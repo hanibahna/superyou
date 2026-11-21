@@ -320,8 +320,12 @@ export function Motion() {
   useEffect(() => {
     if (document.documentElement.dataset.motion === "off" || matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
     const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { rootMargin: "0px 0px -8% 0px" });
+    const seen = new WeakSet<Element>();
     const tag = () => document.querySelectorAll("main .hsec, main section, main .pcard").forEach((el, i) => {
-      if (el.classList.contains("reveal") || el.closest(".bf-hero")) return;
+      if (seen.has(el) || el.closest(".bf-hero")) return;
+      seen.add(el);
+      // Cards React kept from the previous page may still be waiting to fade in: watch them again.
+      if (el.classList.contains("reveal")) return el.classList.contains("in") ? undefined : io.observe(el);
       const r = el.getBoundingClientRect();
       if (r.top < innerHeight) return; // already on screen: leave it
       el.classList.add("reveal");
@@ -331,7 +335,12 @@ export function Motion() {
     tag();
     const mo = new MutationObserver(tag);
     mo.observe(document.querySelector("main") ?? document.body, { childList: true, subtree: true });
-    return () => (io.disconnect(), mo.disconnect());
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+      // Never leave anything hidden when leaving the page.
+      document.querySelectorAll(".reveal:not(.in)").forEach((el) => el.classList.add("in"));
+    };
   }, [path]);
   // Bag bounce when the count goes up
   useEffect(() => {
