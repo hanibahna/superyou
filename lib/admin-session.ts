@@ -95,3 +95,6 @@ export async function audit(who: string, action: string, detail = "") {
     ["ZREMRANGEBYRANK", "audit", 0, -3001],
   ]);
 }
+
+/** Cookie value that unlocks the private preview (SITE_PASSWORD). */
+export const lockToken = (pw: string) => sign(`site-lock:${pw}`).slice(0, 32);

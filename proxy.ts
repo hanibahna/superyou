@@ -1,12 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE, audit, userFromCookie } from "@/lib/admin-session";
+import { ADMIN_COOKIE, audit, lockToken, userFromCookie } from "@/lib/admin-session";
 import { areaOf, can } from "@/lib/roles";
 
 const OPEN = /^\/(api\/)?admin\/(login|logout)(\/|$)/;
 
+// Private preview: when SITE_PASSWORD is set in Vercel, the shop asks for it before showing anything.
+// The admin keeps its own login; payment returns, webhooks and the daily job keep working.
+const LOCK_FREE = /^\/(admin|api\/admin|api\/webhooks|api\/cron|api\/payments|api\/site-lock|site-lock|brand|icon|apple-icon|robots\.txt|favicon)/;
+
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const pw = process.env.SITE_PASSWORD;
+  if (pw && !LOCK_FREE.test(path) && req.cookies.get("site_lock")?.value !== lockToken(pw)) {
+    if (path.startsWith("/api/")) return NextResponse.json({ error: "This site is private for now." }, { status: 401 });
+    const to = new URL("/site-lock/", req.url);
+    to.searchParams.set("next", path + req.nextUrl.search);
+    const res = NextResponse.redirect(to);
+    res.headers.set("X-Robots-Tag", "noindex");
+    return res;
+  }
   if (path.startsWith("/admin") || path.startsWith("/api/admin")) return adminGate(req, path);
+  if (!/^\/(ar|fr)(\/|$)/.test(path)) return NextResponse.next();
 
   // French and Arabic pages live at /fr/… and /ar/… so Google can index them. The same pages are served,
   // with the Arabic interface switched on (see app/layout.tsx).
@@ -35,4 +49,5 @@ async function adminGate(req: NextRequest, path: string) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/ar", "/ar/:path*", "/fr", "/fr/:path*", "/admin", "/admin/:path*", "/api/admin/:path*"] };
+// Everything except Next's own static files (needed for the private-preview lock).
+export const config = { matcher: ["/((?!_next/static|_next/image).*)"] };
