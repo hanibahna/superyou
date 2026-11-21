@@ -17,6 +17,7 @@ type PublicOrder = {
   giftCard?: { code: string; amount: number };
   refunded?: number;
   shipment?: { courierName: string; tracking: string; link: string };
+  giftCardPurchase?: { amount: number; recipient: string; sent: boolean };
   customer: { firstName: string; phone: string; city: string; zone: string; address: string };
 };
 
@@ -83,15 +84,21 @@ function OrderView() {
           <div className="flex justify-between text-base font-semibold"><dt>{tx("Total")}</dt><dd>{money(order.total)}</dd></div>
           {!!order.refunded && <div className="flex justify-between text-muted"><dt>{tx("Refunded")}</dt><dd>{money(order.refunded)}</dd></div>}
         </dl>
+        {order.giftCardPurchase && (
+          <div className="mt-4 rounded-xl bg-brand-50 p-4 text-sm">
+            <p className="font-semibold">🎁 {tx("Gift card for")} {order.giftCardPurchase.recipient}</p>
+            <p className="text-muted">{order.giftCardPurchase.sent ? tx("Sent! They've received their code.") : tx("It will be sent as soon as the payment is confirmed.")}</p>
+          </div>
+        )}
         {order.shipment && (
           <div className="mt-4 rounded-xl bg-brand-50 p-4 text-sm">
             <p className="font-semibold">{tx("Shipped with")} {order.shipment.courierName}{order.shipment.tracking ? ` · ${order.shipment.tracking}` : ""}</p>
             {order.shipment.link && <a href={order.shipment.link} target="_blank" rel="noreferrer" className="mt-1 inline-block font-semibold text-brand-700 underline">{tx("Track your parcel")} ↗</a>}
           </div>
         )}
-        <div className="mt-4 border-t border-line pt-4 text-sm text-muted">
+        {!order.giftCardPurchase && <div className="mt-4 border-t border-line pt-4 text-sm text-muted">
           Delivering to {order.customer.firstName}, {order.customer.address}, {order.customer.city}, {order.customer.zone} · {order.customer.phone}
-        </div>
+        </div>}
       </div>
       <div className="mt-6 text-center">
         <a href={`https://wa.me/${settings.store.whatsapp}?text=${encodeURIComponent(`Hello, I'd like an update on my order ${order.id}`)}`} target="_blank" rel="noreferrer" className="me-3 inline-block rounded-lg bg-[#25D366] px-6 py-3 font-semibold text-white">Track on WhatsApp</a>

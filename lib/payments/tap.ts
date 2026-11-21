@@ -38,6 +38,19 @@ export const tap: PaymentProvider = {
     order.paymentRef = data.id;
     return { kind: "redirect", url: data.transaction.url };
   },
+
+  // Refunds API: POST /v2/refunds with the original charge id.
+  async refund(order, amount, reason) {
+    if (!order.paymentRef) throw new Error("This order has no Tap charge to refund");
+    const res = await fetch(`${API}/refunds`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.TAP_SECRET_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ charge_id: order.paymentRef, amount, currency: order.currency, reason: "requested_by_customer", description: reason || `Refund on ${order.id}`, reference: { merchant: order.id } }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !["REFUNDED", "PENDING", "IN_PROGRESS"].includes(data?.status)) throw new Error(`Tap refused the refund: ${data?.errors?.[0]?.description ?? data?.status ?? res.status}`);
+    return { ref: data.id, status: data.status };
+  },
 };
 
 /** Always re-fetch the charge from Tap rather than trusting query params or webhook bodies. */

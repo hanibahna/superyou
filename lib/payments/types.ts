@@ -12,6 +12,10 @@ export interface PaymentProvider {
   isConfigured(): boolean;
   /** Create the payment for an order and say what the browser should do next. */
   start(order: Order, ctx: { baseUrl: string }): Promise<StartResult>;
+  /** Send money back to the card that paid (part or all). Throws with the gateway's message if refused. */
+  refund?(order: Order, amount: number, reason: string): Promise<RefundResult>;
 }
+
+export type RefundResult = { ref: string; status: string };
 
 export const toMinor = (amount: number) => Math.round(amount * 100);

@@ -187,4 +187,20 @@ export const DICT: Record<string, [fr: string, ar: string]> = {
   // ── gift cards, shipping ──
   "Discount code or gift card": ["Code promo ou carte cadeau", "رمز الخصم أو بطاقة الهدية"], "Gift card": ["Carte cadeau", "بطاقة هدية"],
   Refunded: ["Remboursé", "تم الاسترداد"], "Shipped with": ["Expédié avec", "شُحن مع"], "Track your parcel": ["Suivre mon colis", "تتبّع طردك"],
+  // ── gift card shop ──
+  "Gift cards": ["Cartes cadeaux", "بطاقات الهدايا"], "Gift cards aren't available right now.": ["Les cartes cadeaux ne sont pas disponibles pour le moment.", "بطاقات الهدايا غير متوفرة حالياً."],
+  "Let them choose. Sent by WhatsApp or email, used like money at checkout, over as many orders as they like.": ["Laissez-les choisir. Envoyée par WhatsApp ou e-mail, utilisée comme de l'argent, sur autant de commandes qu'ils veulent.", "دعهم يختارون. تُرسل عبر واتساب أو البريد الإلكتروني وتُستعمل كالمال عند الدفع، على عدة طلبات."],
+  "1. Amount": ["1. Montant", "١. المبلغ"], Other: ["Autre", "مبلغ آخر"], "Choose between $10 and $1,000.": ["Choisissez entre 10 $ et 1 000 $.", "اختر بين 10$ و1000$."],
+  "2. Who is it for?": ["2. Pour qui ?", "٢. لمن؟"], "Their name": ["Son prénom", "اسمه/اسمها"], "Their mobile (we send it on WhatsApp)": ["Son mobile (envoi par WhatsApp)", "رقم هاتفه (نرسلها عبر واتساب)"],
+  "…or their email": ["…ou son e-mail", "…أو بريده الإلكتروني"], "Your message (optional)": ["Votre message (facultatif)", "رسالتك (اختياري)"], "3. From": ["3. De la part de", "٣. من"],
+  "Your mobile": ["Votre mobile", "رقم هاتفك"], "Your email (optional, for the receipt)": ["Votre e-mail (facultatif, pour le reçu)", "بريدك الإلكتروني (اختياري، للإيصال)"],
+  "4. Payment": ["4. Paiement", "٤. الدفع"], "We collect the cash, then send the card.": ["Nous encaissons, puis envoyons la carte.", "نستلم المبلغ نقداً ثم نرسل البطاقة."],
+  "Please wait…": ["Un instant…", "يرجى الانتظار…"], "Buy gift card": ["Acheter la carte cadeau", "اشترِ بطاقة الهدية"],
+  "The card is sent as soon as the payment is confirmed.": ["La carte est envoyée dès que le paiement est confirmé.", "تُرسل البطاقة فور تأكيد الدفع."], "Valid for": ["Valable", "صالحة لمدة"], months: ["mois", "شهراً"],
+  For: ["Pour", "إلى"], "For someone special": ["Pour quelqu'un de spécial", "لشخص مميّز"],
+  "Arrives on WhatsApp or by email, with a code": ["Arrive par WhatsApp ou e-mail, avec un code", "تصل عبر واتساب أو البريد مع رمز"],
+  "Works on everything in the shop, including sale items": ["Valable sur toute la boutique, promotions comprises", "تُستعمل على كل المنتجات بما فيها العروض"],
+  "Any balance left stays on the card for next time": ["Le solde restant reste sur la carte", "يبقى الرصيد المتبقي على البطاقة للمرة القادمة"],
+  "Gift card for": ["Carte cadeau pour", "بطاقة هدية لـ"], "Sent! They've received their code.": ["Envoyée ! Le code a été reçu.", "أُرسلت! وصلهم الرمز."],
+  "It will be sent as soon as the payment is confirmed.": ["Elle sera envoyée dès confirmation du paiement.", "ستُرسل فور تأكيد الدفع."],
 };

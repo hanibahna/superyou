@@ -4,6 +4,7 @@
 // Env: AREEBA_MERCHANT_ID, AREEBA_API_PASSWORD,
 //      AREEBA_GATEWAY_HOST (e.g. https://epayment.areeba.com), AREEBA_API_VERSION (default 100)
 
+import { randomBytes } from "node:crypto";
 import type { PaymentProvider } from "./types";
 
 const host = () => (process.env.AREEBA_GATEWAY_HOST ?? "https://epayment.areeba.com").replace(/\/$/, "");
@@ -37,6 +38,19 @@ export const areeba: PaymentProvider = {
     // Our /pay/areeba page loads MPGS checkout.js and opens the hosted payment page.
     const q = new URLSearchParams({ session: data.session.id, host: host() });
     return { kind: "redirect", url: `${baseUrl}/pay/areeba/?${q}` };
+  },
+
+  // MPGS "Transaction: Refund": PUT …/order/{orderId}/transaction/{new transaction id}
+  async refund(order, amount) {
+    const txn = `refund-${randomBytes(5).toString("hex")}`;
+    const res = await fetch(`${base()}/order/${encodeURIComponent(order.id)}/transaction/${txn}`, {
+      method: "PUT",
+      headers: { Authorization: auth(), "Content-Type": "application/json" },
+      body: JSON.stringify({ apiOperation: "REFUND", transaction: { amount: amount.toFixed(2), currency: order.currency } }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.result !== "SUCCESS") throw new Error(`areeba refused the refund: ${data?.error?.explanation ?? data?.response?.gatewayCode ?? res.status}`);
+    return { ref: txn, status: data?.transaction?.type ?? "REFUND" };
   },
 };
 

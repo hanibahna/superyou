@@ -17,8 +17,8 @@ export const defaultOps: Ops = {
   stock: { lowAt: 5, alertEmail: "", restockOnCancel: true },
   couriers: [
     { id: "own", name: "Our driver", trackingUrl: "", phone: "" },
-    { id: "wakilni", name: "Wakilni", trackingUrl: "", phone: "" },
-    { id: "aramex", name: "Aramex", trackingUrl: "", phone: "" },
+    { id: "wakilni", name: "Wakilni", trackingUrl: "https://portal.wakilni.com/orders/{tracking}", phone: "" },
+    { id: "aramex", name: "Aramex", trackingUrl: "https://t.17track.net/en#nums={tracking}", phone: "" },
     { id: "toters", name: "Toters", trackingUrl: "", phone: "" },
   ],
   invoice: { title: "Invoice", businessName: "", taxId: "", footer: "Thank you for shopping with SuperYou. Questions? WhatsApp us on +961 70 777 608." },

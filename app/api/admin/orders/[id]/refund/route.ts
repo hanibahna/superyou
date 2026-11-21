@@ -8,6 +8,7 @@ const schema = z.object({
   reason: z.string().max(300),
   method: z.enum(["cash", "card", "whish", "giftcard", "other"]),
   restocked: z.array(z.object({ productId: z.string().max(60), qty: z.number().int().min(1).max(100) })).max(100),
+  toCard: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +17,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Check the refund amount" }, { status: 400 });
   try {
-    const { refund } = await refundOrder((await params).id, { ...parsed.data, amount: +parsed.data.amount.toFixed(2), by: (await currentAdmin())!.name });
+    const { toCard, ...d } = parsed.data;
+    const { refund } = await refundOrder((await params).id, { ...d, amount: +d.amount.toFixed(2), by: (await currentAdmin())!.name }, !!toCard);
     return NextResponse.json({ ok: true, refund });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });

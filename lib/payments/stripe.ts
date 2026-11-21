@@ -35,6 +35,16 @@ export const stripe: PaymentProvider = {
     order.paymentRef = data.id;
     return { kind: "redirect", url: data.url };
   },
+
+  async refund(order, amount) {
+    if (!order.paymentRef) throw new Error("This order has no Stripe payment to refund");
+    const s = await (await fetch(`${API}/checkout/sessions/${encodeURIComponent(order.paymentRef)}`, { headers: headers(), cache: "no-store" })).json();
+    if (!s?.payment_intent) throw new Error("Stripe has no payment for this order");
+    const res = await fetch(`${API}/refunds`, { method: "POST", headers: headers(), body: new URLSearchParams({ payment_intent: s.payment_intent, amount: String(toMinor(amount)), reason: "requested_by_customer" }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Stripe refused the refund: ${data?.error?.message ?? res.status}`);
+    return { ref: data.id, status: data.status };
+  },
 };
 
 export async function getStripeSession(id: string): Promise<{ paid: boolean; orderId?: string }> {

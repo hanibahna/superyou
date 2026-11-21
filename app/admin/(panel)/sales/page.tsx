@@ -83,6 +83,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
             <div className="flex justify-between text-sale"><dt>Refunds</dt><dd>−{money(n.refunds)}</dd></div>
             <div className="flex justify-between border-t border-line pt-1.5 font-semibold"><dt>Net sales</dt><dd>{money(n.net)}</dd></div>
             {r.giftCardsUsed > 0 && <p className="pt-1 text-xs text-muted">Includes {money(r.giftCardsUsed)} paid with gift cards.</p>}
+            {r.giftCardsSold.count > 0 && <p className="pt-1 text-xs text-muted">Gift cards sold online: {r.giftCardsSold.count} · {money(r.giftCardsSold.value)} (counted in sales when they&apos;re spent).</p>}
           </dl>
         </section>
         <section className="rounded-xl bg-white p-5 shadow-sm"><h2 className="mb-3 font-semibold">By payment</h2><Bars rows={r.byPayment} label={(k) => PAY[k] ?? k} /></section>

@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { money } from "@/lib/format";
 import { getOps } from "@/lib/ops-store";
 import { getOrder, ORDER_STATUSES, orderValue, refunded, statusLabels } from "@/lib/orders";
+import { refundProvider } from "@/lib/payments";
 import { normPhone } from "@/lib/wa";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Beirut" });
@@ -63,6 +64,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             maxRefund={max}
             hasGiftCard={!!o.giftCard}
             paymentMethod={o.paymentMethod}
+            cardGateway={refundProvider(o)?.id}
           />
 
           {!!o.refunds?.length && (
@@ -72,6 +74,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
                 {o.refunds.map((r) => (
                   <li key={r.id} className="py-2">
                     <div className="flex justify-between"><span>{when(r.at)} · {r.method === "giftcard" ? "store credit / gift card" : r.method}</span><b className="text-sale">−{money(r.amount)}</b></div>
+                    {r.gateway && <p className="text-xs text-brand-700">Sent to card via {r.gateway.provider} · {r.gateway.status} · ref {r.gateway.ref}</p>}
                     <p className="text-muted">{r.reason || "No reason given"} · by {r.by}{r.restocked.length ? ` · ${r.restocked.reduce((s, x) => s + x.qty, 0)} item(s) back in stock` : ""}</p>
                   </li>
                 ))}

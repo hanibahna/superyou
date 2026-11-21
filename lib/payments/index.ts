@@ -40,6 +40,13 @@ export async function checkoutMethods() {
     .map((id) => ({ id, label: s.payments[id].label, description: s.payments[id].description }));
 }
 
+/** The card gateway that took this order's payment, if it can refund through its API. */
+export function refundProvider(order: Order): PaymentProvider | null {
+  if (order.paymentMethod !== "card" || !order.paymentProvider) return null;
+  const p = cardProviders[order.paymentProvider];
+  return p && p.isConfigured() && p.refund ? p : null;
+}
+
 export async function startPayment(order: Order, baseUrl: string): Promise<StartResult & { provider?: string }> {
   switch (order.paymentMethod) {
     case "cod":

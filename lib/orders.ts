@@ -86,10 +86,12 @@ export type Order = {
   stockTaken?: boolean; // tracked stock was taken off for this order
   shipment?: { courier: string; courierName: string; tracking: string; link: string; shippedAt: string; by: string };
   refunds?: Refund[];
+  /** A gift card bought on the site: issued and sent to the recipient once paid. */
+  giftCardPurchase?: { amount: number; recipient: string; phone: string; email: string; message: string; from: string; code?: string; sentAt?: string };
   history?: { at: string; status: OrderStatus; by: string; note?: string }[];
 };
 
-export type Refund = { id: string; at: string; amount: number; reason: string; method: "cash" | "card" | "whish" | "giftcard" | "other"; restocked: { productId: string; qty: number }[]; by: string };
+export type Refund = { id: string; at: string; amount: number; reason: string; method: "cash" | "card" | "whish" | "giftcard" | "other"; restocked: { productId: string; qty: number }[]; by: string; gateway?: { provider: string; ref: string; status: string } };
 
 export const refunded = (o: Order) => +(o.refunds ?? []).reduce((s, r) => s + r.amount, 0).toFixed(2);
 /** What the order is worth: money paid plus any gift card used. */
@@ -284,11 +286,22 @@ export async function shipOrder(id: string, courierId: string, tracking: string,
 }
 
 /** Record a refund (the money itself goes back through the till, the bank or the gift card). */
-export async function refundOrder(id: string, r: Omit<Refund, "id" | "at">) {
+export async function refundOrder(id: string, r: Omit<Refund, "id" | "at" | "gateway">, toCard = false) {
   const order = await getOrder(id);
   if (!order) throw new Error("Order not found");
   const max = +(orderValue(order) - refunded(order)).toFixed(2);
   if (r.amount <= 0 || r.amount > max + 0.001) throw new Error(`You can refund up to $${max.toFixed(2)} on this order.`);
+  // Card refunds go back through the gateway first: if the bank refuses, nothing else changes.
+  let gateway: Refund["gateway"];
+  if (r.method === "card" && toCard) {
+    const { refundProvider } = await import("@/lib/payments");
+    const p = refundProvider(order);
+    if (!p) throw new Error("This order wasn't paid through a card gateway that can refund automatically. Refund it in your gateway's dashboard and untick “send to card”.");
+    const paidByCard = +(order.total - (order.refunds ?? []).filter((x) => x.gateway).reduce((s, x) => s + x.amount, 0)).toFixed(2);
+    if (r.amount > paidByCard + 0.001) throw new Error(`Only $${paidByCard.toFixed(2)} of this order was paid by card.`);
+    const g = await p.refund!(order, r.amount, r.reason);
+    gateway = { provider: p.id, ...g };
+  }
   if (r.restocked.length) await (await import("@/lib/inventory")).adjustStock(r.restocked.map((x) => ({ productId: x.productId, delta: x.qty })), `Refund on ${order.id}`, r.by);
   if (r.method === "giftcard") {
     const gc = await import("@/lib/giftcards");
@@ -299,7 +312,7 @@ export async function refundOrder(id: string, r: Omit<Refund, "id" | "at">) {
       r = { ...r, reason: `${r.reason} — store credit ${card.code}`.trim() };
     }
   }
-  const refund: Refund = { ...r, id: randomBytes(4).toString("hex"), at: new Date().toISOString() };
+  const refund: Refund = { ...r, gateway, id: randomBytes(4).toString("hex"), at: new Date().toISOString() };
   const next: Order = { ...order, refunds: [...(order.refunds ?? []), refund] };
   await saveOrder(next);
   return { order: next, refund };
@@ -310,7 +323,10 @@ export async function notifyOrderStatus(order: Order) {
   console.log(`[order] ${order.id} → ${order.status} (${order.total} ${order.currency})`);
   const key = ({ confirmed: "orderConfirmed", shipped: "orderShipped", delivered: "orderDelivered" } as const)[order.status as "confirmed" | "shipped" | "delivered"];
   if (key) await (await import("@/lib/whatsapp")).trigger(key, order.customer.phone, orderVars(order));
-  if (order.status === "delivered") {
+  if (order.giftCardPurchase && !order.giftCardPurchase.code && (order.status === "paid" || order.status === "delivered")) {
+    await (await import("@/lib/giftcard-sale")).deliverGiftCard(order.id).catch((e) => console.error("[giftcard]", e));
+  }
+  if (order.status === "delivered" && !order.giftCardPurchase) {
     const gs = await import("@/lib/growth-store");
     await gs.awardPoints(order).catch((e) => console.error("[club]", e));
     await gs.scheduleAfterDelivery(order).catch((e) => console.error("[remind]", e));
@@ -321,5 +337,9 @@ export async function notifyOrderStatus(order: Order) {
 /** What the customer-facing confirmation page is allowed to see. */
 export function publicOrder(o: Order) {
   const { accessToken: _t, history: _h, refunds: _r, stockTaken: _s, shipment, ...rest } = o;
-  return { ...rest, refunded: refunded(o), shipment: shipment && { courierName: shipment.courierName, tracking: shipment.tracking, link: shipment.link } };
+  const gcp = rest.giftCardPurchase;
+  return {
+    ...rest, refunded: refunded(o), shipment: shipment && { courierName: shipment.courierName, tracking: shipment.tracking, link: shipment.link },
+    giftCardPurchase: gcp && { amount: gcp.amount, recipient: gcp.recipient, sent: !!gcp.code }, // the code goes to the recipient only
+  };
 }

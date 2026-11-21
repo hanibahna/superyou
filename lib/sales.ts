@@ -6,7 +6,9 @@ import { db } from "@/lib/db";
 import { orderValue, refunded, type Order } from "@/lib/orders";
 
 /** Orders that count as sales (not cancelled, failed or still waiting for an online payment). */
-export const counts = (o: Order) => !["cancelled", "payment_failed", "awaiting_payment"].includes(o.status);
+export const counts = (o: Order) => !["cancelled", "payment_failed", "awaiting_payment"].includes(o.status) && !o.giftCardPurchase;
+/** Gift cards sold online are money in advance: counted when they're spent, shown separately. */
+const giftSale = (o: Order) => !!o.giftCardPurchase && !["cancelled", "payment_failed", "awaiting_payment"].includes(o.status);
 
 export async function ordersBetween(from: number, to: number): Promise<Order[]> {
   const ids = await db.cmd<string[]>(["ZRANGEBYSCORE", "orders", from, to]);
@@ -95,6 +97,7 @@ export async function salesReport(days: number) {
     byPayment: group((o) => o.paymentMethod),
     customers: { total: phones.length, returning, new: phones.length - returning },
     giftCardsUsed: r2(live.reduce((s, o) => s + (o.giftCard?.amount ?? 0), 0)),
+    giftCardsSold: { count: cur.filter(giftSale).length, value: r2(cur.filter(giftSale).reduce((s, o) => s + o.total, 0)) },
     statuses: [...statuses.entries()].sort((a, b) => b[1] - a[1]),
     orders: cur,
   };
