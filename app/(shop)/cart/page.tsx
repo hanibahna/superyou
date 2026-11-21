@@ -1,0 +1,58 @@
+"use client";
+
+import { useT } from "@/lib/site-context";
+
+import Link from "next/link";
+import { Qty } from "@/components/CartDrawer";
+import { CouponBox, GiftPicker, Totals } from "@/components/CartPromos";
+import { FreeDeliveryBar, RecentlyViewed } from "@/components/Growth";
+import { ProductImage } from "@/components/ProductImage";
+import { money } from "@/lib/format";
+import { useShop } from "@/lib/store";
+
+export default function CartPage() {
+  const tx = useT();
+  const { detailed, setQty, remove } = useShop();
+
+  if (!detailed.length)
+    return (
+      <div className="container-x py-24 text-center">
+        <h1 className="text-3xl font-semibold">Your cart is empty</h1>
+        <Link href="/shop/" className="mt-6 inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white">{tx("Start shopping")}</Link>
+        <div className="mt-10 text-start"><RecentlyViewed /></div>
+      </div>
+    );
+
+  return (
+    <div className="container-x grid gap-10 py-10 lg:grid-cols-[1fr_360px]">
+      <div>
+        <h1 className="mb-4 text-3xl font-semibold">{tx("Cart")}</h1>
+        <div className="mb-6"><FreeDeliveryBar /></div>
+        <ul className="divide-y divide-line border-y border-line">
+          {detailed.map(({ product, qty, lineTotal }) => (
+            <li key={product.id} className="flex gap-4 py-5">
+              <ProductImage product={product} className="h-24 w-24 shrink-0 rounded-lg" />
+              <div className="flex flex-1 flex-col">
+                <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
+                <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{product.name}</Link>
+                <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
+                <div className="mt-auto flex items-center gap-4">
+                  <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
+                  <button onClick={() => remove(product.id)} className="text-sm text-muted hover:underline">{tx("Remove")}</button>
+                </div>
+              </div>
+              <p className="font-semibold">{money(lineTotal)}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-6"><GiftPicker /></div>
+      </div>
+      <aside className="h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
+        <h2 className="text-lg font-semibold">{tx("Order summary")}</h2>
+        <div className="mt-4"><CouponBox /></div>
+        <div className="mt-4"><Totals /></div>
+        <Link href="/checkout/" className="mt-5 block rounded-lg bg-brand-500 py-3 text-center font-semibold text-white hover:bg-brand-600">{tx("Checkout")}</Link>
+      </aside>
+    </div>
+  );
+}

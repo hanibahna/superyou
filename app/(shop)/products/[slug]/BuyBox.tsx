@@ -1,0 +1,153 @@
+"use client";
+
+import Link from "next/link";
+import { useState, type ReactNode } from "react";
+import { Qty } from "@/components/CartDrawer";
+import { HeartIcon } from "@/components/Icons";
+import { ProductImage } from "@/components/ProductImage";
+import { discountPct, type ProductLite } from "@/lib/data/catalog";
+import { money } from "@/lib/format";
+import { imgUrl } from "@/lib/img";
+import { PharmacistButton, TrackView } from "@/components/Growth";
+import { Stars } from "@/components/Stars";
+import { deliveryBy } from "@/lib/growth";
+import { localeOf } from "@/lib/i18n";
+import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
+import { snap, useShop } from "@/lib/store";
+
+export function BuyBox({
+  variants,
+  initialId,
+  gallery,
+  concernNames,
+  freeOver,
+  children,
+}: {
+  variants: ProductLite[];
+  initialId: string;
+  gallery: string[];
+  concernNames: Record<string, string>;
+  freeOver: string;
+  children: ReactNode;
+}) {
+  const tx = useT();
+  const { add, toggleWish, isWished } = useShop();
+  const [id, setId] = useState(initialId);
+  const [qty, setQty] = useState(1);
+  const v = variants.find((x) => x.id === id) ?? variants[0];
+  const [shown, setShown] = useState<string | undefined>(v.image ?? gallery[0]);
+  const pct = discountPct(v);
+  const wished = isWished(v.id);
+  const t = useT();
+  const lang = useLang();
+  const growth = useGrowth();
+  const settings = useSettings();
+  const rating = variants.find((x) => x.reviewCount)?.rating;
+  const reviewCount = variants.find((x) => x.reviewCount)?.reviewCount ?? 0;
+  const by = deliveryBy(settings.delivery.estimate || "3").toLocaleDateString(localeOf(lang), { weekday: "short", day: "numeric", month: "short" });
+
+  const pick = (x: ProductLite) => {
+    setId(x.id);
+    if (x.image) setShown(x.image);
+    const u = new URL(window.location.href);
+    u.searchParams.set("v", x.id);
+    window.history.replaceState(null, "", u.toString());
+  };
+
+  return (
+    <div className="grid gap-10 md:grid-cols-2">
+      <div className="relative">
+        <TrackView product={snap(variants.find((x) => x.inStock) ?? v)} />
+        {pct && <span dir="ltr" className="absolute start-4 top-4 z-10 rounded-md bg-sale px-2.5 py-1 text-sm font-bold text-white">-{pct}%</span>}
+        <ProductImage product={{ ...v, image: shown }} width={1000} className="aspect-square w-full rounded-2xl border border-line" />
+        {gallery.length > 1 && (
+          <div className="mt-3 grid grid-cols-5 gap-2">
+            {gallery.slice(0, 10).map((src) => (
+              <button key={src} onClick={() => setShown(src)} className={`overflow-hidden rounded-lg border ${shown === src ? "border-brand-500 ring-1 ring-brand-500" : "border-line"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgUrl(src, 160)} alt="" className="aspect-square w-full bg-white object-contain" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <Link href={`/shop/?brand=${encodeURIComponent(v.brand)}`} className="text-sm font-bold uppercase tracking-wider text-brand-600 hover:underline">{v.brand}</Link>
+        <h1 className="mt-1 text-2xl font-semibold leading-tight md:text-3xl">{v.name}</h1>
+        {growth.reviews.enabled && (
+          <a href="#reviews" className="mt-1 inline-flex items-center gap-2 text-sm hover:underline">
+            {rating ? <><Stars value={rating} size={15} /> <span>{rating.toFixed(1)} · {reviewCount} {t("Reviews")}</span></> : <span className="text-muted">{t("Write a review")}</span>}
+          </a>
+        )}
+        {(v.variant || v.size) && <p className="mt-1 text-sm text-muted">{v.variant ?? v.size}</p>}
+
+        <div className="mt-4 flex flex-wrap items-baseline gap-3">
+          <span className={`text-3xl font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</span>
+          {pct && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
+          {pct && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
+        </div>
+
+        {variants.length > 1 && (
+          <div className="mt-5">
+            <p className="mb-2 text-sm font-semibold">{t("Choose an option")}</p>
+            <div className="flex flex-wrap gap-2">
+              {variants.map((x) => (
+                <button
+                  key={x.id}
+                  onClick={() => pick(x)}
+                  className={`rounded-lg border px-3 py-2 text-sm ${x.id === v.id ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line hover:border-ink"} ${x.inStock ? "" : "text-muted line-through decoration-1"}`}
+                >
+                  {x.variant ?? x.size ?? x.sku}
+                  <span className="ml-1.5 text-xs text-muted no-underline">{money(x.price)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {v.concerns.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {v.concerns.map((c) => (
+              <Link key={c} href={`/shop/?concern=${c}`} className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">{concernNames[c] ?? c}</Link>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 flex items-center gap-3">
+          {v.inStock ? (
+            <>
+              <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
+              <button onClick={() => add(v, qty)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{t("Add to cart")}</button>
+            </>
+          ) : (
+            <button disabled className="flex-1 rounded-lg bg-line py-3 font-semibold text-muted">{t("Sold out")}</button>
+          )}
+          <button onClick={() => toggleWish(v)} aria-label={tx("Wishlist")} className={`rounded-lg border border-line p-3 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}>
+            <HeartIcon filled={wished} />
+          </button>
+        </div>
+
+        {v.inStock && <p className="mt-3 text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
+        <ul className="mt-4 space-y-2 rounded-xl bg-[#f7f8f7] p-4 text-sm">
+          {growth.trust.lines.map((l) => <li key={l}>✓ {l}</li>)}
+          {freeOver && <li>✓ {t("Free delivery on orders over")} {freeOver}</li>}
+          <li>✓ {t("Pay cash on delivery, by card or with Whish")}</li>
+        </ul>
+        {growth.trust.returnsSummary && <p className="mt-2 text-xs text-muted">{growth.trust.returnsSummary}</p>}
+        <PharmacistButton product={`${v.brand} ${v.name}${v.variant ? ` (${v.variant})` : ""}`} className="mt-4" />
+        {/* Sticky buy bar on phones */}
+        {v.inStock && (
+          <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 md:hidden">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs text-muted">{v.brand}</p>
+              <p className={`font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</p>
+            </div>
+            <button onClick={() => add(v, qty)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{t("Add to bag")}</button>
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+}

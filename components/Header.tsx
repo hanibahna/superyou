@@ -1,0 +1,192 @@
+"use client";
+
+import { createPortal } from "react-dom";
+
+import Link from "next/link";
+import { useState } from "react";
+import type { Category, Taxonomy } from "@/lib/data/catalog";
+import { useSettings, useSite, useT } from "@/lib/site-context";
+import { useShop } from "@/lib/store";
+import { BagIcon, CloseIcon, HeartIcon, MenuIcon, UserIcon } from "./Icons";
+import { LangSwitch } from "./Growth";
+import { MegaMenu, MobileMenu } from "./MegaMenu";
+import { SearchBox } from "./SearchBox";
+
+export function AnnouncementBar() {
+  const tx = useT();
+  const { announcement: a, store, social } = useSettings();
+  if (!a.enabled || !a.text) return null;
+  return (
+    <div className="announce bg-brand-600 text-white">
+      <div className="container-x flex h-9 items-center justify-between text-xs">
+        {a.showContacts && store.phone ? (
+          <span className="hidden gap-4 sm:flex">
+            <a href={`tel:${store.phone.replace(/\s/g, "")}`} className="opacity-90 hover:opacity-100">{store.phone}</a>
+            {store.whatsapp && <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="font-semibold opacity-90 hover:opacity-100">{tx("WhatsApp chat")}</a>}
+          </span>
+        ) : <span className="hidden sm:block" />}
+        {a.link ? (
+          <Link href={a.link} className="mx-auto truncate font-medium underline-offset-2 hover:underline sm:mx-0">{a.text}</Link>
+        ) : (
+          <p className="mx-auto truncate font-medium sm:mx-0">{a.text}</p>
+        )}
+        <div className="hidden gap-3 opacity-90 sm:flex">
+          {a.showContacts && (["instagram", "facebook", "tiktok", "youtube"] as const).filter((k) => social[k]).map((k) => (
+            <a key={k} href={social[k]} target="_blank" rel="noreferrer" className="capitalize">{k === "tiktok" ? "TikTok" : k === "youtube" ? "YouTube" : k}</a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: Taxonomy }) {
+  const tx = useT();
+  const { count, wishlist, setDrawerOpen } = useShop();
+  const { settings, routineEnabled } = useSite();
+  const t = useT();
+  const store = settings.store;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const categories = all.filter((c) => c.menu !== false);
+  const groupFor = (slug: string, g?: Category["concernGroup"]) =>
+    g !== undefined ? g : slug === "hair" ? "hair" : slug === "supplements" ? "wellness" : slug === "skincare" ? "skin" : "";
+
+  return (
+    <header className="site-header sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+      <div className="hdr-row container-x flex h-16 items-center gap-4">
+        <button className="lg:hidden" onClick={() => setMenuOpen(true)} aria-label={tx("Open menu")}>
+          <MenuIcon />
+        </button>
+        <Link href="/" aria-label={`${store.name} home`} className="hdr-logo shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/superyou-logo.svg" alt={store.name} className="logo-on-light h-5 w-auto md:h-7" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
+        </Link>
+
+        <SearchBox className="hdr-search mx-auto hidden max-w-xl flex-1 lg:block" />
+
+        <nav className="ms-auto flex items-center gap-4 lg:ms-0">
+          <LangSwitch className="hidden text-sm hover:text-brand-600 sm:block" />
+          <Link href="/account/" aria-label={tx("Account")} className="hidden hover:text-brand-600 sm:block">
+            <UserIcon />
+          </Link>
+          <Link href="/wishlist/" aria-label={tx("Wishlist")} className="relative hover:text-brand-600">
+            <HeartIcon />
+            {wishlist.length > 0 && <Badge n={wishlist.length} />}
+          </Link>
+          <button onClick={() => setDrawerOpen(true)} aria-label={tx("Cart")} className="relative hover:text-brand-600">
+            <BagIcon data-bag />
+            {count > 0 && <Badge n={count} />}
+          </button>
+        </nav>
+      </div>
+
+      {/* Desktop category nav with mega menu */}
+      {settings.menu.length > 0 ? (
+        <MegaMenu items={settings.menu} extra={routineEnabled ? <li className="ml-auto h-full"><Link href="/routine/" className="glow-link flex h-full items-center gap-1.5 font-semibold text-brand-600">✨ {t("Routine finder")}<span className="new-pill">NEW</span></Link></li> : null} />
+      ) : (
+      <nav className="hidden border-t border-line lg:block">
+          <ul className="container-x no-scrollbar flex h-11 items-center gap-5 whitespace-nowrap text-sm font-medium xl:gap-7">
+            {categories.map((c) => { const grp = groupFor(c.slug, c.concernGroup); return (
+              <li key={c.slug} className="group relative h-full">
+                <Link href={`/shop/?category=${c.slug}`} className="flex h-full items-center hover:text-brand-600">
+                  {c.name}
+                </Link>
+                {grp && concerns.some((k) => k.group === grp) && (
+                  <div className="invisible absolute left-0 top-full z-50 w-64 rounded-b-xl border border-line bg-white p-4 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">{tx("Shop by concern")}</p>
+                    <ul className="space-y-1.5">
+                      {concerns
+                        .filter((k) => k.group === grp)
+                        .map((k) => (
+                          <li key={k.slug}>
+                            <Link href={`/shop/?category=${c.slug}&concern=${k.slug}`} className="hover:text-brand-600">
+                              {k.name}
+                            </Link>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            ); })}
+            {routineEnabled && (
+              <li className="ml-auto">
+                <Link href="/routine/" className="font-semibold text-brand-600">{tx("Routine finder")}</Link>
+              </li>
+            )}
+            <li className={routineEnabled ? "" : "ml-auto"}>
+              <Link href="/shop/?sort=discount" className="font-semibold text-sale">
+                {tx("Offers")}
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
+
+      {/* Mobile drawer: full screen, sliding panels, big tap targets */}
+      {menuOpen && createPortal(
+        <div className="fixed inset-0 z-[70] lg:hidden" role="dialog" aria-modal="true" aria-label={tx("Menu")}>
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <div className="drawer-in absolute inset-y-0 start-0 flex w-full max-w-md flex-col bg-white">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/superyou-logo.svg" alt={store.name} className="h-5 w-auto" />
+              <div className="flex items-center gap-2">
+                <LangSwitch />
+                <button onClick={() => setMenuOpen(false)} aria-label={tx("Close menu")} className="tap grid w-11 place-items-center"><CloseIcon /></button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
+              <SearchBox className="mb-4" onDone={() => setMenuOpen(false)} />
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                {routineEnabled && (
+                  <Link href="/routine/" onClick={() => setMenuOpen(false)} className="glow-pill relative rounded-2xl bg-ink p-3 text-white">
+                    <span className="new-pill absolute end-2 top-2">NEW</span>
+                    <span className="block text-lg">✨</span><span className="text-sm font-semibold">{tx("Routine finder")}</span>
+                  </Link>
+                )}
+                <Link href="/skin-scan/" onClick={() => setMenuOpen(false)} className="relative rounded-2xl bg-brand-50 p-3">
+                  <span className="new-pill absolute end-2 top-2">AI</span>
+                  <span className="block text-lg">📸</span><span className="text-sm font-semibold">{tx("Skin scan")}</span>
+                </Link>
+                <Link href="/shop/?sale=1" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#fbeef2] p-3"><span className="block text-lg">%</span><span className="text-sm font-semibold text-sale">{tx("Offers")}</span></Link>
+                <Link href="/shop/?sort=new" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#f5f5f5] p-3"><span className="block text-lg">★</span><span className="text-sm font-semibold">{tx("New arrivals")}</span></Link>
+              </div>
+              {settings.menu.length > 0 ? (
+                <MobileMenu
+                  items={settings.menu}
+                  onNavigate={() => setMenuOpen(false)}
+                  footer={
+                    <div className="mt-4 space-y-1 border-t border-line pt-3 text-[15px]">
+                      {[["Services & Events", "/services/"], ["SuperYou Club", "/club/"], ["Brands A–Z", "/brands/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
+                        <Link key={h} href={h} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center">{tx(l)}{h === "/wishlist/" && wishlist.length > 0 ? ` (${wishlist.length})` : ""}</Link>
+                      ))}
+                      <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="mt-2 flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white">{tx("WhatsApp us")}</a>
+                      <a href={`tel:${store.phone.replace(/\s/g, "")}`} className="flex min-h-[48px] items-center justify-center rounded-full border border-line font-semibold" dir="ltr">{store.phone}</a>
+                    </div>
+                  }
+                />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {categories.map((c) => (
+                    <li key={c.slug}><Link onClick={() => setMenuOpen(false)} href={`/shop/?category=${c.slug}`} className="flex min-h-[52px] items-center font-semibold">{c.name}</Link></li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      , document.body)}
+    </header>
+  );
+}
+
+function Badge({ n }: { n: number }) {
+  return (
+    <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
+      {n}
+    </span>
+  );
+}

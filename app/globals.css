@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+/* Brand palette — change these to rebrand the whole shop */
+@theme {
+  --color-brand-50: #fcf1f4;
+  --color-brand-100: #f7dde5;
+  --color-brand-500: #c0587a;
+  --color-brand-600: #a8456a;
+  --color-brand-700: #8a3656;
+  --color-ink: #2e2229;
+  --color-muted: #7a6b72;
+  --color-line: #ece4e7;
+  --color-sale: #d23c3c;
+  --color-bg: #ffffff;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.container-x {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 768px) {
+  .container-x {
+    padding-inline: 1.5rem;
+  }
+}
+
+/* ── Layout themes (Admin → Appearance → Layout) ─────────────── */
+:root { --font-heading: var(--font-sans); --space-scale: 1; }
+body { font-family: var(--font-sans); }
+h1, h2, h3, .font-heading { font-family: var(--font-heading); }
+[data-upper="1"] h1, [data-upper="1"] h2 { text-transform: uppercase; letter-spacing: 0.04em; }
+.hsec { padding-block: calc(2.5rem * var(--space-scale)); }
+
+/* Buttons: brand-coloured buttons and links follow the chosen shape */
+[data-buttons="square"] :is(a, button)[class*="bg-brand-5"],
+[data-buttons="square"] :is(a, button)[class*="bg-white"][class*="px-6"] { border-radius: 0 !important; }
+[data-buttons="rounded"] :is(a, button)[class*="bg-brand-5"],
+[data-buttons="rounded"] :is(a, button)[class*="bg-white"][class*="px-6"] { border-radius: 0.5rem !important; }
+[data-buttons="pill"] :is(a, button)[class*="bg-brand-5"][class*="py-3"],
+[data-buttons="pill"] :is(a, button)[class*="bg-brand-5"][class*="py-2"] { border-radius: 9999px !important; }
+
+/* Product cards */
+[data-cards="plain"] .pcard { border-color: transparent; }
+[data-cards="border"] .pcard { border-color: var(--color-line); box-shadow: none; }
+[data-cards="shadow"] .pcard { border-color: transparent; box-shadow: 0 6px 24px -10px rgb(0 0 0 / 0.18); }
+[data-cards="tinted"] .pcard { border-color: transparent; background: var(--color-brand-50); }
+
+/* Product image shape */
+[data-ratio="portrait"] .pimg { aspect-ratio: 4 / 5; }
+[data-ratio="landscape"] .pimg { aspect-ratio: 4 / 3; }
+
+/* Product grid columns on large screens */
+@media (min-width: 1280px) {
+  [data-cols="3"] .pgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  [data-cols="5"] .pgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+[data-density="compact"] .pgrid { gap: 0.6rem; }
+[data-density="spacious"] .pgrid { gap: 1.75rem; }
+
+/* Header styles */
+[data-header="dark"] .site-header { background: var(--color-ink); color: #fff; border-color: transparent; }
+
+[data-header="dark"] .site-header nav a:hover { color: var(--color-brand-100); }
+[data-header="dark"] .site-header .hdr-search label { background: rgb(255 255 255 / 0.1); border-color: transparent; }
+[data-header="dark"] .site-header .hdr-search input { color: #fff; }
+[data-header="dark"] .site-header .border-t { border-color: rgb(255 255 255 / 0.12); }
+[data-header="dark"] .site-header ul .group > div { color: var(--color-ink); }
+[data-header="minimal"] .site-header { background: var(--color-bg); border-color: transparent; }
+[data-header="minimal"] .announce { background: var(--color-brand-50); color: var(--color-ink); }
+@media (min-width: 1024px) {
+  [data-header="centered"] .hdr-row { height: 5rem; }
+  [data-header="centered"] .hdr-logo { order: 2; margin-inline: auto; }
+  [data-header="centered"] .hdr-search { order: 1; flex: 0 1 18rem; margin: 0; }
+  [data-header="centered"] .hdr-row > nav { order: 3; flex: 0 0 18rem; justify-content: flex-end; }
+  [data-header="centered"] .site-header > nav ul { justify-content: center; }
+}
+
+/* The admin always keeps a neutral look, whatever layout theme the shop uses */
+.admin-ui {
+  --radius-sm: 0.25rem; --radius-md: 0.375rem; --radius-lg: 0.5rem; --radius-xl: 0.75rem; --radius-2xl: 1rem; --radius-3xl: 1.5rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.admin-ui :is(h1, h2, h3) { font-family: inherit; text-transform: none !important; letter-spacing: normal !important; }
+.admin-ui :is(a, button)[class*="bg-brand-5"] { border-radius: 0.5rem !important; }
+
+/* Logo swap for the dark header */
+.logo-on-dark { display: none; }
+[data-header="dark"] .site-header .logo-on-light { display: none; }
+[data-header="dark"] .site-header .logo-on-dark { display: block; }
+
+/* Outlined add-to-cart buttons (Noir / Sephora-style) */
+[data-buy="outline"] .pcard .buy { background: transparent !important; color: var(--color-ink) !important; border: 1px solid var(--color-ink); border-radius: 9999px !important; }
+[data-buy="outline"] .pcard .buy:hover { background: var(--color-ink) !important; color: #fff !important; }
+[data-buy="outline"] .pcard .buy-alt { border-color: var(--color-line); color: var(--color-ink); border-radius: 9999px !important; }
+
+/* Noir extras: bold brand names, crisp black text links */
+[data-preset="noir"] .pcard .pbrand { color: var(--color-ink); font-weight: 700; letter-spacing: 0.02em; }
+[data-preset="noir"] .announce { background: #000; }
+[data-preset="noir"] .site-header { border-color: #e6e6e6; }
+[data-preset="noir"] .mega a:hover { text-decoration: underline; text-underline-offset: 4px; color: inherit; }
+
+/* Campaign hero ticker */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee { animation: marquee 40s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+/* Phones and Macs with "Reduce motion" on still scroll, just more gently. */
+@media (prefers-reduced-motion: reduce) { .marquee { animation-duration: 80s; } }
+
+/* Add-to-cart shown on hover (Sephora-style cards) */
+@media (hover: hover) and (min-width: 1024px) {
+  [data-buy="hover"] .pcard .buy, [data-buy="hover"] .pcard .buy-alt { opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s; }
+  [data-buy="hover"] .pcard:hover .buy, [data-buy="hover"] .pcard:hover .buy-alt { opacity: 1; transform: none; }
+}
+[data-buy="hover"] .pcard .buy { background: #000 !important; color: #fff !important; border-radius: 9999px !important; }
+[data-buy="hover"] .pcard .buy-alt { border-color: #000; color: #000; border-radius: 9999px !important; }
+[data-preset="noir"] .pcard .pname { color: #333; }
+[data-preset="noir"] .pcard .pname { font-weight: 400; }
+
+/* ── Uniform product photos ── */
+.pframe { background: var(--frame-bg, #fff); padding: var(--frame-pad, 0%); }
+.pframe img { display: block; }
+
+/* ── Accessibility: visible keyboard focus, comfortable tap targets on phones ── */
+:where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--color-brand-500, #111); outline-offset: 2px; }
+@media (max-width: 767px) {
+  .tap { min-height: 44px; }
+  body:has(.tabbar) { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
+
+/* ── Arabic (right-to-left) ── */
+[dir="rtl"] body { font-family: "Noto Kufi Arabic", "Segoe UI", Tahoma, sans-serif; }
+[dir="rtl"] .ltr-keep { direction: ltr; unicode-bidi: isolate; }
+[dir="rtl"] .rtl-flip { transform: scaleX(-1); }
+
+/* ── Sign-up wheel ── */
+@keyframes wheel-spin { from { transform: rotate(0deg); } to { transform: rotate(var(--wheel-to, 1440deg)); } }
+.wheel-spin { animation: wheel-spin 3.2s cubic-bezier(.17,.67,.2,1) forwards; }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-up { animation: sheet-up .28s ease-out; }
+
+/* ── Campaign hero: products gliding left ── */
+@keyframes hero-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.hero-track { animation: hero-left 40s linear infinite; }
+.hero-marquee:hover .hero-track, .hero-marquee:active .hero-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .hero-track { animation-duration: 90s !important; } }
+
+/* ── Motion: gentle, fast, and off when "reduce motion" is on or Admin switches it off ── */
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+[dir="rtl"] .drawer-in { --dx: 100%; }
+.drawer-in { animation: drawer-in .28s cubic-bezier(.2,.8,.2,1); }
+[dir="rtl"] .drawer-in { animation-name: drawer-in-rtl; }
+@keyframes drawer-in-rtl { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes menu-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.menu-in { animation: menu-in .22s ease-out; }
+
+/* "Routine finder": soft rose glow that breathes, plus a shimmering NEW pill */
+@keyframes glow { 0%, 100% { text-shadow: 0 0 0 transparent; transform: scale(1); } 50% { text-shadow: 0 0 14px color-mix(in srgb, var(--color-sale, #c0587a) 70%, transparent); transform: scale(1.06); } }
+.glow-link { animation: glow 2.6s ease-in-out infinite; transform-origin: center; }
+@keyframes glow-box { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-sale, #c0587a) 55%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
+.glow-pill { animation: glow-box 2.4s ease-out infinite; }
+@keyframes shimmer { from { background-position: -120% 0; } to { background-position: 220% 0; } }
+.new-pill { display: inline-block; border-radius: 9999px; padding: 1px 6px; font-size: 9px; font-weight: 800; letter-spacing: .08em; color: #fff;
+  background: linear-gradient(100deg, var(--color-sale, #c0587a) 30%, #f3c1d1 50%, var(--color-sale, #c0587a) 70%) 0 0 / 200% 100%; animation: shimmer 2.2s linear infinite; }
+
+/* Sections and cards rise in as they scroll into view */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+/* Cards lift, photos zoom, buttons press */
+.pcard { transition: transform .25s ease, box-shadow .25s ease; }
+@media (hover: hover) { .pcard:hover { transform: translateY(-4px); box-shadow: 0 12px 30px -12px rgba(0,0,0,.25); } }
+button:active, a.tap:active, .buy:active { transform: scale(.97); }
+/* Bag icon bounces when something is added */
+@keyframes bump { 0% { transform: scale(1); } 30% { transform: scale(1.3) rotate(-8deg); } 60% { transform: scale(.95); } 100% { transform: scale(1); } }
+.bump { animation: bump .5s ease; }
+/* Loading placeholders */
+.skeleton { background: linear-gradient(90deg, #f2f2f2 25%, #e8e8e8 50%, #f2f2f2 75%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
+
+[data-motion="off"] *, [data-motion="off"] *::before, [data-motion="off"] *::after { animation: none !important; transition: none !important; }
+[data-motion="off"] .reveal { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .glow-link, .glow-pill, .new-pill, .drawer-in, .menu-in { animation: none; }
+}
+
+/* ── Hero background video ── */
+.hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

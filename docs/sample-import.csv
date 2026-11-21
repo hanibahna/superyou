@@ -1,0 +1,5 @@
+sku,name,price,compare_at_price,brand,category,concerns,size,stock,status,tags,images,description,how_to_use,ingredients,barcode
+SKU-0001,Hydrating Serum,14.40,24.00,Brand A,Skincare,Dryness | Sensitive Skin,30 ml,25,active,deal | new,https://example.com/serum.jpg,Lightweight serum for dehydrated skin.,Apply morning and evening.,"Aqua, Glycerin, Sodium Hyaluronate",3401234567890
+SKU-0002,Mineral Sunscreen SPF50+,19.80,33.00,Brand B,Suncare,Sensitive Skin,50 ml,10,active,mega,,Very high protection for sensitive skin.,Apply generously before sun exposure.,"Zinc Oxide, Titanium Dioxide",
+SKU-0003,Vitamin D3 1000 IU,12.00,,Brand C,Supplements,Immunity,60 tabs,,active,favorite,,Daily vitamin D supplement.,One tablet a day with food.,"Cholecalciferol",
+SKU-0004,Anti-Dandruff Shampoo,11.00,,Brand D,Hair,Dandruff,200 ml,0,draft,,,,,,

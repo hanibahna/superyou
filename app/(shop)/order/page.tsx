@@ -1,0 +1,103 @@
+"use client";
+
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { money } from "@/lib/format";
+import { useSettings, useT } from "@/lib/site-context";
+
+type PublicOrder = {
+  id: string;
+  status: keyof typeof statusCopy;
+  paymentMethod: "cod" | "card" | "whish";
+  lines: { productId: string; name: string; brand: string; qty: number; lineTotal: number }[];
+  subtotal: number;
+  delivery: number;
+  total: number;
+  customer: { firstName: string; phone: string; city: string; zone: string; address: string };
+};
+
+const statusCopy: Record<string, { title: string; text: string; tone: string }> = {
+  pending_cod: { title: "Order confirmed!", text: "Pay the driver on delivery. We'll call you before we arrive.", tone: "text-brand-600" },
+  paid: { title: "Payment received — thank you!", text: "Your order is being prepared.", tone: "text-brand-600" },
+  awaiting_payment: { title: "Order received", text: "We're waiting for your payment to be confirmed.", tone: "text-amber-600" },
+  payment_failed: { title: "Payment didn't go through", text: "No money was taken. Try again, or contact us to switch to cash on delivery.", tone: "text-sale" },
+  confirmed: { title: "Order confirmed", text: "We're preparing your order.", tone: "text-brand-600" },
+  packed: { title: "Order packed", text: "Your order is ready and will be handed to the courier soon.", tone: "text-brand-600" },
+  shipped: { title: "On its way!", text: "Your order is with the courier.", tone: "text-brand-600" },
+  delivered: { title: "Delivered", text: "Thank you for shopping with us.", tone: "text-brand-600" },
+  cancelled: { title: "Order cancelled", text: "Contact us if this is unexpected.", tone: "text-sale" },
+  returned: { title: "Order returned", text: "Contact us if you have questions about your refund.", tone: "text-muted" },
+};
+
+function OrderView() {
+  const tx = useT();
+  const sp = useSearchParams();
+  const settings = useSettings();
+  const [order, setOrder] = useState<PublicOrder | null>(null);
+  const [missing, setMissing] = useState(false);
+
+  useEffect(() => {
+    const id = sp.get("id") ?? "";
+    if (sp.get("demo")) {
+      try {
+        const raw = sessionStorage.getItem(`order:${id}`);
+        raw ? setOrder(JSON.parse(raw)) : setMissing(true);
+      } catch {
+        setMissing(true);
+      }
+      return;
+    }
+    fetch(`/api/orders/${encodeURIComponent(id)}?t=${encodeURIComponent(sp.get("t") ?? "")}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setOrder)
+      .catch(() => setMissing(true));
+  }, [sp]);
+
+  if (missing) return <p className="text-muted">We couldn't find that order.</p>;
+  if (!order) return <p className="text-muted">{tx("Loading your order…")}</p>;
+  const s = statusCopy[order.status] ?? statusCopy.awaiting_payment;
+
+  return (
+    <div className="mx-auto max-w-xl text-left">
+      <div className="text-center">
+        <h1 className={`text-3xl font-semibold ${s.tone}`}>{tx(s.title)}</h1>
+        <p className="mt-2 text-muted">{tx(s.text)}</p>
+        <p className="mt-4 text-sm">Order number <b>{order.id}</b></p>
+      </div>
+      <div className="mt-8 rounded-2xl border border-line p-6">
+        <ul className="space-y-2 text-sm">
+          {order.lines.map((l) => (
+            <li key={l.productId} className="flex justify-between gap-4">
+              <span>{l.qty} × {l.brand} {l.name}</span>
+              <span>{money(l.lineTotal)}</span>
+            </li>
+          ))}
+        </ul>
+        <dl className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
+          <div className="flex justify-between"><dt>{tx("Delivery")}</dt><dd>{order.delivery === 0 ? tx("Free") : money(order.delivery)}</dd></div>
+          <div className="flex justify-between text-base font-semibold"><dt>{tx("Total")}</dt><dd>{money(order.total)}</dd></div>
+        </dl>
+        <div className="mt-4 border-t border-line pt-4 text-sm text-muted">
+          Delivering to {order.customer.firstName}, {order.customer.address}, {order.customer.city}, {order.customer.zone} · {order.customer.phone}
+        </div>
+      </div>
+      <div className="mt-6 text-center">
+        <a href={`https://wa.me/${settings.store.whatsapp}?text=${encodeURIComponent(`Hello, I'd like an update on my order ${order.id}`)}`} target="_blank" rel="noreferrer" className="me-3 inline-block rounded-lg bg-[#25D366] px-6 py-3 font-semibold text-white">Track on WhatsApp</a>
+        <Link href="/shop/" className="inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white">Continue shopping</Link>
+        <p className="mt-4 text-xs text-muted">{tx("Bookmark this page to follow your order. You can also see all your orders in")} <Link href="/account/" className="underline">{tx("My account")}</Link> with your phone and this order number.</p>
+      </div>
+    </div>
+  );
+}
+
+export default function OrderPage() {
+  const tx = useT();
+  return (
+    <div className="container-x py-16 text-center">
+      <Suspense fallback={<p className="text-muted">{tx("Loading…")}</p>}>
+        <OrderView />
+      </Suspense>
+    </div>
+  );
+}
