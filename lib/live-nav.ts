@@ -74,6 +74,8 @@ function hrefCats(href: string, nav: LiveNav): Set<string> | null {
   if (u.origin !== "https://x.invalid") return null; // another website
   const path = u.pathname.replace(/^\/(ar|fr)(?=\/)/, "");
   const empty = new Set<string>();
+  // The AI skin scan only works once its key is set; until then links to it are left out.
+  if (/^\/skin-scan\/?$/.test(path)) return process.env.ANTHROPIC_API_KEY ? null : empty;
   const col = path.match(/^\/collections\/(.+?)\/?$/);
   if (col) {
     const k = decodeURIComponent(col[1]).toLowerCase();
