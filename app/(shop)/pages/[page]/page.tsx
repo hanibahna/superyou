@@ -1,21 +1,64 @@
-import { getLang } from "@/lib/i18n-server";
-import { translateDeep, translateMany } from "@/lib/translate";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductCard } from "@/components/ProductCard";
+import { cleanPageText, foreignPage, intro, pageProducts } from "@/lib/info-pages";
+import { getLang } from "@/lib/i18n-server";
+import { canonical } from "@/lib/seo";
 import { getSettings } from "@/lib/site-store";
+import { translateDeep } from "@/lib/translate";
 
-// Info pages — edited in Admin → Settings → Pages.
+// Info pages (edited in Admin → Settings → Pages) and brand/range pages, which show live products.
+const niceTitle = (title: string, brand?: string) => {
+  const t = title.replace(/\s*\|.*$/, "").trim();
+  return !t || /^(shop by range|our categories|monthly activations|sale off)$/i.test(t) || (brand && t.length > 60) ? brand ?? t : t;
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ page: string }> }) {
-  const p = (await getSettings()).pages[(await params).page];
-  return p ? { title: p.title } : {};
+  const slug = (await params).page;
+  const p = (await getSettings()).pages[slug];
+  if (!p || foreignPage(slug)) return {};
+  const prods = await pageProducts(slug, p.title);
+  const title = niceTitle(p.title, prods?.brand);
+  return { title: prods?.brand && title !== prods.brand ? `${title} – ${prods.brand}` : title, ...(await canonical(`/pages/${slug}/`)) };
 }
 
 export default async function InfoPage({ params }: { params: Promise<{ page: string }> }) {
   const slug = (await params).page;
   const s = await getSettings();
   const p0 = s.pages[slug];
-  if (!p0) notFound();
-  const p = await translateDeep(p0, await getLang(), ["title", "body"]);
+  if (!p0 || foreignPage(slug)) notFound();
+  const lang = await getLang();
+  const own = ["delivery", "payment", "rewards", "about", "privacy", "contact"].includes(slug);
+  const prods = own ? null : await pageProducts(slug, p0.title);
+  const text = cleanPageText(p0.body);
+  const p = await translateDeep({ title: niceTitle(p0.title, prods?.brand), body: text }, lang, ["title", "body"]);
+
+  // Brand or range page: a short introduction and the products.
+  if (prods) {
+    const paras = intro(p.body);
+    return (
+      <div className="container-x py-10">
+        <nav className="text-xs text-muted"><Link href="/" className="hover:underline">Home</Link> / {prods.brand ? <Link href={`/shop/?brand=${encodeURIComponent(prods.brand)}`} className="hover:underline">{prods.brand}</Link> : "Pages"}</nav>
+        <header className="mt-3 max-w-3xl">
+          {prods.brand && p.title !== prods.brand && <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600">{prods.brand}</p>}
+          <h1 className="text-3xl font-semibold md:text-4xl">{p.title}</h1>
+          {paras.map((t, i) => <p key={i} className="mt-3 text-muted">{t}</p>)}
+        </header>
+        <div className="mt-8 flex items-center justify-between">
+          <p className="text-sm text-muted">{prods.total} product{prods.total === 1 ? "" : "s"}</p>
+          {prods.total > prods.cards.length && <Link href={prods.viewAll} className="text-sm font-semibold text-brand-700 underline">View all {prods.total}</Link>}
+        </div>
+        <div className="pgrid mt-4 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">{prods.cards.map((c) => <ProductCard key={c.slug} product={c} />)}</div>
+        {prods.total > prods.cards.length && (
+          <div className="mt-8 text-center"><Link href={prods.viewAll} className="inline-block rounded-full bg-ink px-8 py-3 text-sm font-semibold text-white">View all {prods.total} products</Link></div>
+        )}
+      </div>
+    );
+  }
+
   const body = p.body.trim() || (slug === "contact" ? [s.store.phone, s.store.email, s.store.address, s.store.openingHours].filter(Boolean).join("\n") : "");
+  // A copied page with only headings or menu words left isn't worth showing.
+  if (!body || (!own && !intro(body, 1).length)) notFound();
   return (
     <div className="container-x max-w-2xl py-14">
       <h1 className="text-3xl font-semibold">{p.title}</h1>
