@@ -13,7 +13,13 @@ import type { MenuItem, Settings } from "@/lib/site";
 import { getCollections, getSearchSettings } from "@/lib/site-store";
 import { getTaxonomy } from "@/lib/catalog";
 
-type LiveNav = { key: string; collections: Set<string>; categories: Set<string>; concerns: Set<string>; brands: Set<string>; knownBrands: Set<string>; brandNames: Map<string, string> };
+type LiveNav = {
+  key: string; collections: Set<string>; categories: Set<string>; concerns: Set<string>; brands: Set<string>; knownBrands: Set<string>; brandNames: Map<string, string>;
+  /** Which product categories each collection / brand has on sale (so "Caudalie" under Fragrances counts only Caudalie fragrances). */
+  colCats: Map<string, Set<string>>; brandCats: Map<string, Set<string>>;
+  /** Every category, on sale or not, to tell which category a menu section is about. */
+  allCats: { slug: string; name: string }[];
+};
 const g = globalThis as unknown as { __liveNav?: LiveNav };
 
 export async function liveNav(): Promise<LiveNav> {
@@ -21,24 +27,28 @@ export async function liveNav(): Promise<LiveNav> {
   const key = `${live.key}|${JSON.stringify(cols.items.map((c) => [c.key, c.hidden, c.brands, c.rule]))}`;
   if (g.__liveNav?.key === key) return g.__liveNav;
   const list: ProductLite[] = live.list;
+  const colCats = new Map<string, Set<string>>();
+  const brandCats = new Map<string, Set<string>>();
+  const add = (m: Map<string, Set<string>>, k: string, c: string) => (m.get(k) ?? m.set(k, new Set()).get(k)!).add(c);
   const collections = new Set<string>();
   const categories = new Set<string>();
   const concerns = new Set<string>();
   const brands = new Set<string>();
   for (const p of list) {
-    for (const c of p.collections ?? []) collections.add(c.toLowerCase());
+    for (const c of p.collections ?? []) (collections.add(c.toLowerCase()), add(colCats, c.toLowerCase(), p.category));
+    add(brandCats, slugify(p.brand).replace(/-/g, ""), p.category);
     categories.add(p.category);
     for (const c of p.concerns) concerns.add(c);
     brands.add(slugify(p.brand));
   }
   const ruled = cols.items.filter((c) => !c.hidden && (c.brands.length || c.rule));
-  if (ruled.length) {
-    const [tax, ss] = await Promise.all([getTaxonomy(), getSearchSettings()]);
-    for (const c of ruled) {
-      const k = c.key.toLowerCase();
-      if (collections.has(k)) continue;
-      if (c.brands.some((b) => brands.has(slugify(b))) || (c.rule && searchProducts(list, c.rule, tax, ss).length)) collections.add(k);
-    }
+  const [tax, ss] = await Promise.all([getTaxonomy(), getSearchSettings()]);
+  for (const c of ruled) {
+    const k = c.key.toLowerCase();
+    // Products a brand or search rule adds (counted with their categories too).
+    const ruleBrands = new Set(c.brands.map((b) => slugify(b)));
+    const extra = [...(ruleBrands.size ? list.filter((p) => ruleBrands.has(slugify(p.brand))) : []), ...(c.rule ? searchProducts(list, c.rule, tax, ss) : [])];
+    for (const p of extra) (collections.add(k), add(colCats, k, p.category));
   }
   for (const c of cols.items) if (c.hidden) collections.delete(c.key.toLowerCase());
   const knownBrands = new Set(idx.all.map((p) => slugify(p.brand)));
@@ -47,13 +57,14 @@ export async function liveNav(): Promise<LiveNav> {
   // Brand pages are matched loosely too ("sobio-etic" = "So' Bio Etic").
   for (const b of [...knownBrands]) knownBrands.add(b.replace(/-/g, ""));
   for (const b of [...brands]) brands.add(b.replace(/-/g, ""));
-  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames };
+  const allCats = tax.categories.map((c) => ({ slug: c.slug, name: c.name }));
+  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, allCats };
   return g.__liveNav;
 }
 
-/** true = leads to products, false = would be empty, null = not a catalog link (keep it). */
-export function hrefIsLive(href: string, nav: LiveNav): boolean | null {
-  if (!href || href === "#") return null; // a heading, or a placeholder link
+/** The categories a link's products are in (null = not a catalog link). */
+function hrefCats(href: string, nav: LiveNav): Set<string> | null {
+  if (!href || href === "#") return null;
   let u: URL;
   try {
     u = new URL(href, "https://x.invalid");
@@ -62,23 +73,34 @@ export function hrefIsLive(href: string, nav: LiveNav): boolean | null {
   }
   if (u.origin !== "https://x.invalid") return null; // another website
   const path = u.pathname.replace(/^\/(ar|fr)(?=\/)/, "");
+  const empty = new Set<string>();
   const col = path.match(/^\/collections\/(.+?)\/?$/);
-  if (col) return nav.collections.has(decodeURIComponent(col[1]).toLowerCase());
+  if (col) {
+    const k = decodeURIComponent(col[1]).toLowerCase();
+    return nav.collections.has(k) ? (nav.colCats.get(k) ?? empty) : empty;
+  }
   const page = path.match(/^\/pages\/([^/]+)\/?$/);
   if (page) {
-    // Brand pages (/pages/la-roche-posay/): hide when that brand has nothing on sale.
-    const s = page[1].toLowerCase();
-    const c = s.replace(/-/g, "");
-    return nav.knownBrands.has(s) || nav.knownBrands.has(c) ? nav.brands.has(s) || nav.brands.has(c) : null;
+    // Brand pages (/pages/la-roche-posay/) show that brand's products.
+    const c = page[1].toLowerCase().replace(/-/g, "");
+    return nav.knownBrands.has(c) || nav.knownBrands.has(page[1].toLowerCase()) ? (nav.brandCats.get(c) ?? empty) : null;
   }
   if (path === "/shop" || path === "/shop/") {
     const cat = u.searchParams.get("category");
     const brand = u.searchParams.get("brand");
-    if (cat && !nav.categories.has(cat)) return false;
-    if (brand && nav.knownBrands.has(slugify(brand)) && !nav.brands.has(slugify(brand))) return false;
-    return cat || brand ? true : null;
+    if (!cat && !brand) return null;
+    let cats = brand ? (nav.brandCats.get(slugify(brand).replace(/-/g, "")) ?? empty) : new Set(nav.categories);
+    if (cat) cats = new Set([...cats].filter((c) => c === cat));
+    return cats;
   }
   return null;
+}
+
+/** true = leads to products (in the section's category, when given), false = would be empty, null = not a catalog link. */
+export function hrefIsLive(href: string, nav: LiveNav, scope?: string): boolean | null {
+  const cats = hrefCats(href, nav);
+  if (cats === null) return null;
+  return scope ? cats.has(scope) : cats.size > 0;
 }
 
 const squash = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "").replace(/s$/, "");
@@ -89,30 +111,46 @@ export function matchCategory(label: string, auto: MenuItem[]): MenuItem | undef
   return auto.find((a) => squash(a.label) === l) ?? auto.find((a) => { const c = squash(a.label); return c.length >= 4 && (l.startsWith(c) || c.startsWith(l)); });
 }
 
-/** Keep every menu entry that leads to products. An entry whose own page would be empty stays as a
- *  heading while anything under it still has products (its link then goes to the matching automatic
- *  category, or nowhere); with nothing left under it, it goes. */
-export function pruneMenu(items: MenuItem[], nav: LiveNav, auto: MenuItem[] = []): MenuItem[] {
+/** The category a menu section is about ("Fragrances" → fragrance), if its name says so. */
+function sectionCategory(label: string, nav: LiveNav): string | undefined {
+  const m = matchCategory(label, nav.allCats.map((c) => ({ label: c.name, href: c.slug, children: [] })));
+  return m?.href;
+}
+
+/** Keep a menu entry only when it leads to products, counting only products in its section's
+ *  category (so "Caudalie" under Fragrances needs Caudalie fragrances). An entry whose own page is
+ *  empty stays as a heading while anything under it has products; a top section with no entries
+ *  left opens its category when that has products, otherwise it goes. */
+export function pruneMenu(items: MenuItem[], nav: LiveNav, auto: MenuItem[] = [], scope?: string): MenuItem[] {
   const out: MenuItem[] = [];
+  const brandLink = (label: string) => {
+    if (/^view all$/i.test(label)) return null;
+    const brand = nav.brandNames.get(slugify(label).replace(/-/g, ""));
+    if (!brand) return null;
+    const href = `/shop/?brand=${encodeURIComponent(brand)}${scope ? `&category=${scope}` : ""}`;
+    return hrefIsLive(href, nav, scope) ? href : null;
+  };
   for (const it of items) {
-    const live = hrefIsLive(it.href, nav);
+    const sc = sectionCategory(it.label, nav) ?? scope;
+    const live = hrefIsLive(it.href, nav, sc);
     const hadChildren = (it.children ?? []).length > 0;
-    const children = pruneMenu(it.children ?? [], nav, auto);
+    const children = pruneMenu(it.children ?? [], nav, auto, sc);
     if (live === false) {
+      const cat = matchCategory(it.label, auto); // the matching category, if it has products
       if (!children.length) {
-        // A brand entry whose own list is empty, while another catalog still sells that brand: open the brand.
-        const brand = !/^view all$/i.test(it.label) && nav.brandNames.get(slugify(it.label).replace(/-/g, ""));
-        if (brand) out.push({ ...it, href: `/shop/?brand=${encodeURIComponent(brand)}` });
-        continue; // otherwise empty and nothing under it with products
+        // Its own list has nothing here, but the brand (or the category) still does.
+        const href = brandLink(it.label) ?? (hadChildren && cat && hrefIsLive(cat.href, nav, sc) ? cat.href : null);
+        if (href) out.push({ ...it, href, children: [] });
+        continue;
       }
-      out.push({ ...it, href: matchCategory(it.label, auto)?.href ?? "#", children });
+      out.push({ ...it, href: cat && hrefIsLive(cat.href, nav, sc) ? cat.href : "#", children });
       continue;
     }
     if (live === null && hadChildren && !children.length) continue; // a heading with nothing left under it
     if ((!it.href || it.href === "#") && !children.length) {
       // A placeholder named after a brand on sale ("Avène", "Durex") opens that brand's products.
-      const brand = nav.brandNames.get(slugify(it.label).replace(/-/g, ""));
-      if (brand) out.push({ ...it, href: `/shop/?brand=${encodeURIComponent(brand)}` });
+      const href = brandLink(it.label);
+      if (href) out.push({ ...it, href });
       continue;
     }
     out.push({ ...it, children });
