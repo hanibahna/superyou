@@ -37,7 +37,7 @@ export type Index = {
   skuToId: Map<string, string>;
 };
 
-const g = globalThis as unknown as { __idx?: Index; __idxChecked?: number; __idxLoading?: Promise<Index>; __seeded?: boolean };
+const g = globalThis as unknown as { __idx?: Index; __idxChecked?: number; __idxLoading?: Promise<Index>; __idxLoadingVer?: unknown; __seeded?: boolean };
 
 async function currentVersion(): Promise<string> {
   return String((await db.cmd<string | number | null>(["GET", VER])) ?? "0");
@@ -126,10 +126,15 @@ export async function loadBuiltInCatalog(): Promise<number> {
 export async function getIndex(): Promise<Index> {
   await ensureSeeded();
   const now = Date.now();
+  // A newer version is being loaded: wait for it rather than serve the old one.
+  if (g.__idxLoading) return g.__idxLoading;
   if (g.__idx && g.__idxChecked && now - g.__idxChecked < CHECK_EVERY_MS) return g.__idx;
   const ver = await currentVersion();
   g.__idxChecked = now;
   if (g.__idx && g.__idx.ver === ver) return g.__idx;
+  // A load already running for an older version must not be reused (it may miss the latest save).
+  if (g.__idxLoading && g.__idxLoadingVer !== ver) g.__idxLoading = undefined;
+  g.__idxLoadingVer = ver;
   g.__idxLoading ??= (async () => {
     // Read the index in chunks: one request must stay under Upstash's 10 MB limit.
     const raw: string[] = [];
@@ -140,7 +145,7 @@ export async function getIndex(): Promise<Index> {
       cursor = String(next);
     } while (cursor !== "0");
     const idx = buildIndex(ver, raw);
-    g.__idx = idx;
+    if (!g.__idx || Number(idx.ver) >= Number(g.__idx.ver)) g.__idx = idx;
     return idx;
   })().finally(() => (g.__idxLoading = undefined));
   return g.__idxLoading;

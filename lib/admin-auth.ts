@@ -1,65 +1,38 @@
 import "server-only";
 
-// Single-password admin login, signed cookie, 7-day sessions.
-// Set ADMIN_PASSWORD in Vercel (and optionally ADMIN_SECRET for cookie signing).
+// Admin sign-in. The owner uses ADMIN_PASSWORD (set in Vercel); staff accounts are added in
+// Admin → Staff. proxy.ts also checks each admin page and API call against the person's role.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
+import { cache } from "react";
+import { ADMIN_COOKIE, adminPassword, checkOwnerPassword, cookieOptions, sessionValue, userFromCookie, type AdminUser } from "@/lib/admin-session";
+import { can, type Area } from "@/lib/roles";
 
-const COOKIE = "admin_session";
-const MAX_AGE = 60 * 60 * 24 * 7;
+export { ADMIN_COOKIE, adminPassword };
 
-export function adminPassword(): string | null {
-  return process.env.ADMIN_PASSWORD || (process.env.NODE_ENV !== "production" ? "admin" : null);
-}
+export const checkPassword = checkOwnerPassword;
+export const sessionCookie = (who = "owner", ver = 0) => cookieOptions(sessionValue(who, ver));
 
-function secret() {
-  return process.env.ADMIN_SECRET || `pw:${adminPassword()}`;
-}
-
-const sign = (v: string) => createHmac("sha256", secret()).update(v).digest("hex");
-
-function safeEqual(a: string, b: string) {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
-export function checkPassword(input: string) {
-  const pw = adminPassword();
-  return !!pw && safeEqual(sign(`check:${input}`), sign(`check:${pw}`));
-}
-
-export function sessionCookie() {
-  const exp = String(Date.now() + MAX_AGE * 1000);
-  return {
-    name: COOKIE,
-    value: `${exp}.${sign(exp)}`,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: MAX_AGE,
-  };
-}
+export const currentAdmin = cache(async (): Promise<AdminUser | null> => userFromCookie((await cookies()).get(ADMIN_COOKIE)?.value));
 
 export async function isAdmin(): Promise<boolean> {
-  if (!adminPassword()) return false;
-  const v = (await cookies()).get(COOKIE)?.value ?? "";
-  const [exp, sig] = v.split(".");
-  return !!exp && !!sig && Number(exp) > Date.now() && safeEqual(sig, sign(exp));
+  return !!(await currentAdmin());
 }
 
 /** For admin pages. */
-export async function requireAdmin() {
-  if (!(await isAdmin())) redirect("/admin/login/");
+export async function requireAdmin(area?: Area): Promise<AdminUser> {
+  const u = await currentAdmin();
+  if (!u) redirect("/admin/login/");
+  if (area && !can(u.role, area)) redirect("/admin/?denied=1");
+  return u;
 }
 
-/** For admin API routes: returns a 401 response, or null when allowed. */
-export async function adminGuard(): Promise<NextResponse | null> {
-  return (await isAdmin()) ? null : NextResponse.json({ error: "Not signed in" }, { status: 401 });
+/** For admin API routes: returns a 401/403 response, or null when allowed. */
+export async function adminGuard(area?: Area): Promise<NextResponse | null> {
+  const u = await currentAdmin();
+  if (!u) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (area && !can(u.role, area)) return NextResponse.json({ error: "Your account can't do this" }, { status: 403 });
+  return null;
 }
-
-export const ADMIN_COOKIE = COOKIE;

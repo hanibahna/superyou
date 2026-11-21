@@ -14,6 +14,9 @@ type PublicOrder = {
   subtotal: number;
   delivery: number;
   total: number;
+  giftCard?: { code: string; amount: number };
+  refunded?: number;
+  shipment?: { courierName: string; tracking: string; link: string };
   customer: { firstName: string; phone: string; city: string; zone: string; address: string };
 };
 
@@ -76,8 +79,16 @@ function OrderView() {
         </ul>
         <dl className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
           <div className="flex justify-between"><dt>{tx("Delivery")}</dt><dd>{order.delivery === 0 ? tx("Free") : money(order.delivery)}</dd></div>
+          {order.giftCard && <div className="flex justify-between text-brand-700"><dt>{tx("Gift card")}</dt><dd>−{money(order.giftCard.amount)}</dd></div>}
           <div className="flex justify-between text-base font-semibold"><dt>{tx("Total")}</dt><dd>{money(order.total)}</dd></div>
+          {!!order.refunded && <div className="flex justify-between text-muted"><dt>{tx("Refunded")}</dt><dd>{money(order.refunded)}</dd></div>}
         </dl>
+        {order.shipment && (
+          <div className="mt-4 rounded-xl bg-brand-50 p-4 text-sm">
+            <p className="font-semibold">{tx("Shipped with")} {order.shipment.courierName}{order.shipment.tracking ? ` · ${order.shipment.tracking}` : ""}</p>
+            {order.shipment.link && <a href={order.shipment.link} target="_blank" rel="noreferrer" className="mt-1 inline-block font-semibold text-brand-700 underline">{tx("Track your parcel")} ↗</a>}
+          </div>
+        )}
         <div className="mt-4 border-t border-line pt-4 text-sm text-muted">
           Delivering to {order.customer.firstName}, {order.customer.address}, {order.customer.city}, {order.customer.zone} · {order.customer.phone}
         </div>

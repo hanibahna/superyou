@@ -16,6 +16,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: (e as Error).message }, { status: 409 });
   }
 
+  // Fully paid by gift card: nothing to collect.
+  if (order.total === 0) {
+    const confirmUrl = `/order/?id=${order.id}&t=${order.accessToken}`;
+    return NextResponse.json({ orderId: order.id, next: { redirect: confirmUrl }, confirmUrl });
+  }
+
   try {
     const result = await startPayment(order, baseUrl(req));
     order.paymentProvider = result.provider;

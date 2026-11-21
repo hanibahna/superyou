@@ -2,9 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { areaOf, can, roleInfo, type Role } from "@/lib/roles";
 
 const groups: { title: string; links: { href: string; label: string }[] }[] = [
-  { title: "", links: [{ href: "/admin/", label: "Dashboard" }, { href: "/admin/orders/", label: "Orders" }, { href: "/admin/bookings/", label: "Bookings & sign-ups" }] },
+  { title: "", links: [{ href: "/admin/", label: "Dashboard" }, { href: "/admin/orders/", label: "Orders" }, { href: "/admin/sales/", label: "Sales" }, { href: "/admin/bookings/", label: "Bookings & sign-ups" }] },
+  {
+    title: "Orders & stock",
+    links: [
+      { href: "/admin/inventory/", label: "Inventory" },
+      { href: "/admin/orders/pickup/", label: "Pickup sheet" },
+      { href: "/admin/carts/", label: "Abandoned carts" },
+      { href: "/admin/giftcards/", label: "Gift cards" },
+    ],
+  },
   {
     title: "Catalog",
     links: [
@@ -38,25 +48,38 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/search/", label: "Search & filters" },
       { href: "/admin/translations/", label: "Languages & translations" },
       { href: "/admin/settings/", label: "Settings" },
+      { href: "/admin/operations/", label: "Operations" },
+    ],
+  },
+  {
+    title: "Team",
+    links: [
+      { href: "/admin/staff/", label: "Staff accounts" },
+      { href: "/admin/activity/", label: "Activity log" },
       { href: "/admin/help/", label: "Help & guides" },
     ],
   },
 ];
 
-export function AdminNav() {
+export function AdminNav({ role, name }: { role: Role; name: string }) {
   const path = usePathname();
-  const active = (href: string) => (href === "/admin/" ? path === "/admin" || path === "/admin/" : path.startsWith(href.replace(/\/$/, "")));
+  const all = groups.flatMap((g) => g.links.map((l) => l.href));
+  // The most specific link wins (Orders vs Pickup sheet).
+  const best = all.filter((h) => (h === "/admin/" ? path === "/admin" || path === "/admin/" : path.startsWith(h.replace(/\/$/, "")))).sort((a, b) => b.length - a.length)[0];
+  const active = (href: string) => href === best;
+  const visible = groups.map((g) => ({ ...g, links: g.links.filter((l) => can(role, areaOf(l.href))) })).filter((g) => g.links.length);
   return (
-    <aside className="bg-ink text-white/80 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+    <aside className="bg-ink text-white/80 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto print:hidden">
       <div className="flex items-center justify-between px-5 py-5 lg:block">
         <Link href="/admin/" className="text-xl font-extrabold text-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/superyou-logo-white.svg" alt="SuperYou" className="inline h-4 w-auto" />{" "}
           <span className="text-xs font-medium text-white/50">admin</span>
         </Link>
+        <p className="hidden pt-2 text-xs text-white/50 lg:block">{name} · {roleInfo[role].label}</p>
       </div>
       <nav className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-3 text-sm lg:flex-col lg:pb-0">
-        {groups.map((g) => (
+        {visible.map((g) => (
           <div key={g.title} className="contents lg:block">
             {g.title && <p className="hidden px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-widest text-white/40 lg:block">{g.title}</p>}
             {g.links.map((l) => (

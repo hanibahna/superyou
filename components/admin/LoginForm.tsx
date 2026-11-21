@@ -12,8 +12,8 @@ export function LoginForm() {
         e.preventDefault();
         setBusy(true);
         setError("");
-        const password = new FormData(e.currentTarget).get("password");
-        const res = await fetch("/api/admin/login/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+        const f = new FormData(e.currentTarget);
+        const res = await fetch("/api/admin/login/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: f.get("email"), password: f.get("password") }) });
         if (res.ok) window.location.href = "/admin/";
         else {
           setError((await res.json()).error ?? "Sign in failed");
@@ -21,7 +21,8 @@ export function LoginForm() {
         }
       }}
     >
-      <input name="password" type="password" required autoFocus placeholder="Password" className="w-full rounded-lg border border-line px-4 py-3 outline-none focus:border-brand-500" />
+      <input name="email" type="email" autoComplete="username" placeholder="Email (staff only — owner leaves this empty)" className="w-full rounded-lg border border-line px-4 py-3 outline-none focus:border-brand-500" />
+      <input name="password" type="password" required autoComplete="current-password" placeholder="Password" className="w-full rounded-lg border border-line px-4 py-3 outline-none focus:border-brand-500" />
       {error && <p className="text-sm text-sale">{error}</p>}
       <button disabled={busy} className="w-full rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600 disabled:opacity-60">
         {busy ? "Signing in…" : "Sign in"}

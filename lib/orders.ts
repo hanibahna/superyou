@@ -32,6 +32,7 @@ export const checkoutSchema = z.object({
   gifts: z.array(z.object({ tierId: z.string().max(40), productIds: z.array(z.string().max(60)).max(10) })).max(20).optional(),
   joinClub: z.boolean().optional(), // SuperYou Club loyalty
   birthday: z.string().regex(/^\d{2}-\d{2}$/).optional().or(z.literal("")),
+  giftCard: z.string().max(30).optional(),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -78,10 +79,21 @@ export type Order = {
   code?: string;
   referral?: string; // a member's REF- code used on a first order
   delivery: number;
-  total: number;
+  total: number; // what the customer pays now (after any gift card)
   currency: string;
   customer: CheckoutInput["customer"];
+  giftCard?: { code: string; amount: number };
+  stockTaken?: boolean; // tracked stock was taken off for this order
+  shipment?: { courier: string; courierName: string; tracking: string; link: string; shippedAt: string; by: string };
+  refunds?: Refund[];
+  history?: { at: string; status: OrderStatus; by: string; note?: string }[];
 };
+
+export type Refund = { id: string; at: string; amount: number; reason: string; method: "cash" | "card" | "whish" | "giftcard" | "other"; restocked: { productId: string; qty: number }[]; by: string };
+
+export const refunded = (o: Order) => +(o.refunds ?? []).reduce((s, r) => s + r.amount, 0).toFixed(2);
+/** What the order is worth: money paid plus any gift card used. */
+export const orderValue = (o: Order) => +(o.total + (o.giftCard?.amount ?? 0)).toFixed(2);
 
 /** Recompute every price, discount, gift and delivery fee on the server — never trust client totals. */
 export async function priceOrder(input: CheckoutInput) {
@@ -90,6 +102,13 @@ export async function priceOrder(input: CheckoutInput) {
     const l = q.lines.find((x) => x.productId === i.productId);
     if (!l) throw new Error("A product in your cart is no longer available. Please review your cart.");
     if (!l.available) throw new Error(`${q._lines.find((x) => x.productId === i.productId)?.name ?? "An item"} is out of stock`);
+  }
+  // Tracked stock: don't sell more than is on the shelf.
+  const { getIndex } = await import("@/lib/catalog");
+  const idx = await getIndex();
+  for (const i of input.items) {
+    const p = idx.byId.get(i.productId);
+    if (p?.stock !== undefined && i.qty > p.stock) throw new Error(p.stock > 0 ? `Only ${p.stock} left of ${p.name}. Please lower the quantity.` : `${p.name} just sold out.`);
   }
   if (input.code && q.couponError) throw new Error(q.couponError);
   // Referral codes only work on a customer's first order, and not on your own code.
@@ -125,15 +144,23 @@ export async function priceOrder(input: CheckoutInput) {
       q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
     }
   }
+  let giftCard: Order["giftCard"];
+  if (input.giftCard) {
+    const { giftCardFor } = await import("@/lib/pricing");
+    const gc = await giftCardFor(input.giftCard, q.total);
+    if ("error" in gc) throw new Error(gc.error);
+    if (gc.amount > 0) giftCard = { code: gc.code, amount: gc.amount };
+  }
   return {
     lines,
+    giftCard,
     subtotal: q.subtotal,
     discount: q.discountTotal,
     discounts: q.discounts,
     code: q.discounts.some((d) => d.code) && !referral ? input.code : undefined,
     referral,
     delivery: q.delivery,
-    total: q.total,
+    total: +(q.total - (giftCard?.amount ?? 0)).toFixed(2),
     _prefix: q._settings.store.name,
   };
 }
@@ -144,17 +171,25 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     await countCouponUse(priced.code).catch(() => {});
     await (await import("@/lib/growth-store")).useVoucher(priced.code).catch(() => {});
   }
+  const id = `${_prefix.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase() || "ORD"}-${Date.now().toString(36).toUpperCase()}`;
+  // Gift card first: if the balance has gone meanwhile, nothing else has happened yet.
+  if (priced.giftCard) await (await import("@/lib/giftcards")).spendGiftCard(priced.giftCard.code, priced.giftCard.amount, id);
+  const status: OrderStatus = priced.total === 0 ? "paid" : input.paymentMethod === "cod" ? "pending_cod" : "awaiting_payment";
   const order: Order = {
-    id: `${_prefix.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase() || "ORD"}-${Date.now().toString(36).toUpperCase()}`,
+    id,
     accessToken: randomBytes(16).toString("hex"),
     createdAt: new Date().toISOString(),
-    status: input.paymentMethod === "cod" ? "pending_cod" : "awaiting_payment",
+    status,
     paymentMethod: input.paymentMethod,
     ...priced,
     currency: "USD",
     customer: input.customer,
+    history: [{ at: new Date().toISOString(), status, by: "customer" }],
   };
+  const moves = await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => ({ productId: l.productId, delta: -l.qty })), `Order ${order.id}`).catch((e) => (console.error("[stock]", e), []));
+  order.stockTaken = moves.length > 0;
   await saveOrder(order);
+  await (await import("@/lib/carts")).cartConverted(order.customer.phone, order.id).catch(() => {});
   await onOrderCreated(order, input).catch((e) => console.error("[whatsapp] order", e));
   return order;
 }
@@ -186,6 +221,7 @@ function orderVars(o: Order): Record<string, string> {
   return {
     first_name: o.customer.firstName, name: `${o.customer.firstName} ${o.customer.lastName}`, order_id: o.id, total: `$${o.total.toFixed(2)}`,
     items: o.lines.map((l) => `${l.qty}× ${l.name}`).join(", ").slice(0, 900), link: site ? `${site}/order/?id=${o.id}&t=${o.accessToken}` : "",
+    courier: o.shipment?.courierName ?? "", tracking: o.shipment?.tracking ?? "", tracking_link: o.shipment?.link || (site ? `${site}/order/?id=${o.id}&t=${o.accessToken}` : ""),
   };
 }
 
@@ -213,13 +249,60 @@ export async function listOrders(offset = 0, limit = 50): Promise<{ orders: Orde
   return { orders: raws.filter(Boolean).map((r) => JSON.parse(r as string) as Order), total };
 }
 
-export async function updateOrder(id: string, patch: Partial<Order>) {
+export async function updateOrder(id: string, patch: Partial<Order>, by = "system", note?: string) {
   const order = await getOrder(id);
   if (!order) return null;
-  const next = { ...order, ...patch };
+  const next: Order = { ...order, ...patch };
+  const changed = patch.status && patch.status !== order.status;
+  if (changed) next.history = [...(order.history ?? []), { at: new Date().toISOString(), status: patch.status!, by, note }];
+  // Cancelled or payment failed: put tracked stock back and return any gift card money.
+  if (changed && (patch.status === "cancelled" || patch.status === "payment_failed")) {
+    const { getOps } = await import("@/lib/ops-store");
+    if (order.stockTaken && (await getOps()).stock.restockOnCancel) {
+      // Items already put back through a refund aren't counted twice.
+      const back = new Map<string, number>();
+      for (const r of order.refunds ?? []) for (const x of r.restocked) back.set(x.productId, (back.get(x.productId) ?? 0) + x.qty);
+      await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => { const n = Math.min(l.qty, back.get(l.productId) ?? 0); back.set(l.productId, (back.get(l.productId) ?? 0) - n); return { productId: l.productId, delta: l.qty - n }; }), `Order ${order.id} ${patch.status === "cancelled" ? "cancelled" : "payment failed"}`, by).catch(() => {});
+      next.stockTaken = false;
+    }
+    const gcBack = (order.giftCard?.amount ?? 0) - (order.refunds ?? []).filter((r) => r.method === "giftcard").reduce((s, r) => s + r.amount, 0);
+    if (order.giftCard && gcBack > 0) await (await import("@/lib/giftcards")).creditGiftCard(order.giftCard.code, +gcBack.toFixed(2), `Order ${order.id} ${patch.status}`, order.id).catch(() => {});
+  }
   await saveOrder(next);
-  if (patch.status && patch.status !== order.status) await notifyOrderStatus(next);
+  if (changed) await notifyOrderStatus(next);
   return next;
+}
+
+/** Hand an order to a courier: saves the tracking number and sets it to Shipped (sends "on its way"). */
+export async function shipOrder(id: string, courierId: string, tracking: string, by: string) {
+  const { getOps } = await import("@/lib/ops-store");
+  const { trackingLink } = await import("@/lib/ops");
+  const ops = await getOps();
+  const c = ops.couriers.find((x) => x.id === courierId);
+  const shipment = { courier: courierId, courierName: c?.name ?? courierId, tracking: tracking.trim(), link: trackingLink(c, tracking.trim()), shippedAt: new Date().toISOString(), by };
+  return updateOrder(id, { shipment, status: "shipped" }, by, `${shipment.courierName}${shipment.tracking ? ` · ${shipment.tracking}` : ""}`);
+}
+
+/** Record a refund (the money itself goes back through the till, the bank or the gift card). */
+export async function refundOrder(id: string, r: Omit<Refund, "id" | "at">) {
+  const order = await getOrder(id);
+  if (!order) throw new Error("Order not found");
+  const max = +(orderValue(order) - refunded(order)).toFixed(2);
+  if (r.amount <= 0 || r.amount > max + 0.001) throw new Error(`You can refund up to $${max.toFixed(2)} on this order.`);
+  if (r.restocked.length) await (await import("@/lib/inventory")).adjustStock(r.restocked.map((x) => ({ productId: x.productId, delta: x.qty })), `Refund on ${order.id}`, r.by);
+  if (r.method === "giftcard") {
+    const gc = await import("@/lib/giftcards");
+    if (order.giftCard) await gc.creditGiftCard(order.giftCard.code, r.amount, `Refund on ${order.id}`, order.id);
+    else {
+      const { getOps } = await import("@/lib/ops-store");
+      const card = await gc.issueGiftCard({ amount: r.amount, recipient: `${order.customer.firstName} ${order.customer.lastName}`, phone: order.customer.phone, note: `Store credit for ${order.id}`, validMonths: (await getOps()).giftCards.validMonths, by: r.by });
+      r = { ...r, reason: `${r.reason} — store credit ${card.code}`.trim() };
+    }
+  }
+  const refund: Refund = { ...r, id: randomBytes(4).toString("hex"), at: new Date().toISOString() };
+  const next: Order = { ...order, refunds: [...(order.refunds ?? []), refund] };
+  await saveOrder(next);
+  return { order: next, refund };
 }
 
 /** Hook for notifications (WhatsApp Business API, email, Slack, ERP push…). */
@@ -237,6 +320,6 @@ export async function notifyOrderStatus(order: Order) {
 
 /** What the customer-facing confirmation page is allowed to see. */
 export function publicOrder(o: Order) {
-  const { accessToken: _t, ...rest } = o;
-  return rest;
+  const { accessToken: _t, history: _h, refunds: _r, stockTaken: _s, shipment, ...rest } = o;
+  return { ...rest, refunded: refunded(o), shipment: shipment && { courierName: shipment.courierName, tracking: shipment.tracking, link: shipment.link } };
 }

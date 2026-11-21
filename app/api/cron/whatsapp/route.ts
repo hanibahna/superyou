@@ -13,5 +13,6 @@ export async function GET(req: NextRequest) {
   const gs = await import("@/lib/growth-store");
   const followUps = await gs.sendDueReminders(500).catch(() => 0); // review requests + restock reminders
   const birthdays = await gs.sendBirthdays().catch(() => 0);
-  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays });
+  const carts = await (await import("@/lib/carts")).sweepCarts(true).catch(() => 0);
+  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts });
 }

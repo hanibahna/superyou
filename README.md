@@ -174,3 +174,13 @@ npm run dev     # http://localhost:3000 — admin password is "admin" in develop
 ## Roadmap (next phases)
 
 Discount codes · stock decrement on orders and back-in-stock alerts · delivery zones and courier integration (Wakilni / Aramex) · customer accounts and loyalty · email/WhatsApp notifications · reviews · Arabic/RTL · sales reports
+
+## Running the shop day to day
+
+- **Staff accounts** (Admin → Staff accounts, owner only): each person gets their own email login and a role (Manager, Orders & delivery, Catalog, Marketing & content). Every change is recorded in Admin → Activity log.
+- **Sales** (Admin → Sales): net sales, orders, average order, best sellers, by area and payment, CSV export for the accountant.
+- **Inventory**: give products a stock count; it goes down with each order, back up on cancellation, and a low-stock email goes to the store email (needs `RESEND_API_KEY` and `EMAIL_FROM`).
+- **Orders**: courier + tracking per order, printable invoice, refunds (with restocking), pickup sheet for the driver.
+- **Gift cards**: create them in Admin → Gift cards; customers type the GC- code in the discount box.
+- **Abandoned carts**: saved when a shopper types their mobile at checkout; one WhatsApp reminder (template `cart_reminder`) if they agreed to offers.
+- Settings for all of the above: Admin → Operations.

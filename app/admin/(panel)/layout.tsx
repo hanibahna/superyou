@@ -3,17 +3,17 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { dbConfigured } from "@/lib/db";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   return (
-    <div dir="ltr" className="lg:grid lg:min-h-screen lg:grid-cols-[230px_1fr]">
-      <AdminNav />
+    <div dir="ltr" className="lg:grid lg:min-h-screen lg:grid-cols-[230px_1fr] print:block">
+      <AdminNav role={me.role} name={me.name} />
       <div className="min-w-0">
         {!dbConfigured && (
-          <div className="bg-amber-100 px-6 py-2.5 text-sm text-amber-900">
+          <div className="bg-amber-100 px-6 py-2.5 text-sm text-amber-900 print:hidden">
             <b>No database connected</b> — changes are temporary. In Vercel go to Storage → Create Database → Upstash (Redis), connect it to this project and redeploy.
           </div>
         )}
-        <div className="mx-auto max-w-6xl p-5 md:p-8">{children}</div>
+        <div className="mx-auto max-w-6xl p-5 md:p-8 print:max-w-none print:p-0">{children}</div>
       </div>
     </div>
   );

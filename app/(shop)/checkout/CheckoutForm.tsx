@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { CouponBox, GiftPicker, Totals } from "@/components/CartPromos";
 import { DEMO_MODE } from "@/lib/config";
@@ -14,7 +14,22 @@ type Method = { id: "cod" | "card" | "whish"; label: string; description: string
 
 export function CheckoutForm({ methods }: { methods: Method[] }) {
   const tx = useT();
-  const { detailed, subtotal, delivery, total, clear, code, zone, setZone, giftPicks, quote } = useShop();
+  const { detailed, subtotal, delivery, total, clear, code, zone, setZone, giftPicks, quote, giftCard, setGiftCard } = useShop();
+  const formRef = useRef<HTMLFormElement>(null);
+  // Save the bag against the mobile number so the shopper can pick it up later (abandoned-cart reminder).
+  const saveCart = () => {
+    const f = formRef.current;
+    if (!f || DEMO_MODE) return;
+    const d = Object.fromEntries(new FormData(f)) as Record<string, string>;
+    if (!d.phone || d.phone.replace(/\D/g, "").length < 7 || !detailed.length) return;
+    fetch("/api/cart/save/", {
+      method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+      body: JSON.stringify({ phone: d.phone, name: `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim(), items: detailed.map((l) => ({ productId: l.productId, qty: l.qty })), code: code || undefined, consent: d.waOffers === "on" }),
+    }).catch(() => {});
+  };
+  const cartKey = detailed.map((l) => `${l.productId}:${l.qty}`).join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => saveCart(), [cartKey]);
   const settings = useSettings();
   const growth = useGrowth();
   const [club, setClub] = useState(true);
@@ -48,6 +63,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
       joinClub: growth.club.enabled && f.joinClub === "on",
       birthday: f.bdMonth && f.bdDay ? `${f.bdMonth.padStart(2, "0")}-${f.bdDay.padStart(2, "0")}` : "",
       code: code || undefined,
+      giftCard: quote?.giftCard ? giftCard : undefined,
       gifts: Object.entries(giftPicks).filter(([id]) => quote?.gifts.some((g) => g.id === id && g.unlocked)).map(([tierId, productIds]) => ({ tierId, productIds })),
     };
 
@@ -72,6 +88,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       clear();
+      setGiftCard("");
       window.location.href = data.next.redirect; // full navigation: may leave the site for a payment page
     } catch (err) {
       setError((err as Error).message);
@@ -84,7 +101,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
   return (
     <div className="container-x py-10">
       <h1 className="text-3xl font-semibold">{tx("Checkout")}</h1>
-      <form onSubmit={submit} className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
+      <form ref={formRef} onSubmit={submit} onBlur={(e) => ["phone", "firstName", "waOffers"].includes((e.target as unknown as HTMLInputElement).name) && saveCart()} className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
         <div className="space-y-8">
           <fieldset>
             <legend className="mb-3 text-lg font-semibold">{tx("1. Contact")}</legend>

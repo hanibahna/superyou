@@ -56,13 +56,15 @@ export function GiftPicker({ compact = false }: { compact?: boolean }) {
 
 export function CouponBox() {
   const tx = useT();
-  const { code, setCode, quote } = useShop();
+  const { code, setCode, quote, giftCard, setGiftCard } = useShop();
   const [v, setV] = useState(code);
   const applied = code && quote && !quote.couponError && quote.discounts.some((d) => d.code?.toLowerCase() === code.toLowerCase());
+  // Gift card codes (GC-…) go in the same box and sit alongside a discount code.
+  const apply = (raw: string) => (/^GC-/i.test(raw) ? (setGiftCard(raw), setV(code)) : setCode(raw));
   return (
     <div>
-      <form onSubmit={(e) => (e.preventDefault(), setCode(v.trim()))} className="flex gap-2">
-        <input value={v} onChange={(e) => setV(e.target.value.toUpperCase())} placeholder="Discount code" aria-label="Discount code" className="w-full rounded-lg border border-line px-3 py-2 text-sm uppercase outline-none focus:border-brand-500" />
+      <form onSubmit={(e) => (e.preventDefault(), v.trim() && apply(v.trim()))} className="flex gap-2">
+        <input value={v} onChange={(e) => setV(e.target.value.toUpperCase())} placeholder={tx("Discount code or gift card")} aria-label="Discount code or gift card" className="w-full rounded-lg border border-line px-3 py-2 text-sm uppercase outline-none focus:border-brand-500" />
         {code ? (
           <button type="button" onClick={() => (setCode(""), setV(""))} className="rounded-lg border border-line px-3 text-sm">{tx("Remove")}</button>
         ) : (
@@ -71,6 +73,12 @@ export function CouponBox() {
       </form>
       {code && quote?.couponError && <p className="mt-1 text-xs text-sale">{quote.couponError}</p>}
       {applied && <p className="mt-1 text-xs font-semibold text-brand-700">Code {code} applied</p>}
+      {giftCard && (
+        <p className={`mt-1 flex items-center justify-between gap-2 text-xs ${quote?.giftCardError ? "text-sale" : "font-semibold text-brand-700"}`}>
+          <span>{quote?.giftCardError ?? (quote?.giftCard ? `Gift card ${giftCard} · ${money(quote.giftCard.balance)} balance` : `Gift card ${giftCard}`)}</span>
+          <button type="button" onClick={() => setGiftCard("")} className="font-normal text-muted underline">{tx("Remove")}</button>
+        </p>
+      )}
     </div>
   );
 }
@@ -88,6 +96,7 @@ export function Totals({ big = false }: { big?: boolean }) {
         <div key={d.name + d.code} className="flex justify-between text-brand-700"><dt>{d.name}{d.code ? ` (${d.code})` : ""}</dt><dd>−{money(d.amount)}</dd></div>
       ))}
       <div className="flex justify-between"><dt>{tx("Delivery")}</dt><dd>{delivery === 0 ? tx("Free") : money(delivery)}</dd></div>
+      {quote?.giftCard && quote.giftCard.amount > 0 && <div className="flex justify-between text-brand-700"><dt>{tx("Gift card")} ({quote.giftCard.code})</dt><dd>−{money(quote.giftCard.amount)}</dd></div>}
       <div className="flex justify-between border-t border-line pt-2 text-base font-semibold"><dt>{tx("Total")}</dt><dd>{money(total)}</dd></div>
       {saleSavings > 0 && <p className="text-xs text-brand-700">You're saving {money(saleSavings + (quote?.discountTotal ?? 0))} on this order</p>}
       {minOrder > 0 && subtotal < minOrder && <p className="text-xs text-sale">Minimum order is {money(minOrder)}</p>}

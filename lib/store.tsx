@@ -30,6 +30,8 @@ export type ServerQuote = {
   delivery: number;
   total: number;
   couponError?: string;
+  giftCard?: { code: string; amount: number; balance: number };
+  giftCardError?: string;
   minOrder: number;
   gifts: { id: string; name: string; unlocked: boolean; remaining: number; pick: number; showProgress: boolean; options: ProductSnap[] }[];
 };
@@ -53,6 +55,9 @@ type ShopState = {
   addMany: (products: (AnyProduct | ProductSnap)[]) => void;
   code: string;
   setCode: (c: string) => void;
+  giftCard: string;
+  setGiftCard: (c: string) => void;
+  giftCardAmount: number;
   zone: string;
   setZone: (z: string) => void;
   giftPicks: Record<string, string[]>; // tier id → chosen product ids
@@ -86,6 +91,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [code, setCode] = useState("");
+  const [giftCard, setGiftCard] = useState("");
   const [zone, setZone] = useState("");
   const [giftPicks, setGiftPicks] = useState<Record<string, string[]>>({});
   const [quote, setQuote] = useState<ServerQuote | null>(null);
@@ -95,16 +101,17 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     // v2 keys: older carts stored ids only.
     setLines(load<CartLine[]>("cart:v3", []).filter((l) => l?.product?.id));
     setWishlist(load<ProductSnap[]>("wishlist:v3", []).filter((p) => p?.id));
-    const extra = load<{ code?: string; zone?: string; gifts?: Record<string, string[]> }>("cart-extra:v1", {});
+    const extra = load<{ code?: string; zone?: string; gifts?: Record<string, string[]>; giftCard?: string }>("cart-extra:v1", {});
     setCode(extra.code ?? "");
+    setGiftCard(extra.giftCard ?? "");
     setZone(extra.zone ?? "");
     setGiftPicks(extra.gifts ?? {});
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) save("cart-extra:v1", { code, zone, gifts: giftPicks });
-  }, [code, zone, giftPicks, hydrated]);
+    if (hydrated) save("cart-extra:v1", { code, zone, gifts: giftPicks, giftCard });
+  }, [code, zone, giftPicks, giftCard, hydrated]);
 
   // Ask the server for live prices, promotions and free-gift eligibility.
   useEffect(() => {
@@ -115,7 +122,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       fetch("/api/cart/quote/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: lines.map((l) => ({ productId: l.productId, qty: l.qty })), code, zone }),
+        body: JSON.stringify({ items: lines.map((l) => ({ productId: l.productId, qty: l.qty })), code, zone, giftCard: giftCard || undefined }),
         signal: ctl.signal,
       })
         .then((r) => (r.ok ? r.json() : null))
@@ -137,7 +144,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         .catch(() => {});
     }, 250);
     return () => (clearTimeout(t), ctl.abort());
-  }, [lines, code, zone, hydrated]);
+  }, [lines, code, zone, giftCard, hydrated]);
 
   useEffect(() => {
     if (hydrated) save("cart:v3", lines);
@@ -152,6 +159,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const fresh = quote && Math.abs(quote.subtotal - subtotal) < 0.01;
     const discountTotal = fresh ? quote.discountTotal : 0;
     const delivery = fresh ? quote.delivery : deliveryFor(settings, subtotal, zone);
+    const giftCardAmount = fresh && quote.giftCard ? quote.giftCard.amount : 0;
     const add = (product: AnyProduct | ProductSnap, qty = 1) => {
       const s = snap(product);
       setLines((prev) => {
@@ -174,6 +182,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       },
       code,
       setCode,
+      giftCard,
+      setGiftCard,
+      giftCardAmount,
       zone,
       setZone,
       giftPicks,
@@ -198,11 +209,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       detailed,
       subtotal,
       delivery,
-      total: +(subtotal - discountTotal + delivery).toFixed(2),
+      total: Math.max(0, +(subtotal - discountTotal + delivery - giftCardAmount).toFixed(2)),
       drawerOpen,
       setDrawerOpen,
     };
-  }, [lines, wishlist, drawerOpen, code, zone, giftPicks, quote, settings]);
+  }, [lines, wishlist, drawerOpen, code, giftCard, zone, giftPicks, quote, settings]);
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }

@@ -76,7 +76,7 @@ const snapOf = (p: ProductLite): ProductSnap => ({
   variant: p.variant, image: p.image, shape: p.shape, color: p.color, inStock: p.inStock,
 });
 
-export type QuoteInput = { items: { productId: string; qty: number }[]; code?: string; zone?: string };
+export type QuoteInput = { items: { productId: string; qty: number }[]; code?: string; zone?: string; giftCard?: string };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);
@@ -139,7 +139,10 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     }
   }
   const bySku = new Map(live.list.map((p) => [p.sku.toLowerCase(), p]));
+  const gc = input.giftCard ? await giftCardFor(input.giftCard, q.total) : null;
   return {
+    giftCard: gc && "amount" in gc ? gc : undefined,
+    giftCardError: gc && "error" in gc ? gc.error : undefined,
     lines: lines.filter((l): l is NonNullable<typeof l> => !!l).map((l) => ({ productId: l.productId, price: l.price, compareAt: l.compareAt, available: l.available })),
     subtotal: q.subtotal,
     discounts: q.discounts,
@@ -171,3 +174,14 @@ export function allowedGifts(q: Awaited<ReturnType<typeof serverQuote>>, picks: 
 }
 
 export { inScope };
+
+/** How much of an order total a gift card covers (shown in the cart; charged again at checkout). */
+export async function giftCardFor(code: string, total: number): Promise<{ code: string; amount: number; balance: number } | { error: string }> {
+  const { getGiftCard, giftCardProblem } = await import("@/lib/giftcards");
+  const { getOps } = await import("@/lib/ops-store");
+  if (!(await getOps()).giftCards.enabled) return { error: "Gift cards can't be used right now" };
+  const gc = await getGiftCard(code);
+  const problem = giftCardProblem(gc);
+  if (problem || !gc) return { error: problem ?? "Gift card not found" };
+  return { code: gc.code, amount: +Math.min(gc.balance, total).toFixed(2), balance: gc.balance };
+}

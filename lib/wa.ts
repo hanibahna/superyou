@@ -37,7 +37,7 @@ export type Contact = {
 
 // ── Automations ─────────────────────────────────────────
 
-export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday";
+export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder";
 
 export type Automation = {
   enabled: boolean;
@@ -49,7 +49,7 @@ export type Automation = {
 export const automationInfo: Record<AutomationKey, { label: string; when: string; tokens: string[]; category: "UTILITY" | "MARKETING" }> = {
   orderPlaced: { label: "Order received", when: "As soon as a customer places an order", tokens: ["first_name", "order_id", "total", "items", "link"], category: "UTILITY" },
   orderConfirmed: { label: "Order confirmed", when: "When you set an order to Confirmed", tokens: ["first_name", "order_id", "total", "link"], category: "UTILITY" },
-  orderShipped: { label: "Order on its way", when: "When you set an order to Shipped", tokens: ["first_name", "order_id", "link"], category: "UTILITY" },
+  orderShipped: { label: "Order on its way", when: "When you set an order to Shipped", tokens: ["first_name", "order_id", "link", "courier", "tracking", "tracking_link"], category: "UTILITY" },
   orderDelivered: { label: "Order delivered", when: "When you set an order to Delivered", tokens: ["first_name", "order_id"], category: "UTILITY" },
   bookingReceived: { label: "Booking received", when: "When someone books a service or signs up for an event", tokens: ["first_name", "service", "date", "time"], category: "UTILITY" },
   bookingConfirmed: { label: "Booking confirmed", when: "When you set a booking to Confirmed", tokens: ["first_name", "service", "date", "time"], category: "UTILITY" },
@@ -60,6 +60,7 @@ export const automationInfo: Record<AutomationKey, { label: string; when: string
   reorderReminder: { label: "Time to restock", when: "When a product bought earlier is likely running out", tokens: ["first_name", "product", "link"], category: "MARKETING" },
   clubReward: { label: "Club reward voucher", when: "When a member's points turn into a voucher", tokens: ["first_name", "code", "value", "points"], category: "MARKETING" },
   birthday: { label: "Birthday gift", when: "On the member's birthday (morning)", tokens: ["first_name", "code", "percent"], category: "MARKETING" },
+  cartReminder: { label: "Forgot something? (abandoned cart)", when: "A few hours after someone leaves checkout without ordering (only if they ticked WhatsApp offers)", tokens: ["first_name", "items", "total", "link"], category: "MARKETING" },
 };
 
 export type WaConfig = {
@@ -87,6 +88,7 @@ export const defaultWaConfig: WaConfig = {
     reorderReminder: auto("restock_reminder", ["{{first_name}}", "{{product}}", "{{link}}"]),
     clubReward: auto("club_reward", ["{{first_name}}", "{{value}}", "{{code}}"]),
     birthday: auto("birthday_gift", ["{{first_name}}", "{{percent}}", "{{code}}"]),
+    cartReminder: auto("cart_reminder", ["{{first_name}}", "{{link}}"]),
   },
 };
 
@@ -112,6 +114,7 @@ export const templatePresets: { name: string; category: "UTILITY" | "MARKETING";
   { name: "restock_reminder", category: "MARKETING", body: "Hi {{1}}, running low on {{2}}? Reorder in one tap: {{3}}\n\nReply STOP to unsubscribe.", example: ["Rana", "La Roche-Posay Effaclar Duo+", "https://shopsuperyou.com/products/effaclar-duo/"] },
   { name: "club_reward", category: "MARKETING", body: "Congratulations {{1}}! Your SuperYou Club points earned you a {{2}} voucher: {{3}}. Use it on your next order.", example: ["Rana", "$10", "CLUB-4H8K"] },
   { name: "birthday_gift", category: "MARKETING", body: "Happy birthday {{1}}! Enjoy {{2}}% off with code {{3}}, valid for 7 days. With love, SuperYou.", example: ["Rana", "15", "BDAY-2M7P"] },
+  { name: "cart_reminder", category: "MARKETING", body: "Hi {{1}}, you left some favourites in your SuperYou bag. They're saved for you here: {{2}}\n\nReply STOP to unsubscribe.", example: ["Rana", "https://shopsuperyou.com/cart/?restore=abc123"] },
   { name: "black_friday_2026", category: "MARKETING", header: "IMAGE", body: "Hi {{1}}, Black Friday is here! Up to 70% off skin care, make up and fragrance until 30 November. Shop now: {{2}}\n\nReply STOP to unsubscribe.", example: ["Rana", "https://shopsuperyou.com/collections/value-deals/"] },
   { name: "new_arrivals", category: "MARKETING", header: "IMAGE", body: "Hi {{1}}, new at SuperYou: {{2}}. Discover it here: {{3}}\n\nReply STOP to unsubscribe.", example: ["Rana", "the new La Roche-Posay serum", "https://shopsuperyou.com/"] },
   { name: "personal_offer", category: "MARKETING", body: "Hi {{1}}, a little thank-you: use code {{2}} for {{3}} off your next order at SuperYou. Valid until {{4}}.\n\nReply STOP to unsubscribe.", example: ["Rana", "THANKYOU10", "10%", "31 December"] },

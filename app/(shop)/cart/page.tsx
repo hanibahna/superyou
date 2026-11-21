@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useT } from "@/lib/site-context";
 
 import Link from "next/link";
@@ -12,7 +13,25 @@ import { useShop } from "@/lib/store";
 
 export default function CartPage() {
   const tx = useT();
-  const { detailed, setQty, remove } = useShop();
+  const { detailed, setQty, remove, add, setDrawerOpen, setCode, lines } = useShop();
+  const linesRef = useRef(lines);
+  linesRef.current = lines;
+
+  // Link from the "you left something in your bag" message: refill the bag once.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("restore");
+    if (!t) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    fetch(`/api/cart/restore/?t=${encodeURIComponent(t)}`)
+      .then((r) => r.json())
+      .then((d: { items: { qty: number; product: Parameters<typeof add>[0] }[]; code?: string }) => {
+        for (const i of d.items) if (!linesRef.current.some((l) => l.productId === i.product.id)) add(i.product, i.qty);
+        if (d.code) setCode(d.code);
+        setDrawerOpen(false);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!detailed.length)
     return (

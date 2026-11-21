@@ -184,4 +184,7 @@ export const DICT: Record<string, [fr: string, ar: string]> = {
   Face: ["Teint", "الوجه"], Eyes: ["Yeux", "العيون"], Lips: ["Lèvres", "الشفاه"], Nails: ["Ongles", "الأظافر"], Cleansers: ["Nettoyants", "منظفات"], Moisturizers: ["Hydratants", "مرطبات"], Serums: ["Sérums", "سيرومات"],
   Shampoo: ["Shampooing", "شامبو"], Conditioner: ["Après-shampooing", "بلسم"], Women: ["Femme", "النساء"], Unisex: ["Mixte", "للجنسين"],
   "Pay on delivery": ["Paiement à la livraison", "الدفع عند الاستلام"], "Free delivery over": ["Livraison offerte dès", "توصيل مجاني فوق"], "Free pharmacist advice": ["Conseil pharmacien gratuit", "استشارة صيدلي مجانية"],
+  // ── gift cards, shipping ──
+  "Discount code or gift card": ["Code promo ou carte cadeau", "رمز الخصم أو بطاقة الهدية"], "Gift card": ["Carte cadeau", "بطاقة هدية"],
+  Refunded: ["Remboursé", "تم الاسترداد"], "Shipped with": ["Expédié avec", "شُحن مع"], "Track your parcel": ["Suivre mon colis", "تتبّع طردك"],
 };
