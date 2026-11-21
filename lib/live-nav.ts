@@ -1,9 +1,9 @@
 import "server-only";
 
-// Keeps menus and category links in step with what's actually on sale. When a catalog source
-// (e.g. Skin Society) or a brand is switched off in Admin → Visibility, every menu entry,
-// footer link and homepage tile that would lead to an empty page disappears, and comes back
-// as soon as it's switched on again. Links that aren't to a collection or category stay as they are.
+// Keeps menus and category links in step with what's actually on sale, for every catalog (current
+// or imported later). When a catalog or brand is switched off in Admin → Visibility, a menu section
+// stays only if products from the catalogs still on are in it; sections, links and tiles that would
+// open an empty page or an empty search disappear, and come back when the catalog is switched on.
 
 import { getIndex } from "@/lib/catalog";
 import { slugify, type ProductLite } from "@/lib/data/catalog";
@@ -42,13 +42,16 @@ export async function liveNav(): Promise<LiveNav> {
   }
   for (const c of cols.items) if (c.hidden) collections.delete(c.key.toLowerCase());
   const knownBrands = new Set(idx.all.map((p) => slugify(p.brand)));
+  // Brand pages are matched loosely too ("sobio-etic" = "So' Bio Etic").
+  for (const b of [...knownBrands]) knownBrands.add(b.replace(/-/g, ""));
+  for (const b of [...brands]) brands.add(b.replace(/-/g, ""));
   g.__liveNav = { key, collections, categories, concerns, brands, knownBrands };
   return g.__liveNav;
 }
 
 /** true = leads to products, false = would be empty, null = not a catalog link (keep it). */
 export function hrefIsLive(href: string, nav: LiveNav): boolean | null {
-  if (!href || href === "#") return null;
+  if (!href || href === "#") return null; // a heading, or a placeholder link
   let u: URL;
   try {
     u = new URL(href, "https://x.invalid");
@@ -63,7 +66,8 @@ export function hrefIsLive(href: string, nav: LiveNav): boolean | null {
   if (page) {
     // Brand pages (/pages/la-roche-posay/): hide when that brand has nothing on sale.
     const s = page[1].toLowerCase();
-    return nav.knownBrands.has(s) ? nav.brands.has(s) : null;
+    const c = s.replace(/-/g, "");
+    return nav.knownBrands.has(s) || nav.knownBrands.has(c) ? nav.brands.has(s) || nav.brands.has(c) : null;
   }
   if (path === "/shop" || path === "/shop/") {
     const cat = u.searchParams.get("category");
@@ -75,22 +79,54 @@ export function hrefIsLive(href: string, nav: LiveNav): boolean | null {
   return null;
 }
 
-/** Drop menu entries that lead nowhere; a heading stays while any of its entries is left. */
+/** Drop menu sections that lead nowhere: a section whose own collection is gone goes with everything
+ *  under it; a heading without a link stays while any of its entries is left. */
 export function pruneMenu(items: MenuItem[], nav: LiveNav): MenuItem[] {
   const out: MenuItem[] = [];
   for (const it of items) {
-    const children = pruneMenu(it.children ?? [], nav);
     const live = hrefIsLive(it.href, nav);
+    if (live === false) continue; // its catalog is off or it's empty: the whole section goes
     const hadChildren = (it.children ?? []).length > 0;
-    if (live === false && !children.length) continue; // empty collection, nothing under it
-    if (live === null && hadChildren && !children.length && (!it.href || it.href === "#")) continue; // empty heading
-    // "View All" under a heading whose collection is empty: already dropped above.
+    const children = pruneMenu(it.children ?? [], nav);
+    if (live === null && hadChildren && !children.length) continue; // a heading with nothing left under it
+    if ((!it.href || it.href === "#") && !children.length) continue; // a placeholder that opens nothing
     out.push({ ...it, children });
   }
   // A lone "View All" left in a group isn't useful.
   return out.length === 1 && /^view all$/i.test(out[0].label) && !out[0].children.length ? [] : out;
 }
 
+/** The menu for the shop. When a catalog's sections have all gone (it's switched off), automatic
+ *  category links built from the catalogs still on (`auto`) take their place, before what's left. */
+export function liveMenu(items: MenuItem[], nav: LiveNav, auto: MenuItem[]): MenuItem[] {
+  const pruned = pruneMenu(items, nav);
+  const isCatalog = (x: MenuItem) => /\/collections\/|[?&]category=/.test(x.href);
+  const hadSections = items.some(isCatalog);
+  const keptSections = pruned.some(isCatalog);
+  if (hadSections && !keptSections) {
+    const labels = new Set(pruned.map((x) => x.label.toLowerCase()));
+    return [...auto.filter((a) => !labels.has(a.label.toLowerCase())), ...pruned];
+  }
+  return pruned;
+}
+
 export function pruneLinks<T extends { href: string }>(links: T[], nav: LiveNav): T[] {
   return links.filter((l) => hrefIsLive(l.href, nav) !== false);
+}
+
+/** For buttons and banners: an empty category is swapped for the sale page or the whole shop. */
+export function liveHref(href: string, nav: LiveNav): string {
+  if (hrefIsLive(href, nav) !== false) return href;
+  return /deal|offer|sale|black|friday|promo|discount/i.test(href) ? "/shop/?sale=1" : "/shop/";
+}
+
+/** Same, for every link field (href, href2, link…) inside homepage sections. */
+export function liveHrefsDeep<T>(v: T, nav: LiveNav): T {
+  if (Array.isArray(v)) return v.map((x) => liveHrefsDeep(x, nav)) as T;
+  if (v && typeof v === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) out[k] = typeof x === "string" && /^(href\d*|link)$/.test(k) ? liveHref(x, nav) : liveHrefsDeep(x, nav);
+    return out as T;
+  }
+  return v;
 }
