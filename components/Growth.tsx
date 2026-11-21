@@ -321,17 +321,21 @@ export function Motion() {
     if (document.documentElement.dataset.motion === "off" || matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
     const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { rootMargin: "0px 0px -8% 0px" });
     const seen = new WeakSet<Element>();
-    const tag = () => document.querySelectorAll("main .hsec, main section, main .pcard").forEach((el, i) => {
-      if (seen.has(el) || el.closest(".bf-hero")) return;
+    const tag = () => {
+      // A section hidden before its products streamed in: show it now.
+      document.querySelectorAll("main .reveal:not(.in)").forEach((el) => el.querySelector(".pcard, .pgrid") && el.classList.add("in"));
+      document.querySelectorAll("main .hsec, main section").forEach((el) => {
+      // Products are never faded: anything holding product cards shows straight away.
+      if (seen.has(el) || el.closest(".bf-hero") || el.querySelector(".pcard, .pgrid")) return;
       seen.add(el);
       // Cards React kept from the previous page may still be waiting to fade in: watch them again.
       if (el.classList.contains("reveal")) return el.classList.contains("in") ? undefined : io.observe(el);
       const r = el.getBoundingClientRect();
       if (r.top < innerHeight) return; // already on screen: leave it
       el.classList.add("reveal");
-      (el as HTMLElement).style.transitionDelay = el.classList.contains("pcard") ? `${(i % 5) * 60}ms` : "";
-      io.observe(el);
+            io.observe(el);
     });
+    };
     tag();
     const mo = new MutationObserver(tag);
     mo.observe(document.querySelector("main") ?? document.body, { childList: true, subtree: true });
