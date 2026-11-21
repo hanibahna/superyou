@@ -1,4 +1,5 @@
 import { getProductsDetailed } from "@/lib/catalog";
+import { shopImg } from "@/lib/img";
 import { liveProducts } from "@/lib/pricing";
 import { siteUrl } from "@/lib/seo";
 import { getSettings } from "@/lib/site-store";
@@ -27,7 +28,8 @@ export async function GET() {
     const details = new Map((await getProductsDetailed(chunk.map((p) => p.id))).map((d) => [d.id, d]));
     for (const p of chunk) {
       const d = details.get(p.id);
-      const image = p.image ?? d?.images?.[0];
+      const abs = (x?: string) => { const s = shopImg(x); return s?.startsWith("/") ? base + s : s; };
+      const image = abs(p.image ?? d?.images?.[0]);
       if (!image) continue; // Google requires an image
       const sale = p.compareAt && p.compareAt > p.price;
       const title = `${p.brand} ${p.name}${p.variant ? ` - ${p.variant}` : p.size ? ` ${p.size}` : ""}`.slice(0, 150);
@@ -35,7 +37,7 @@ export async function GET() {
 <g:id>${esc(p.sku)}</g:id><g:title>${esc(title)}</g:title>
 <g:description>${esc((d?.description || title).slice(0, 4900))}</g:description>
 <g:link>${base}/products/${p.slug}/?v=${p.id}</g:link><g:image_link>${esc(image)}</g:image_link>
-${(d?.images ?? []).slice(1, 6).map((u) => `<g:additional_image_link>${esc(u)}</g:additional_image_link>`).join("")}
+${(d?.images ?? []).slice(1, 6).map((u) => `<g:additional_image_link>${esc(abs(u)!)}</g:additional_image_link>`).join("")}
 <g:availability>${p.inStock ? "in_stock" : "out_of_stock"}</g:availability><g:condition>new</g:condition>
 <g:price>${(sale ? p.compareAt! : p.price).toFixed(2)} USD</g:price>${sale ? `<g:sale_price>${p.price.toFixed(2)} USD</g:sale_price>` : ""}
 <g:brand>${esc(p.brand)}</g:brand>${p.barcode ? `<g:gtin>${esc(p.barcode)}</g:gtin>` : "<g:identifier_exists>no</g:identifier_exists>"}

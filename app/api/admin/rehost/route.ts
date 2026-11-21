@@ -2,7 +2,7 @@ import { put } from "@vercel/blob";
 import { NextResponse, type NextRequest } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { getAllProducts, getProductsDetailed, saveProducts } from "@/lib/catalog";
-import { imgUrl } from "@/lib/img";
+import { rawImgUrl } from "@/lib/img";
 
 export const maxDuration = 300;
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       try {
         let url = cache.get(src);
         if (!url) {
-          const res = await fetch(imgUrl(src, 1200)!, { cache: "no-store" });
+          const res = await fetch(rawImgUrl(src, 1200)!, { cache: "no-store" });
           if (!res.ok) throw new Error(String(res.status));
           const type = res.headers.get("content-type") ?? "image/jpeg";
           const ext = type.includes("webp") ? "webp" : type.includes("png") ? "png" : "jpg";

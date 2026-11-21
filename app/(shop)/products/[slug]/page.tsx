@@ -1,4 +1,5 @@
 import { getT } from "@/lib/i18n-server";
+import { shopImg } from "@/lib/img";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { RecentlyViewed } from "@/components/Growth";
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${p.brand} ${p.name}${p.size ? ` ${p.size}` : ""}`.slice(0, 70),
     description: `${desc}${desc.length >= 155 ? "…" : ""}`,
     ...(await canonical(`/products/${slug}/`)),
-    openGraph: { type: "website", title: `${p.brand} ${p.name}`, description: desc, images: d?.images?.slice(0, 1) ?? [] },
+    openGraph: { type: "website", title: `${p.brand} ${p.name}`, description: desc, images: d?.images?.slice(0, 1).map((x) => siteUrl() + (shopImg(x) ?? "")) ?? [] },
   };
 }
 
@@ -38,7 +39,8 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const slug = (await params).slug;
   const [raw, live] = await Promise.all([getGroupBySlug(slug), liveProducts()]);
   // Show live (sale) prices.
-  const variants = raw.map((v) => live.byId.get(v.id)).filter((v): v is NonNullable<typeof v> => !!v); // hidden catalogs/brands are excluded
+  const variants = raw.map((v) => live.byId.get(v.id)).filter((v): v is NonNullable<typeof v> => !!v) // hidden catalogs/brands are excluded
+    .map(({ source: _s, collections: _c, ...v }) => ({ ...v, image: shopImg(v.image) })); // the supplier's name never reaches the browser
   if (!variants.length) {
     const kept = live.dupOf.get(slug); // same product shown under the other catalog's listing
     if (kept) permanentRedirect(`/products/${kept}/`);
@@ -69,7 +71,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   }
   const related = cards.filter((c) => c.slug !== initial.slug && c.inStock && (c.brand === initial.brand || c.category === initial.category)).slice(0, 12);
   // Description etc. are shared by all sizes/shades of an item.
-  const gallery = Array.from(new Set([...detail.images, ...variants.map((v) => v.image).filter((x): x is string => !!x)]));
+  const gallery = Array.from(new Set([...detail.images.map((x) => shopImg(x)!), ...variants.map((v) => v.image).filter((x): x is string => !!x)]));
   const how = detail.video;
   const videos = lib.show.product
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)
@@ -81,7 +83,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
     "@type": "Product",
     name: initial.name,
     brand: { "@type": "Brand", name: initial.brand },
-    image: gallery.slice(0, 5),
+    image: gallery.slice(0, 5).map((x) => (x.startsWith("/") ? siteUrl() + x : x)),
     description: detail.description.slice(0, 5000),
     ...(reviews.length ? { aggregateRating: { "@type": "AggregateRating", ratingValue: +(reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1), reviewCount: reviews.length } } : {}),
     offers: variants.map((v) => ({

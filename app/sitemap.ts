@@ -29,7 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...cols.items.filter((c) => !c.hidden && nav.collections.has(c.key.toLowerCase())).map((c) => ({ url: `${base}/collections/${c.key}/`, changeFrequency: "daily" as const, priority: 0.7 })),
     ...brands.map((b) => ({ url: `${base}/shop/?brand=${encodeURIComponent(b)}`, changeFrequency: "weekly" as const, priority: 0.6 })),
     // Only pages that show something real: our own pages, and brand/range pages with products on sale.
-    ...(await Promise.all(Object.entries(settings.pages).filter(([k]) => !foreignPage(k)).map(async ([k, p]) => (["delivery", "payment", "rewards", "about", "privacy", "contact"].includes(k) || (await pageProducts(k, p.title)) ? k : null))))
+    ...(await Promise.all(Object.entries(settings.pages).filter(([k]) => !foreignPage(k)).map(async ([k, p]) => (["delivery", "payment", "rewards", "about", "privacy", "contact", "return-policy", "privacy-policy", "delivery-terms", "terms-conditions"].includes(k) || (await pageProducts(k, p.title)) ? k : null))))
       .filter((k): k is string => !!k)
       .map((k) => ({ url: `${base}/pages/${k}/`, changeFrequency: "monthly" as const, priority: 0.3 })),
     ...[...products].map(([slug, d]) => ({ url: `${base}/products/${slug}/`, lastModified: d, changeFrequency: "weekly" as const, priority: 0.6, alternates: { languages: { fr: `${base}/fr/products/${slug}/`, ar: `${base}/ar/products/${slug}/` } } })),

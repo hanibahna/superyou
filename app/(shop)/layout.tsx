@@ -1,4 +1,5 @@
 import { CartDrawer } from "@/components/CartDrawer";
+import { shopImgDeep } from "@/lib/img";
 import { FloatingWidgets, Footer, TrustStrip } from "@/components/Footer";
 import { MobileTabBar, Motion, RefCapture, SignupPopup } from "@/components/Growth";
 import { AnnouncementBar, Header } from "@/components/Header";
@@ -19,7 +20,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const tax = await getTaxonomy();
   // Only categories with something on sale (switching a source off hides its empty categories).
   const menus = await translateDeep(shopNav(await getSettings(), nav, tax), lang, ["label", "title", "text"]);
-  const taxonomy = await translateDeep({ ...tax, categories: tax.categories.filter((c) => nav.categories.has(c.slug)), concerns: tax.concerns.filter((c) => nav.concerns.has(c.slug)) }, lang, ["name"]);
+  const taxonomy = shopImgDeep(await translateDeep({ ...tax, categories: tax.categories.filter((c) => nav.categories.has(c.slug)), concerns: tax.concerns.filter((c) => nav.concerns.has(c.slug)) }, lang, ["name"]));
   return (
     <ShopNavProvider nav={menus}>
     <ShopProvider>

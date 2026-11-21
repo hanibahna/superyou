@@ -1,4 +1,5 @@
 import { getLang } from "@/lib/i18n-server";
+import { shopImg } from "@/lib/img";
 import { translateDeep, translateMany } from "@/lib/translate";
 import { notFound } from "next/navigation";
 import { queryShop } from "@/lib/listing";
@@ -33,5 +34,5 @@ export default async function CollectionPage({ params, searchParams }: { params:
   const lang = await getLang();
   const loc = await translateMany([title, c?.description ?? ""], lang);
   const facets = await translateDeep(result.facets, lang, ["name"]);
-  return <ShopView result={{ ...result, facets }} query={query} videos={videos} base={`/collections/${key}/`} heading={loc.get(title) ?? title} intro={c?.description ? loc.get(c.description) ?? c.description : undefined} banner={c?.image || undefined} />;
+  return <ShopView result={{ ...result, facets }} query={query} videos={videos} base={`/collections/${key}/`} heading={loc.get(title) ?? title} intro={c?.description ? loc.get(c.description) ?? c.description : undefined} banner={shopImg(c?.image) || undefined} />;
 }

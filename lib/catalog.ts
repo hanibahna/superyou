@@ -43,8 +43,26 @@ async function currentVersion(): Promise<string> {
   return String((await db.cmd<string | number | null>(["GET", VER])) ?? "0");
 }
 
+// SuperYou is the dealer: customers only ever see SuperYou, never the supplier shops' names.
+const SUPPLIER = /skin[\s_-]*society|neo[\s_-]*vitale/i;
+const CLINIC = /^skin\s*society\s+the\s+clinic$/i;
+/** Text from a supplier ("…our clients at Skin Society The Clinic…") speaks as SuperYou. */
+export const asSuperYou = (t: string) => (t && SUPPLIER.test(t) ? t.replace(/skin[\s_-]*society([\s_-]+the[\s_-]+clinic)?([\s_-]+para)?|neo[\s_-]*vitale/gi, "SuperYou") : t);
+
 function buildIndex(ver: string, raw: string[]): Index {
-  const all = raw.map((r) => JSON.parse(r) as ProductLite).sort((a, b) => a.name.localeCompare(b.name) || (a.price - b.price));
+  const parsed = raw.map((r) => JSON.parse(r) as ProductLite);
+  // Products a supplier sold under its own shop name get their real brand from the product name
+  // when it starts with one ("Bio-Strath …"), otherwise SuperYou.
+  if (parsed.some((p) => SUPPLIER.test(p.brand))) {
+    const known = [...new Set(parsed.map((p) => p.brand).filter((b) => !SUPPLIER.test(b)))].sort((a, b) => b.length - a.length);
+    for (const p of parsed) {
+      if (!SUPPLIER.test(p.brand)) continue;
+      const n = p.name.toLowerCase();
+      p.brand = CLINIC.test(p.brand) ? "SuperYou Clinic" : known.find((b) => b.length >= 3 && (n.startsWith(b.toLowerCase() + " ") || n.startsWith(b.toLowerCase() + "-"))) ?? "SuperYou";
+    }
+  }
+  for (const p of parsed) if (SUPPLIER.test(p.name)) p.name = asSuperYou(p.name);
+  const all = parsed.sort((a, b) => a.name.localeCompare(b.name) || (a.price - b.price));
   const byId = new Map(all.map((p) => [p.id, p]));
   const bySlug = new Map<string, ProductLite[]>();
   for (const p of all) {
@@ -200,7 +218,7 @@ export async function getProductsDetailed(ids: string[]): Promise<Product[]> {
 
 function merge(lite: ProductLite, d?: Detail): Product {
   const { image, imageCount: _c, ...rest } = lite;
-  return { ...rest, description: d?.description ?? "", howToUse: d?.howToUse ?? "", ingredients: d?.ingredients ?? "", images: d?.images ?? (image ? [image] : []), video: d?.video || undefined };
+  return { ...rest, description: asSuperYou(d?.description ?? ""), howToUse: asSuperYou(d?.howToUse ?? ""), ingredients: d?.ingredients ?? "", images: d?.images ?? (image ? [image] : []), video: d?.video || undefined };
 }
 
 // ── Writes ──────────────────────────────────────────────────

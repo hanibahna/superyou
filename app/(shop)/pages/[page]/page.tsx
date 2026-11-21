@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
+import { asSuperYou } from "@/lib/catalog";
 import { cleanPageText, foreignPage, intro, pageProducts } from "@/lib/info-pages";
+import { foreignText, policyText } from "@/lib/policies";
 import { getLang } from "@/lib/i18n-server";
 import { canonical } from "@/lib/seo";
 import { getSettings } from "@/lib/site-store";
@@ -17,6 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
   const slug = (await params).page;
   const p = (await getSettings()).pages[slug];
   if (!p || foreignPage(slug)) return {};
+  const builtIn = policyText(slug, await getSettings());
+  if (builtIn) return { title: builtIn.title, ...(await canonical(`/pages/${slug}/`)) };
   const prods = await pageProducts(slug, p.title);
   const title = niceTitle(p.title, prods?.brand);
   return { title: prods?.brand && title !== prods.brand ? `${title} – ${prods.brand}` : title, ...(await canonical(`/pages/${slug}/`)) };
@@ -25,12 +29,16 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
 export default async function InfoPage({ params }: { params: Promise<{ page: string }> }) {
   const slug = (await params).page;
   const s = await getSettings();
-  const p0 = s.pages[slug];
-  if (!p0 || foreignPage(slug)) notFound();
+  const stored = s.pages[slug];
+  if (!stored || foreignPage(slug)) notFound();
+  // Policy pages copied from a supplier are replaced by SuperYou's own until you write yours.
+  const builtIn = policyText(slug, s);
+  const p0 = builtIn && foreignText.test(stored.body) ? builtIn : stored;
   const lang = await getLang();
-  const own = ["delivery", "payment", "rewards", "about", "privacy", "contact"].includes(slug);
+  const own = !!builtIn || ["delivery", "payment", "rewards", "about", "privacy", "contact"].includes(slug);
   const prods = own ? null : await pageProducts(slug, p0.title);
-  const text = cleanPageText(p0.body);
+  // Only SuperYou speaks: supplier names become SuperYou, their phone numbers and stores are dropped.
+  const text = cleanPageText(asSuperYou(p0.body)).split("\n").filter((l) => !/950\s*333|5\s*950|hazmieh|dbayeh|@skinsociety/i.test(l)).join("\n");
   const p = await translateDeep({ title: niceTitle(p0.title, prods?.brand), body: text }, lang, ["title", "body"]);
 
   // Brand or range page: a short introduction and the products.

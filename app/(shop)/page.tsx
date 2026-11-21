@@ -1,4 +1,5 @@
 import { BrandStrip, Banners, CategoryTiles, Countdown, HeroSlider, NewsletterSection, ShopByConcern, TextBlock, TikTokProfile, VideoSection } from "@/components/Home";
+import { shopImgDeep } from "@/lib/img";
 import { autoCategories, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
 import { CampaignHero, Circles, OffersGrid, PromoTiles } from "@/components/Campaign";
 import { ProductCarousel } from "@/components/ProductCarousel";
@@ -18,7 +19,7 @@ export async function generateMetadata() {
 }
 
 export default async function HomePage() {
-  const [cards, tax, landing, lib] = await Promise.all([liveCards(), getTaxonomy().then(async (t) => translateDeep(t, await getLang(), ["name"])), getLanding(), getVideoLibrary()]);
+  const [cards, tax, landing, lib] = await Promise.all([liveCards(), getTaxonomy().then(async (t) => shopImgDeep(await translateDeep(t, await getLang(), ["name"]))), getLanding(), getVideoLibrary()]);
   if (!cards.length)
     return (
       <div className="container-x py-24 text-center">
@@ -43,7 +44,7 @@ export default async function HomePage() {
   // Tiles and circles that would lead to an empty category (source or brand switched off) are left out.
   const nav = await liveNav();
   const auto = autoCategories(await getTaxonomy(), nav);
-  const onSale = landing.sections.filter((s) => s.enabled).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => liveHrefsDeep(s, nav));
+  const onSale = landing.sections.filter((s) => s.enabled).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => shopImgDeep(liveHrefsDeep(s, nav)));
   const sections = await translateDeep(onSale, lang, ["eyebrow", "title", "text", "cta", "cta2", "badge", "body"]);
   const rows = await Promise.all(sections.map((s) => (s.type === "products" ? cardsFor(s.source, s.limit, s.sort) : Promise.resolve(null))));
 

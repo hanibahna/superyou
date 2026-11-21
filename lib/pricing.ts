@@ -2,6 +2,7 @@ import "server-only";
 
 // Live shop prices (automatic sales applied) and the authoritative cart quote.
 
+import { shopImg } from "@/lib/img";
 import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
@@ -57,7 +58,8 @@ export async function liveProducts() {
   if (g.__live?.key === key) return g.__live;
   const hiddenSrc = new Set(vis.hiddenSources.map((x) => x.toLowerCase()));
   const hiddenBrand = new Set(vis.hiddenBrands.map((x) => x.toLowerCase()));
-  const shown = (p: ProductLite) => !hiddenBrand.has(p.brand.toLowerCase()) && !hiddenSrc.has((p.source || "manual").toLowerCase());
+  // In-clinic treatments (laser hair removal…) can't be bought online; they stay in the admin only.
+  const shown = (p: ProductLite) => p.brand !== "SuperYou Clinic" && !hiddenBrand.has(p.brand.toLowerCase()) && !hiddenSrc.has((p.source || "manual").toLowerCase());
   let list = idx.all.filter((p) => p.status === "active" && shown(p)).map((p) => {
     const r = ratings.get(p.slug);
     const q = r ? { ...p, rating: r.avg, reviewCount: r.count } : p;
@@ -73,7 +75,7 @@ export async function liveProducts() {
 
 const snapOf = (p: ProductLite): ProductSnap => ({
   id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, compareAt: p.compareAt, size: p.size,
-  variant: p.variant, image: p.image, shape: p.shape, color: p.color, inStock: p.inStock,
+  variant: p.variant, image: shopImg(p.image), shape: p.shape, color: p.color, inStock: p.inStock,
 });
 
 export type QuoteInput = { items: { productId: string; qty: number }[]; code?: string; zone?: string; giftCard?: string };

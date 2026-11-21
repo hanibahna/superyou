@@ -4,6 +4,7 @@ import "server-only";
 
 import { getTaxonomy } from "@/lib/catalog";
 import { discountPct, type ProductLite, type Tag, type Taxonomy } from "@/lib/data/catalog";
+import { shopImg } from "@/lib/img";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
 import type { ProductSource, SearchSettings } from "@/lib/site";
@@ -23,7 +24,8 @@ export function toCards(list: ProductLite[]): CardItem[] {
     const live = vs.filter((v) => v.inStock);
     const pool = live.length ? live : vs;
     const rep = pool.reduce((a, b) => (b.price < a.price ? b : a), pool[0]);
-    out.push({ ...rep, image: rep.image ?? vs.find((v) => v.image)?.image, inStock: live.length > 0, variantCount: vs.length, priceMax: Math.max(...vs.map((v) => v.price)) });
+    const { source: _src, collections: _cols, ...card } = rep; // which supplier it came from never reaches the browser
+    out.push({ ...card, image: shopImg(rep.image ?? vs.find((v) => v.image)?.image), inStock: live.length > 0, variantCount: vs.length, priceMax: Math.max(...vs.map((v) => v.price)) });
   }
   return out;
 }
