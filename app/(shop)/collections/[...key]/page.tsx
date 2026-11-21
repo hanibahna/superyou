@@ -26,7 +26,9 @@ export default async function CollectionPage({ params, searchParams }: { params:
   const query = { ...parseQuery(await searchParams), collection: key };
   const [result, cols, videos] = await Promise.all([queryShop(query), getCollections(), videosFor(query)]);
   const c = cols.items.find((x) => x.key.toLowerCase() === key.toLowerCase());
-  if ((!c && result.total === 0) || c?.hidden) notFound();
+  // Nothing on sale (e.g. its source or brands are switched off): the page is gone until they're back.
+  const filtered = Object.entries(query).some(([k, v]) => k !== "collection" && k !== "page" && k !== "sort" && v !== undefined && !(Array.isArray(v) && !v.length));
+  if (c?.hidden || (result.total === 0 && !filtered)) notFound();
   const title = c?.title ?? key.split("/").pop()!.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   const lang = await getLang();
   const loc = await translateMany([title, c?.description ?? ""], lang);

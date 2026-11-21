@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { liveNav } from "@/lib/live-nav";
 import { getTaxonomy } from "@/lib/catalog";
 import { liveProducts } from "@/lib/pricing";
 import { siteUrl } from "@/lib/seo";
@@ -12,6 +13,7 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const [live, cols, tax, settings] = await Promise.all([liveProducts(), getCollections(), getTaxonomy(), getSettings()]);
+  const nav = await liveNav(); // only categories and collections with something on sale
   const now = new Date();
   const products = new Map<string, Date>();
   for (const p of live.list) {
@@ -22,8 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${base}/`, changeFrequency: "daily", priority: 1, alternates: { languages: { fr: `${base}/fr/`, ar: `${base}/ar/` } } },
     ...["/shop/", "/brands/", "/routine/", "/skin-scan/", "/shade-finder/", "/services/", "/club/"].map((u) => ({ url: base + u, changeFrequency: "weekly" as const, priority: 0.7 })),
-    ...tax.categories.map((c) => ({ url: `${base}/shop/?category=${c.slug}`, changeFrequency: "daily" as const, priority: 0.8 })),
-    ...cols.items.filter((c) => !c.hidden).map((c) => ({ url: `${base}/collections/${c.key}/`, changeFrequency: "daily" as const, priority: 0.7 })),
+    ...tax.categories.filter((c) => nav.categories.has(c.slug)).map((c) => ({ url: `${base}/shop/?category=${c.slug}`, changeFrequency: "daily" as const, priority: 0.8 })),
+    ...cols.items.filter((c) => !c.hidden && nav.collections.has(c.key.toLowerCase())).map((c) => ({ url: `${base}/collections/${c.key}/`, changeFrequency: "daily" as const, priority: 0.7 })),
     ...brands.map((b) => ({ url: `${base}/shop/?brand=${encodeURIComponent(b)}`, changeFrequency: "weekly" as const, priority: 0.6 })),
     ...Object.keys(settings.pages).map((k) => ({ url: `${base}/pages/${k}/`, changeFrequency: "monthly" as const, priority: 0.3 })),
     ...[...products].map(([slug, d]) => ({ url: `${base}/products/${slug}/`, lastModified: d, changeFrequency: "weekly" as const, priority: 0.6, alternates: { languages: { fr: `${base}/fr/products/${slug}/`, ar: `${base}/ar/products/${slug}/` } } })),

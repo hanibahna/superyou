@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { liveNav, pruneLinks, pruneMenu } from "@/lib/live-nav";
 import "./globals.css";
 import { getIndex } from "@/lib/catalog";
 import { publicGrowth } from "@/lib/growth";
@@ -25,9 +26,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 // Page bodies stay on the server; the browser only needs the titles of footer pages.
-function publicSettings(s: Awaited<ReturnType<typeof getSettings>>) {
+function publicSettings(s: Awaited<ReturnType<typeof getSettings>>, nav: Awaited<ReturnType<typeof liveNav>>) {
   const pages = Object.fromEntries(Object.entries(s.pages).filter(([, p]) => p.footer !== false).map(([k, p]) => [k, { title: p.title, body: "" }]));
-  return { ...s, pages };
+  // Menus only show categories that have products on sale (see lib/live-nav.ts).
+  const footerMenu = s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav) })).filter((c) => c.links.length);
+  return { ...s, pages, menu: pruneMenu(s.menu, nav), footerMenu };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -44,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="theme-color" content={palette["brand-600"]} />
       </head>
       <body>
-        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(publicGrowth(growth), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
+        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav()), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(publicGrowth(growth), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
           {children}
         </SiteProvider>
       </body>

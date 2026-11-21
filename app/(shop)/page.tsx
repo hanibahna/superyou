@@ -1,4 +1,5 @@
 import { BrandStrip, Banners, CategoryTiles, Countdown, HeroSlider, NewsletterSection, ShopByConcern, TextBlock, TikTokProfile, VideoSection } from "@/components/Home";
+import { liveNav, pruneLinks } from "@/lib/live-nav";
 import { CampaignHero, Circles, OffersGrid, PromoTiles } from "@/components/Campaign";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { ProductCard } from "@/components/ProductCard";
@@ -39,7 +40,10 @@ export default async function HomePage() {
   const topBrands = [...brandCount.entries()].sort((a, b) => b[1] - a[1]).map(([b]) => b);
 
   const lang = await getLang();
-  const sections = await translateDeep(landing.sections.filter((s) => s.enabled), lang, ["eyebrow", "title", "text", "cta", "cta2", "badge", "body"]);
+  // Tiles and circles that would lead to an empty category (source or brand switched off) are left out.
+  const nav = await liveNav();
+  const onSale = landing.sections.filter((s) => s.enabled).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length));
+  const sections = await translateDeep(onSale, lang, ["eyebrow", "title", "text", "cta", "cta2", "badge", "body"]);
   const rows = await Promise.all(sections.map((s) => (s.type === "products" ? cardsFor(s.source, s.limit, s.sort) : Promise.resolve(null))));
 
   const settings = await getSettings();
@@ -105,7 +109,7 @@ export default async function HomePage() {
             return <CategoryTiles key={s.id} eyebrow={s.eyebrow} title={s.title} tiles={list} />;
           }
           case "concerns":
-            return <ShopByConcern key={s.id} concerns={tax.concerns} counts={counts} eyebrow={s.eyebrow} title={s.title} />;
+            return <ShopByConcern key={s.id} concerns={tax.concerns.filter((c) => counts[c.slug])} counts={counts} eyebrow={s.eyebrow} title={s.title} />;
           case "brands":
             return <BrandStrip key={s.id} title={s.title} brands={(s.brands.length ? s.brands : topBrands).slice(0, s.limit)} logos={Object.fromEntries((s.logos ?? []).filter((l) => l.image).map((l) => [l.brand.toLowerCase(), l.image]))} />;
           case "reviews": {
