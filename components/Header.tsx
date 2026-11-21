@@ -57,7 +57,9 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
         <button className="lg:hidden" onClick={() => setMenuOpen(true)} aria-label={tx("Open menu")}>
           <MenuIcon />
         </button>
-        <Link href="/" aria-label={`${store.name} home`} className="hdr-logo shrink-0">
+        <Link href="/" aria-label={`${store.name} home`} className="hdr-logo flex shrink-0 items-center gap-2 md:gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/superyou-mark.svg" alt="" aria-hidden className="h-7 w-7 rounded-md ring-1 ring-white/25 md:h-9 md:w-9" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/superyou-logo.svg" alt={store.name} className="logo-on-light h-5 w-auto md:h-7" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -131,8 +133,12 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
           <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
           <div className="drawer-in absolute inset-y-0 start-0 flex w-full max-w-md flex-col bg-white">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/superyou-logo.svg" alt={store.name} className="h-5 w-auto" />
+              <span className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/superyou-mark.svg" alt="" aria-hidden className="h-7 w-7 rounded-md" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/superyou-logo.svg" alt={store.name} className="h-5 w-auto" />
+              </span>
               <div className="flex items-center gap-2">
                 <LangSwitch />
                 <button onClick={() => setMenuOpen(false)} aria-label={tx("Close menu")} className="tap grid w-11 place-items-center"><CloseIcon /></button>

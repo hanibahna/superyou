@@ -36,8 +36,12 @@ export function Footer({ categories }: { categories: Category[] }) {
     <footer className="bg-ink text-white/80">
       <div className="container-x grid gap-10 py-14 md:grid-cols-4">
         <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/superyou-logo-white.svg" alt={store.name} className="h-6 w-auto" />
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/superyou-mark.svg" alt="" aria-hidden className="h-10 w-10 rounded-lg ring-1 ring-white/25" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/superyou-logo-white.svg" alt={store.name} className="h-6 w-auto" />
+          </div>
           <p className="mt-3 text-sm">{store.tagline}</p>
           <p className="mt-4 text-sm">{store.address}</p>
           <a href={`tel:${store.phone.replace(/\s/g, "")}`} className="block text-sm hover:underline">{store.phone}</a>
