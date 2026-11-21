@@ -4,7 +4,9 @@ import { MobileTabBar, Motion, RefCapture, SignupPopup } from "@/components/Grow
 import { AnnouncementBar, Header } from "@/components/Header";
 import { getTaxonomy } from "@/lib/catalog";
 import { getLang } from "@/lib/i18n-server";
-import { liveNav } from "@/lib/live-nav";
+import { liveNav, shopNav } from "@/lib/live-nav";
+import { ShopNavProvider } from "@/lib/site-context";
+import { getSettings } from "@/lib/site-store";
 import { translateDeep } from "@/lib/translate";
 import { ShopProvider } from "@/lib/store";
 
@@ -16,8 +18,10 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const nav = await liveNav();
   const tax = await getTaxonomy();
   // Only categories with something on sale (switching a source off hides its empty categories).
+  const menus = await translateDeep(shopNav(await getSettings(), nav, tax), lang, ["label", "title", "text"]);
   const taxonomy = await translateDeep({ ...tax, categories: tax.categories.filter((c) => nav.categories.has(c.slug)), concerns: tax.concerns.filter((c) => nav.concerns.has(c.slug)) }, lang, ["name"]);
   return (
+    <ShopNavProvider nav={menus}>
     <ShopProvider>
       <AnnouncementBar />
       <Header taxonomy={taxonomy} />
@@ -31,5 +35,6 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <Motion />
       <MobileTabBar />
     </ShopProvider>
+    </ShopNavProvider>
   );
 }

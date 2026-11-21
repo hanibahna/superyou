@@ -6,10 +6,10 @@ import "server-only";
 // open an empty page or an empty search disappear, and come back when the catalog is switched on.
 
 import { getIndex } from "@/lib/catalog";
-import { slugify, type ProductLite } from "@/lib/data/catalog";
+import { slugify, type ProductLite, type Taxonomy } from "@/lib/data/catalog";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
-import type { MenuItem } from "@/lib/site";
+import type { MenuItem, Settings } from "@/lib/site";
 import { getCollections, getSearchSettings } from "@/lib/site-store";
 import { getTaxonomy } from "@/lib/catalog";
 
@@ -129,4 +129,14 @@ export function liveHrefsDeep<T>(v: T, nav: LiveNav): T {
     return out as T;
   }
   return v;
+}
+
+/** Menus, footer links and announcement for the shop, trimmed to what's on sale right now. */
+export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy) {
+  const auto = tax.categories.filter((c) => c.menu !== false && nav.categories.has(c.slug)).map((c) => ({ label: c.name, href: `/shop/?category=${c.slug}`, children: [] }));
+  return {
+    menu: liveMenu(s.menu, nav, auto),
+    footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav) })).filter((c) => c.links.length),
+    announcement: liveHrefsDeep(s.announcement, nav),
+  };
 }

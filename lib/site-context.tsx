@@ -21,6 +21,13 @@ export function SiteProvider({ value, children }: { value: PublicSite; children:
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
+/** The shop's own copy of the menus, worked out on every shop page load so they always match
+ *  what's switched on (the outer frame can be kept from an earlier admin page). */
+export function ShopNavProvider({ nav, children }: { nav: Pick<PublicSite["settings"], "menu" | "footerMenu" | "announcement">; children: React.ReactNode }) {
+  const v = useContext(Ctx);
+  return <Ctx.Provider value={{ ...v, settings: { ...v.settings, ...nav } }}>{children}</Ctx.Provider>;
+}
+
 export const useSite = () => useContext(Ctx);
 export const useSettings = () => useContext(Ctx).settings;
 export const useGrowth = () => useContext(Ctx).growth;

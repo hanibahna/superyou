@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { liveHrefsDeep, liveMenu, liveNav, pruneLinks } from "@/lib/live-nav";
+import { liveNav, shopNav } from "@/lib/live-nav";
 import "./globals.css";
 import { getIndex, getTaxonomy } from "@/lib/catalog";
 import { publicGrowth } from "@/lib/growth";
@@ -29,9 +29,7 @@ export const dynamic = "force-dynamic";
 function publicSettings(s: Awaited<ReturnType<typeof getSettings>>, nav: Awaited<ReturnType<typeof liveNav>>, tax: Awaited<ReturnType<typeof getTaxonomy>>) {
   const pages = Object.fromEntries(Object.entries(s.pages).filter(([, p]) => p.footer !== false).map(([k, p]) => [k, { title: p.title, body: "" }]));
   // Menus only show categories that have products on sale (see lib/live-nav.ts).
-  const footerMenu = s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav) })).filter((c) => c.links.length);
-  const auto = tax.categories.filter((c) => c.menu !== false && nav.categories.has(c.slug)).map((c) => ({ label: c.name, href: `/shop/?category=${c.slug}`, children: [] }));
-  return { ...s, pages, menu: liveMenu(s.menu, nav, auto), footerMenu, announcement: liveHrefsDeep(s.announcement, nav) };
+  return { ...s, pages, ...shopNav(s, nav, tax) };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
