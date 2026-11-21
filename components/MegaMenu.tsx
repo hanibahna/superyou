@@ -99,7 +99,7 @@ const ICONS: [RegExp, string][] = [
 const iconFor = (label: string) => ICONS.find(([r]) => r.test(label))?.[1];
 
 /** Mobile drawer: one level at a time, sliding panels with a back button (Sephora style). */
-export function MobileMenu({ items: raw, onNavigate, footer }: { items: MenuItem[]; onNavigate: () => void; footer?: React.ReactNode }) {
+export function MobileMenu({ items: raw, onNavigate, footer, onBrands }: { items: MenuItem[]; onNavigate: () => void; footer?: React.ReactNode; onBrands?: () => void }) {
   const tx = useT();
   const items = tMenu(raw, tx);
   const [path, setPath] = useState<number[]>([]);
@@ -114,13 +114,22 @@ export function MobileMenu({ items: raw, onNavigate, footer }: { items: MenuItem
               <span className="rtl-flip text-lg leading-none">‹</span> {tx("Back")}
             </button>
             <p className="mb-1 text-xl font-bold">{parent.label}</p>
-            {isLink(parent.href) && <Link href={parent.href} onClick={onNavigate} className="tap mb-2 flex items-center border-b border-line text-sm font-semibold underline">{tx("View all")}</Link>}
+            {onBrands && /^\/brands\/?$/.test(parent.href ?? "") ? (
+              // The brands section: list every brand right here instead of leaving the menu.
+              <button onClick={onBrands} className="tap mb-2 flex w-full items-center justify-between border-b border-line text-sm font-semibold">{tx("All brands A–Z")} <span className="rtl-flip text-xl leading-none text-muted">›</span></button>
+            ) : (
+              isLink(parent.href) && <Link href={parent.href} onClick={onNavigate} className="tap mb-2 flex items-center border-b border-line text-sm font-semibold underline">{tx("View all")}</Link>
+            )}
           </>
         )}
         <ul className="divide-y divide-line">
           {level.map((it, i) => (
             <li key={i}>
-              {it.children.length ? (
+              {!it.children.length && onBrands && /^\/brands\/?$/.test(it.href ?? "") ? (
+                <button onClick={onBrands} className={`flex min-h-[52px] w-full items-center justify-between gap-3 text-start ${path.length ? "text-[15px]" : "text-base font-semibold"}`}>
+                  <span>{it.label}</span><span className="rtl-flip text-xl leading-none text-muted">›</span>
+                </button>
+              ) : it.children.length ? (
                 <button onClick={() => setPath([...path, i])} className={`flex min-h-[52px] w-full items-center justify-between gap-3 text-start ${path.length ? "text-[15px]" : "text-base font-semibold"} ${it.highlight ? "text-sale" : ""}`}>
                   <span className="flex items-center gap-3">
                     {!path.length && !it.image && iconFor(raw[i]?.label ?? "") && (

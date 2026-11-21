@@ -11,6 +11,7 @@ import { BagIcon, CloseIcon, HeartIcon, MenuIcon, UserIcon } from "./Icons";
 import { LangSwitch } from "./Growth";
 import { MegaMenu, MobileMenu } from "./MegaMenu";
 import { SearchBox } from "./SearchBox";
+import { BrandList } from "./BrandList";
 
 export function AnnouncementBar() {
   const tx = useT();
@@ -46,7 +47,9 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
   const { settings, routineEnabled, growth } = useSite();
   const t = useT();
   const store = settings.store;
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpenRaw] = useState(false);
+  const [brandsOpen, setBrandsOpen] = useState(false);
+  const setMenuOpen = (v: boolean) => (setMenuOpenRaw(v), v || setBrandsOpen(false));
   const categories = all.filter((c) => c.menu !== false);
   const groupFor = (slug: string, g?: Category["concernGroup"]) =>
     g !== undefined ? g : slug === "hair" ? "hair" : slug === "supplements" ? "wellness" : slug === "skincare" ? "skin" : "";
@@ -162,13 +165,17 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
                 <Link href="/shop/?sale=1" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#fbeef2] p-3"><span className="block text-lg">%</span><span className="text-sm font-semibold text-sale">{tx("Offers")}</span></Link>
                 <Link href="/shop/?sort=new" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#f5f5f5] p-3"><span className="block text-lg">★</span><span className="text-sm font-semibold">{tx("New arrivals")}</span></Link>
               </div>
-              {settings.menu.length > 0 ? (
+              {brandsOpen ? (
+                <BrandList onBack={() => setBrandsOpen(false)} onNavigate={() => setMenuOpen(false)} />
+              ) : settings.menu.length > 0 ? (
                 <MobileMenu
+                  onBrands={() => setBrandsOpen(true)}
                   items={settings.menu}
                   onNavigate={() => setMenuOpen(false)}
                   footer={
                     <div className="mt-4 space-y-1 border-t border-line pt-3 text-[15px]">
-                      {[["Services & Events", "/services/"], ["SuperYou Club", "/club/"], ["Brands A–Z", "/brands/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
+                      <button onClick={() => setBrandsOpen(true)} className="flex min-h-[48px] w-full items-center justify-between text-start">{tx("Brands A–Z")} <span className="rtl-flip text-xl leading-none text-muted">›</span></button>
+                      {[["Services & Events", "/services/"], ["SuperYou Club", "/club/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
                         <Link key={h} href={h} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center">{tx(l)}{h === "/wishlist/" && wishlist.length > 0 ? ` (${wishlist.length})` : ""}</Link>
                       ))}
                       <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="mt-2 flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white">{tx("WhatsApp us")}</a>
