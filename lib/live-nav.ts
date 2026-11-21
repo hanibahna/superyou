@@ -13,7 +13,7 @@ import type { MenuItem, Settings } from "@/lib/site";
 import { getCollections, getSearchSettings } from "@/lib/site-store";
 import { getTaxonomy } from "@/lib/catalog";
 
-type LiveNav = { key: string; collections: Set<string>; categories: Set<string>; concerns: Set<string>; brands: Set<string>; knownBrands: Set<string> };
+type LiveNav = { key: string; collections: Set<string>; categories: Set<string>; concerns: Set<string>; brands: Set<string>; knownBrands: Set<string>; brandNames: Map<string, string> };
 const g = globalThis as unknown as { __liveNav?: LiveNav };
 
 export async function liveNav(): Promise<LiveNav> {
@@ -42,10 +42,12 @@ export async function liveNav(): Promise<LiveNav> {
   }
   for (const c of cols.items) if (c.hidden) collections.delete(c.key.toLowerCase());
   const knownBrands = new Set(idx.all.map((p) => slugify(p.brand)));
+  const brandNames = new Map<string, string>(); // squashed name → brand, for brands on sale
+  for (const p of list) brandNames.set(slugify(p.brand).replace(/-/g, ""), p.brand);
   // Brand pages are matched loosely too ("sobio-etic" = "So' Bio Etic").
   for (const b of [...knownBrands]) knownBrands.add(b.replace(/-/g, ""));
   for (const b of [...brands]) brands.add(b.replace(/-/g, ""));
-  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands };
+  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames };
   return g.__liveNav;
 }
 
@@ -79,17 +81,40 @@ export function hrefIsLive(href: string, nav: LiveNav): boolean | null {
   return null;
 }
 
-/** Drop menu sections that lead nowhere: a section whose own collection is gone goes with everything
- *  under it; a heading without a link stays while any of its entries is left. */
-export function pruneMenu(items: MenuItem[], nav: LiveNav): MenuItem[] {
+const squash = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "").replace(/s$/, "");
+/** The automatic category that matches a menu label or tile title ("Skin Care" → Skincare, "Hair Expert" → Hair). */
+export function matchCategory(label: string, auto: MenuItem[]): MenuItem | undefined {
+  const l = squash(label);
+  if (l.length < 3) return undefined;
+  return auto.find((a) => squash(a.label) === l) ?? auto.find((a) => { const c = squash(a.label); return c.length >= 4 && (l.startsWith(c) || c.startsWith(l)); });
+}
+
+/** Keep every menu entry that leads to products. An entry whose own page would be empty stays as a
+ *  heading while anything under it still has products (its link then goes to the matching automatic
+ *  category, or nowhere); with nothing left under it, it goes. */
+export function pruneMenu(items: MenuItem[], nav: LiveNav, auto: MenuItem[] = []): MenuItem[] {
   const out: MenuItem[] = [];
   for (const it of items) {
     const live = hrefIsLive(it.href, nav);
-    if (live === false) continue; // its catalog is off or it's empty: the whole section goes
     const hadChildren = (it.children ?? []).length > 0;
-    const children = pruneMenu(it.children ?? [], nav);
+    const children = pruneMenu(it.children ?? [], nav, auto);
+    if (live === false) {
+      if (!children.length) {
+        // A brand entry whose own list is empty, while another catalog still sells that brand: open the brand.
+        const brand = !/^view all$/i.test(it.label) && nav.brandNames.get(slugify(it.label).replace(/-/g, ""));
+        if (brand) out.push({ ...it, href: `/shop/?brand=${encodeURIComponent(brand)}` });
+        continue; // otherwise empty and nothing under it with products
+      }
+      out.push({ ...it, href: matchCategory(it.label, auto)?.href ?? "#", children });
+      continue;
+    }
     if (live === null && hadChildren && !children.length) continue; // a heading with nothing left under it
-    if ((!it.href || it.href === "#") && !children.length) continue; // a placeholder that opens nothing
+    if ((!it.href || it.href === "#") && !children.length) {
+      // A placeholder named after a brand on sale ("Avène", "Durex") opens that brand's products.
+      const brand = nav.brandNames.get(slugify(it.label).replace(/-/g, ""));
+      if (brand) out.push({ ...it, href: `/shop/?brand=${encodeURIComponent(brand)}` });
+      continue;
+    }
     out.push({ ...it, children });
   }
   // A lone "View All" left in a group isn't useful.
@@ -99,20 +124,30 @@ export function pruneMenu(items: MenuItem[], nav: LiveNav): MenuItem[] {
 /** The menu for the shop. When a catalog's sections have all gone (it's switched off), automatic
  *  category links built from the catalogs still on (`auto`) take their place, before what's left. */
 export function liveMenu(items: MenuItem[], nav: LiveNav, auto: MenuItem[]): MenuItem[] {
-  const pruned = pruneMenu(items, nav);
+  const pruned = pruneMenu(items, nav, auto);
   const isCatalog = (x: MenuItem) => /\/collections\/|[?&]category=/.test(x.href);
+  const anyLive = (xs: MenuItem[]): boolean => xs.some((x) => (isCatalog(x) && hrefIsLive(x.href, nav) === true) || anyLive(x.children ?? []));
   const hadSections = items.some(isCatalog);
-  const keptSections = pruned.some(isCatalog);
-  if (hadSections && !keptSections) {
+  // Only when nothing at all is left from the catalog's menu do the automatic categories take over.
+  if (hadSections && !anyLive(pruned)) {
     const labels = new Set(pruned.map((x) => x.label.toLowerCase()));
     return [...auto.filter((a) => !labels.has(a.label.toLowerCase())), ...pruned];
   }
   return pruned;
 }
 
-export function pruneLinks<T extends { href: string }>(links: T[], nav: LiveNav): T[] {
-  return links.filter((l) => hrefIsLive(l.href, nav) !== false);
+/** Footer links and homepage tiles: an empty one points to the matching automatic category, or goes. */
+export function pruneLinks<T extends { href: string; label?: string; title?: string }>(links: T[], nav: LiveNav, auto: MenuItem[] = []): T[] {
+  return links.flatMap((l) => {
+    if (hrefIsLive(l.href, nav) !== false) return [l];
+    const m = matchCategory(l.label ?? l.title ?? "", auto);
+    return m ? [{ ...l, href: m.href }] : [];
+  });
 }
+
+/** Automatic category links from the catalogs that are on. */
+export const autoCategories = (tax: Taxonomy, nav: LiveNav): MenuItem[] =>
+  tax.categories.filter((c) => c.menu !== false && nav.categories.has(c.slug)).map((c) => ({ label: c.name, href: `/shop/?category=${c.slug}`, children: [] }));
 
 /** For buttons and banners: an empty category is swapped for the sale page or the whole shop. */
 export function liveHref(href: string, nav: LiveNav): string {
@@ -133,10 +168,10 @@ export function liveHrefsDeep<T>(v: T, nav: LiveNav): T {
 
 /** Menus, footer links and announcement for the shop, trimmed to what's on sale right now. */
 export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy) {
-  const auto = tax.categories.filter((c) => c.menu !== false && nav.categories.has(c.slug)).map((c) => ({ label: c.name, href: `/shop/?category=${c.slug}`, children: [] }));
+  const auto = autoCategories(tax, nav);
   return {
     menu: liveMenu(s.menu, nav, auto),
-    footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav) })).filter((c) => c.links.length),
+    footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav, auto) })).filter((c) => c.links.length),
     announcement: liveHrefsDeep(s.announcement, nav),
   };
 }
