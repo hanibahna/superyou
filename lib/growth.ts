@@ -187,7 +187,8 @@ export function publicGrowth(g: Growth) {
     pharmacist: g.pharmacist,
     bundles: g.bundles,
     advent: { enabled: g.advent.enabled },
-    skinScan: { enabled: g.skinScan.enabled },
+    // Only offered to shoppers once the AI key is in place (otherwise the page just says "not connected").
+    skinScan: { enabled: g.skinScan.enabled && typeof process !== "undefined" && !!process.env.ANTHROPIC_API_KEY },
     shadeFinder: g.shadeFinder,
     images: g.images,
     trust: g.trust,

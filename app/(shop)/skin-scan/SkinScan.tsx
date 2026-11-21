@@ -12,14 +12,30 @@ import { useShop } from "@/lib/store";
 type Step = { id: string; name: string; time: string; tip: string; picks: CardItem[] };
 type Analysis = { skinType?: string; concerns: string[]; sensitive: boolean; observations: string[]; advice: string };
 
+/** Opens any photo the phone gives us (iPhone HEIC included), upright, as an image we can draw. */
+async function decode(file: File): Promise<{ src: CanvasImageSource; w: number; h: number }> {
+  try {
+    const b = await createImageBitmap(file, { imageOrientation: "from-image" });
+    return { src: b, w: b.width, h: b.height };
+  } catch {
+    // Safari can't always make a bitmap from HEIC, but an <img> can show it.
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return { src: img, w: img.naturalWidth, h: img.naturalHeight };
+  }
+}
+
 /** Shrinks the photo in the browser (max 1024 px JPEG) before upload. */
 async function shrink(file: File) {
-  const img = await createImageBitmap(file);
-  const k = Math.min(1, 1024 / Math.max(img.width, img.height));
+  const { src, w, h } = await decode(file);
+  if (!w || !h) throw new Error("empty");
+  const k = Math.min(1, 1024 / Math.max(w, h));
   const c = document.createElement("canvas");
-  c.width = Math.round(img.width * k);
-  c.height = Math.round(img.height * k);
-  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  c.width = Math.round(w * k);
+  c.height = Math.round(h * k);
+  c.getContext("2d")!.drawImage(src, 0, 0, c.width, c.height);
   return c.toDataURL("image/jpeg", 0.85);
 }
 
@@ -41,10 +57,12 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     if (!data) return setErr(tx("We couldn't open that photo. Try a JPG or PNG."));
     setPreview(data);
     setBusy(true);
-    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data }) }).catch(() => null);
+    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
-    if (!r?.ok) return setErr(d.error === "not_configured" ? tx("The AI skin scan isn't switched on yet. Use the quiz instead — it takes a minute.") : d.error ?? "Please try again");
+    if (input.current) input.current.value = ""; // so the same photo can be picked again
+    if (!r) return setErr(tx("No connection, or the scan took too long. Please try again."));
+    if (!r.ok) return setErr(d.error === "not_configured" ? tx("The AI skin scan isn't switched on yet. Use the quiz instead — it takes a minute.") : tx(d.error ?? "Please try again"));
     setRes(d);
   }
 
@@ -67,8 +85,8 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
             )}
           </div>
           <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that my photo is sent once to an AI service to read my skin. It isn't stored.")}</label>
-          <input ref={input} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-          <button disabled={!consent || busy || !ready} onClick={() => input.current?.click()} className="tap mt-3 w-full rounded-full bg-ink font-semibold text-white disabled:opacity-40">{busy ? tx("Reading your skin…") : preview ? "Try another photo" : "Take or upload a selfie"}</button>
+          <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+          <button disabled={!consent || busy || !ready} onClick={() => input.current?.click()} className="tap mt-3 w-full rounded-full bg-ink font-semibold text-white disabled:opacity-40">{busy ? tx("Reading your skin…") : preview ? tx("Try another photo") : tx("Take or upload a selfie")}</button>
           {err && <p className="mt-3 text-sm text-sale">{err}</p>}
           <p className="mt-4 text-[11px] text-muted">{tx("Cosmetic guidance only — not a medical diagnosis.")}</p>
         </div>

@@ -43,7 +43,7 @@ export function AnnouncementBar() {
 export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: Taxonomy }) {
   const tx = useT();
   const { count, wishlist, setDrawerOpen } = useShop();
-  const { settings, routineEnabled } = useSite();
+  const { settings, routineEnabled, growth } = useSite();
   const t = useT();
   const store = settings.store;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -153,10 +153,12 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
                     <span className="block text-lg">✨</span><span className="text-sm font-semibold">{tx("Routine finder")}</span>
                   </Link>
                 )}
-                <Link href="/skin-scan/" onClick={() => setMenuOpen(false)} className="relative rounded-2xl bg-brand-50 p-3">
-                  <span className="new-pill absolute end-2 top-2">AI</span>
-                  <span className="block text-lg">📸</span><span className="text-sm font-semibold">{tx("Skin scan")}</span>
-                </Link>
+                {growth.skinScan.enabled && (
+                  <Link href="/skin-scan/" onClick={() => setMenuOpen(false)} className="relative rounded-2xl bg-brand-50 p-3">
+                    <span className="new-pill absolute end-2 top-2">AI</span>
+                    <span className="block text-lg">📸</span><span className="text-sm font-semibold">{tx("Skin scan")}</span>
+                  </Link>
+                )}
                 <Link href="/shop/?sale=1" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#fbeef2] p-3"><span className="block text-lg">%</span><span className="text-sm font-semibold text-sale">{tx("Offers")}</span></Link>
                 <Link href="/shop/?sort=new" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#f5f5f5] p-3"><span className="block text-lg">★</span><span className="text-sm font-semibold">{tx("New arrivals")}</span></Link>
               </div>

@@ -33,11 +33,18 @@ Otherwise return only JSON: {"ok":true,"skinType": one of ${JSON.stringify(types
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+      temperature: 0,
       max_tokens: 700,
       messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data } }, { type: "text", text: prompt }] }],
     }),
-  }).catch(() => null);
-  if (!res?.ok) return NextResponse.json({ error: "The skin scan is busy, please try again or use the quiz" }, { status: 502 });
+    signal: AbortSignal.timeout(55_000),
+  }).catch((e) => (console.error("skin-scan: AI request failed", e), null));
+  if (!res?.ok) {
+    if (res) console.error("skin-scan: AI error", res.status, (await res.text().catch(() => "")).slice(0, 500));
+    // A wrong or expired key reads to the shopper as "not switched on", not as a broken scan.
+    if (res && (res.status === 401 || res.status === 403)) return NextResponse.json({ error: "not_configured" }, { status: 503 });
+    return NextResponse.json({ error: "The skin scan is busy, please try again or use the quiz" }, { status: 502 });
+  }
   const out = (await res.json()) as { content?: { type: string; text?: string }[] };
   const text = out.content?.find((c) => c.type === "text")?.text ?? "";
   let a: { ok: boolean; reason?: string; skinType?: string; concerns?: string[]; sensitive?: boolean; observations?: string[]; advice?: string };
