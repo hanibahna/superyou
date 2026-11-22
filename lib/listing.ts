@@ -2,7 +2,7 @@ import "server-only";
 
 // Server-side catalog queries: grouping variants into cards, filtering, search, facets, paging.
 
-import { forShopper } from "@/lib/gender";
+import { forShopper, genderOf } from "@/lib/gender";
 import { brandKey, getTaxonomy } from "@/lib/catalog";
 import { discountPct, type ProductLite, type Tag, type Taxonomy } from "@/lib/data/catalog";
 import { shopImg } from "@/lib/img";
@@ -107,6 +107,8 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
     // Keep search relevance order (cards come out in result order); optionally sink sold-out items.
     if (oosLast) cards.sort((a, b) => Number(b.inStock) - Number(a.inStock));
   } else cards.sort((a, b) => Number(b.inStock) - Number(a.inStock) || Number(b.tags.includes("favorite")) - Number(a.tags.includes("favorite")) || a.name.localeCompare(b.name));
+  // Men's section: products made for men first, then unisex care (stable sort keeps the order above).
+  if (q.for === "men" && !q.q && (!q.sort || q.sort === "featured")) cards.sort((a, b) => Number(genderOf(b) === "men") - Number(genderOf(a) === "men"));
 
   const perPage = q.perPage ?? ss.perPage;
   const pages = Math.max(1, Math.ceil(cards.length / perPage));
