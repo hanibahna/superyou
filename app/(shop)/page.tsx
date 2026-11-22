@@ -3,6 +3,9 @@ import { shopImgDeep } from "@/lib/img";
 import { autoCategories, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
 import { CampaignHero, Circles, OffersGrid, PromoTiles } from "@/components/Campaign";
 import { ProductCarousel } from "@/components/ProductCarousel";
+import { PharmacistBand, PromiseStrip, QuickJump } from "@/components/HomeExtras";
+import { publicGrowth } from "@/lib/growth";
+import { getGrowth } from "@/lib/growth-store";
 import { ProductCard } from "@/components/ProductCard";
 import { VideoStrip, VideoWall } from "@/components/Video";
 import { getTaxonomy } from "@/lib/catalog";
@@ -10,7 +13,7 @@ import { cardsFor, liveCards } from "@/lib/listing";
 import { canonical, siteUrl } from "@/lib/seo";
 import { listReviews } from "@/lib/growth-store";
 import { ReviewsStrip } from "@/components/ReviewsStrip";
-import { getLang } from "@/lib/i18n-server";
+import { getLang, getT } from "@/lib/i18n-server";
 import { translateDeep } from "@/lib/translate";
 import { getLanding, getSettings, getVideoLibrary } from "@/lib/site-store";
 
@@ -66,13 +69,43 @@ export default async function HomePage() {
       { "@type": "WebSite", url: `${base}/`, name: settings.store.name, potentialAction: { "@type": "SearchAction", target: `${base}/shop/?q={search_term_string}`, "query-input": "required name=search_term_string" } },
     ],
   };
+  const t = await getT();
+  const scanOn = publicGrowth(await getGrowth()).skinScan.enabled;
+  const firstHero = sections.findIndex((x) => x.type === "bfhero" || x.type === "hero");
+  const productIdx = new Map<number, number>();
+  sections.forEach((x, i) => x.type === "products" && productIdx.set(i, productIdx.size));
+  // The pharmacist band goes after the second product row (or halfway down if there are few).
+  const bandAfter = [...productIdx.keys()][1] ?? Math.floor(sections.length / 2);
+  // Two rows with the same heading ("Just dropped" twice) get their eyebrow added so each reads as its own.
+  const seenTitles = new Set<string>();
+  for (const x of sections) if ("title" in x && typeof x.title === "string") {
+    const k = x.title.trim().toLowerCase();
+    if (k && seenTitles.has(k) && "eyebrow" in x && x.eyebrow) (x as { title: string }).title = `${x.title}: ${x.eyebrow.charAt(0).toUpperCase()}${x.eyebrow.slice(1).toLowerCase()}`;
+    seenTitles.add(k);
+  }
+  const jumpCats = ["skincare", "makeup", "fragrance", "hair", "suncare", "body", "supplements", "baby", "men"];
+  const jumps = [
+    { label: t("Offers"), href: "/shop/?sale=1", hot: true },
+    ...jumpCats.map((slug) => tax.categories.find((c) => c.slug === slug)).filter((c) => c && (catCount[c.slug] ?? 0) > 0).map((c) => ({ label: c!.name, href: `/shop/?category=${c!.slug}` })),
+    { label: t("Brands A–Z"), href: "/brands/" },
+  ];
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(org).replace(/</g, "\\u003c") }} />
       {sections.map((s, n) => {
         const el = renderSection(s, n);
-        return el && s.hideOnMobile ? <div key={s.id} className="hidden md:block">{el}</div> : el;
+        const wrapped = el && s.hideOnMobile ? <div key={s.id} className="hidden md:block">{el}</div> : el;
+        if (!wrapped) return null;
+        const extra = [];
+        // Right under the first big banner: the promise, then one-tap jumps to the main aisles.
+        if (n === firstHero) extra.push(<PromiseStrip key="promise" t={t} freeOver={settings.delivery.freeThreshold} />, <QuickJump key="jump" t={t} links={jumps} />);
+        // Halfway down, an invitation to ask a pharmacist.
+        if (n === bandAfter) extra.push(<PharmacistBand key="band" t={t} whatsapp={settings.store.whatsapp} scan={scanOn} />);
+        // Product rows alternate on a soft band so the page reads as distinct chapters.
+        const banded = s.type === "products" && (productIdx.get(n) ?? 0) % 2 === 1 ? <div key={s.id} className="bg-[#faf7f8]">{wrapped}</div> : wrapped;
+        return extra.length ? [banded, ...extra] : banded;
       })}
+      {firstHero < 0 && <><PromiseStrip t={t} freeOver={settings.delivery.freeThreshold} /><QuickJump t={t} links={jumps} /></>}
     </>
   );
 
