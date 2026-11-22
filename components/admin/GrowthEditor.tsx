@@ -217,7 +217,16 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
           <Card title="AI skin scan" sub="Page /skin-scan/: a selfie is read by an AI vision model and a routine is built from stock. The photo is not stored.">
             <Toggle label="Skin scan page is on" checked={g.skinScan.enabled} onChange={(enabled) => up("skinScan", { enabled })} />
             <div className="mt-3"><Area label="Intro" value={g.skinScan.intro} onChange={(intro) => up("skinScan", { intro })} /></div>
-            <p className={`mt-3 text-sm ${aiReady ? "text-green-700" : "text-sale"}`}>{aiReady ? "✓ AI key found — the scan works." : "Not connected: add ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables, then redeploy. Until then the page offers the quiz."}</p>
+            <p className={`mt-3 text-sm ${aiReady ? "text-green-700" : "text-sale"}`}>{aiReady ? "✓ AI key found — the scan works." : "Not connected: paste a Claude API key in Admin → Sections & AI. Until then the page offers the quiz."}</p>
+          </Card>
+          <Card title="Subscribe & save" sub="Customers choose monthly or every-3-months delivery on the product page and get an extra discount. Orders are placed automatically (cash on delivery) and they can skip, change or cancel from their link. Manage them in Admin → Subscriptions.">
+            <Toggle label="Offer subscriptions" checked={g.subscribe.enabled} onChange={(enabled) => up("subscribe", { enabled })} />
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <Num label="Monthly: extra % off" value={g.subscribe.monthly} onChange={(monthly) => up("subscribe", { monthly })} />
+              <Num label="Every 3 months: extra % off" value={g.subscribe.quarterly} onChange={(quarterly) => up("subscribe", { quarterly })} />
+              <Text label="Only for this collection (empty = every product)" value={g.subscribe.collection} onChange={(collection) => up("subscribe", { collection })} placeholder="collection slug" />
+              <Text label="Note under the options" value={g.subscribe.note} onChange={(note) => up("subscribe", { note })} />
+            </div>
           </Card>
           <Card title="Foundation shade finder" sub="Page /shade-finder/: 5 questions → shade range, undertone letters and matching foundations in stock.">
             <Toggle label="Shade finder page is on" checked={g.shadeFinder.enabled} onChange={(enabled) => up("shadeFinder", { enabled })} />

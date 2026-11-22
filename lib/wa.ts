@@ -37,7 +37,7 @@ export type Contact = {
 
 // ── Automations ─────────────────────────────────────────
 
-export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder" | "giftCardSent";
+export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder" | "giftCardSent" | "subscriptionStarted" | "subscriptionReminder";
 
 export type Automation = {
   enabled: boolean;
@@ -61,6 +61,8 @@ export const automationInfo: Record<AutomationKey, { label: string; when: string
   clubReward: { label: "Club reward voucher", when: "When a member's points turn into a voucher", tokens: ["first_name", "code", "value", "points"], category: "MARKETING" },
   birthday: { label: "Birthday gift", when: "On the member's birthday (morning)", tokens: ["first_name", "code", "percent"], category: "MARKETING" },
   giftCardSent: { label: "Gift card received", when: "When a gift card bought on the site is paid — sent to the person receiving it", tokens: ["first_name", "from", "amount", "code", "message", "link"], category: "UTILITY" },
+  subscriptionStarted: { label: "Subscription started", when: "When a customer subscribes to monthly or quarterly delivery", tokens: ["first_name", "items", "every", "next_date", "link"], category: "UTILITY" },
+  subscriptionReminder: { label: "Subscription delivery coming", when: "3 days before the next subscription order is placed", tokens: ["first_name", "items", "next_date", "total", "link"], category: "UTILITY" },
   cartReminder: { label: "Forgot something? (abandoned cart)", when: "A few hours after someone leaves checkout without ordering (only if they ticked WhatsApp offers)", tokens: ["first_name", "items", "total", "link"], category: "MARKETING" },
 };
 
@@ -91,6 +93,8 @@ export const defaultWaConfig: WaConfig = {
     birthday: auto("birthday_gift", ["{{first_name}}", "{{percent}}", "{{code}}"]),
     cartReminder: auto("cart_reminder", ["{{first_name}}", "{{link}}"]),
     giftCardSent: auto("gift_card_received", ["{{first_name}}", "{{from}}", "{{amount}}", "{{code}}"]),
+    subscriptionStarted: auto("subscription_started", ["{{first_name}}", "{{every}}", "{{next_date}}", "{{link}}"]),
+    subscriptionReminder: auto("subscription_reminder", ["{{first_name}}", "{{next_date}}", "{{total}}", "{{link}}"]),
   },
 };
 
@@ -103,6 +107,8 @@ export const waConfigSchema = z.object({
 
 /** Ready-to-submit templates (create them in one click from the admin, then wait for Meta's approval). */
 export const templatePresets: { name: string; category: "UTILITY" | "MARKETING"; body: string; example: string[]; header?: "IMAGE" }[] = [
+  { name: "subscription_started", category: "UTILITY", body: "Hi {{1}}, your SuperYou subscription is set: delivered {{2}}, next order on {{3}}. Skip, change or cancel any time: {{4}}", example: ["Rana", "every month", "22 Dec", "https://shopsuperyou.com/subscription/?id=SUB-1&t=x"] },
+  { name: "subscription_reminder", category: "UTILITY", body: "Hi {{1}}, your next SuperYou subscription order will be placed on {{2}} ({{3}}, pay on delivery). To skip or change it: {{4}}", example: ["Rana", "22 Dec", "$38.50", "https://shopsuperyou.com/subscription/?id=SUB-1&t=x"] },
   { name: "order_received", category: "UTILITY", body: "Hi {{1}}, thank you for your order {{2}} at SuperYou! Total: {{3}}. We'll let you know as soon as it's on its way.", example: ["Rana", "SUP-M3K2Q", "$45.90"] },
   { name: "order_confirmed", category: "UTILITY", body: "Hi {{1}}, your SuperYou order {{2}} is confirmed and being prepared.", example: ["Rana", "SUP-M3K2Q"] },
   { name: "order_shipped", category: "UTILITY", body: "Good news {{1}}! Your SuperYou order {{2}} is on its way. Our driver will call you before arriving.", example: ["Rana", "SUP-M3K2Q"] },

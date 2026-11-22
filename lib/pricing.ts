@@ -85,7 +85,7 @@ const snapOf = (p: ProductLite): ProductSnap => ({
   origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
-export type QuoteInput = { items: { productId: string; qty: number }[]; code?: string; zone?: string; giftCard?: string };
+export type QuoteInput = { items: { productId: string; qty: number; every?: 1 | 3 }[]; code?: string; zone?: string; giftCard?: string };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);
@@ -146,6 +146,27 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
         q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
       }
     }
+  }
+  // Subscribe & save: lines on a monthly or 3-monthly plan get the extra % off.
+  if (growth.subscribe.enabled && input.items.some((i) => i.every)) {
+    const sub = growth.subscribe;
+    let allowed: Set<string> | null = null;
+    if (sub.collection) {
+      const { collectionMembers } = await import("@/lib/listing");
+      allowed = new Set((await collectionMembers(sub.collection)).map((p) => p.id));
+    }
+    for (const every of [1, 3] as const) {
+      const pct = every === 1 ? sub.monthly : sub.quarterly;
+      const spend = ok.filter((l) => input.items.find((i) => i.productId === l.productId)?.every === every && (!allowed || allowed.has(l.productId))).reduce((a, l) => a + l.price * l.qty, 0);
+      const amount = +Math.min(q.subtotal - q.discountTotal, (spend * pct) / 100).toFixed(2);
+      if (pct > 0 && amount > 0) {
+        q.discounts.push({ name: `Subscribe & save, ${every === 1 ? "monthly" : "every 3 months"} (−${pct}%)`, amount });
+        q.discountTotal = +(q.discountTotal + amount).toFixed(2);
+      }
+    }
+    const { deliveryFor } = await import("@/lib/site");
+    q.delivery = deliveryFor(settings, q.subtotal - q.discountTotal, input.zone);
+    q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
   }
   const bySku = new Map(live.list.map((p) => [p.sku.toLowerCase(), p]));
   const gc = input.giftCard ? await giftCardFor(input.giftCard, q.total) : null;

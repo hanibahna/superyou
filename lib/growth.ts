@@ -49,6 +49,7 @@ export type Growth = {
   reorder: { enabled: boolean; days: { category: string; days: number }[]; defaultDays: number };
   advent: { enabled: boolean; year: number; title: string; intro: string; doors: AdventDoor[] };
   skinScan: { enabled: boolean; intro: string };
+  subscribe: { enabled: boolean; monthly: number; quarterly: number; collection: string; note: string }; // Subscribe & save
   shadeFinder: { enabled: boolean };
   images: { frame: "white" | "grey"; padding: number }; // uniform product photos
   motion: boolean; // site animations
@@ -119,6 +120,7 @@ export const defaultGrowth: Growth = {
     intro: "A new deal or gift behind every door, 1–24 December. Come back each day.",
     doors: Array.from({ length: 24 }, (_, i) => ({ day: i + 1, title: `Day ${i + 1}`, text: "", code: "", href: "/shop/?sale=1", image: "" })),
   },
+  subscribe: { enabled: true, monthly: 10, quarterly: 15, collection: "", note: "Skip, change or cancel any time. Pay on delivery, nothing charged in advance." },
   skinScan: { enabled: true, intro: "Take a selfie in daylight, without make-up. We'll read your skin and build a routine from products in stock. Your photo is analysed once and never stored." },
   shadeFinder: { enabled: true },
   images: { frame: "grey", padding: 8 },
@@ -158,6 +160,7 @@ export const growthSchema = z.object({
     doors: z.array(z.object({ day: z.number().int().min(1).max(31), title: z.string().max(80), text: z.string().max(300), code: z.string().max(40), href: z.string().max(300), image: z.string().max(500) })).max(31),
   }),
   skinScan: z.object({ enabled: z.boolean(), intro: z.string().max(400) }),
+  subscribe: z.object({ enabled: z.boolean(), monthly: z.number().min(0).max(50), quarterly: z.number().min(0).max(50), collection: z.string().max(200), note: z.string().max(200) }).default({ enabled: true, monthly: 10, quarterly: 15, collection: "", note: "" }),
   shadeFinder: z.object({ enabled: z.boolean() }),
   images: z.object({ frame: z.enum(["white", "grey"]), padding: z.number().min(0).max(20) }),
   motion: z.boolean(),
@@ -172,12 +175,12 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     popup: { ...d.popup, ...v.popup }, samples: { ...d.samples, ...v.samples }, dedupe: { ...d.dedupe, ...v.dedupe },
     reviews: { ...d.reviews, ...v.reviews }, club: { ...d.club, ...v.club, bonus: { ...d.club.bonus, ...v.club?.bonus }, referral: { ...d.club.referral, ...v.club?.referral }, memberPrice: { ...d.club.memberPrice, ...v.club?.memberPrice } }, pharmacist: { ...d.pharmacist, ...v.pharmacist },
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
-    skinScan: { ...d.skinScan, ...v.skinScan }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
+    skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
   };
 }
 
 /** What the browser needs (no voucher logic, no wheel odds). */
-export function publicGrowth(g: Growth) {
+export function publicGrowth(g: Growth, aiKey?: boolean) {
   const { wheel, ...popup } = g.popup;
   return {
     popup: { ...popup, wheel: wheel.map((w) => w.label) },
@@ -188,7 +191,8 @@ export function publicGrowth(g: Growth) {
     bundles: g.bundles,
     advent: { enabled: g.advent.enabled },
     // Only offered to shoppers once the AI key is in place (otherwise the page just says "not connected").
-    skinScan: { enabled: g.skinScan.enabled && typeof process !== "undefined" && !!process.env.ANTHROPIC_API_KEY },
+    skinScan: { enabled: g.skinScan.enabled && (aiKey ?? (typeof process !== "undefined" && !!process.env.ANTHROPIC_API_KEY)) },
+    subscribe: g.subscribe,
     shadeFinder: g.shadeFinder,
     images: g.images,
     trust: g.trust,

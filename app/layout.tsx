@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {marketing.tracking.metaDomain && <meta name="facebook-domain-verification" content={marketing.tracking.metaDomain} />}
       </head>
       <body>
-        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav(), await getTaxonomy()), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(publicGrowth(growth), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
+        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav(), await getTaxonomy()), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(publicGrowth(growth, !!(await (await import("@/lib/extras")).anthropicKey())), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
           {children}
         </SiteProvider>
         <Tracking t={publicTracking(marketing)} />

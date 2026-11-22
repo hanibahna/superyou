@@ -73,6 +73,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const related = cards.filter((c) => c.slug !== initial.slug && c.inStock && (c.brand === initial.brand || c.category === initial.category)).slice(0, 12);
   // Description etc. are shared by all sizes/shades of an item.
   const gallery = Array.from(new Set([...detail.images.map((x) => shopImg(x)!), ...variants.map((v) => v.image).filter((x): x is string => !!x)]));
+  const subOk = !growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id));
   const how = detail.video;
   const videos = lib.show.product
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)
@@ -112,7 +113,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           <span>{initial.name}</span>
         </nav>
 
-        <BuyBox variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
+        <BuyBox subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <div className="mt-8 divide-y divide-line border-y border-line">
             {detail.description && <Section title={tx("Description")} open>{L(detail.description)}</Section>}
             {(detail.howToUse || how) && (

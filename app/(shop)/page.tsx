@@ -70,7 +70,7 @@ export default async function HomePage() {
     ],
   };
   const t = await getT();
-  const scanOn = publicGrowth(await getGrowth()).skinScan.enabled;
+  const scanOn = publicGrowth(await getGrowth(), !!(await (await import("@/lib/extras")).anthropicKey())).skinScan.enabled;
   const firstHero = sections.findIndex((x) => x.type === "bfhero" || x.type === "hero");
   const productIdx = new Map<number, number>();
   sections.forEach((x, i) => x.type === "products" && productIdx.set(i, productIdx.size));

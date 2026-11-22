@@ -1,5 +1,6 @@
 "use client";
 
+import { LinePlan } from "@/components/SubscribePlan";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -63,7 +64,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const payload = {
       attribution: readAttribution(),
-      items: detailed.map((l) => ({ productId: l.productId, qty: l.qty })),
+      items: detailed.map((l) => ({ productId: l.productId, qty: l.qty, ...(l.every ? { every: l.every } : {}) })),
       customer: {
         firstName: f.firstName, lastName: f.lastName, phone: f.phone, email: f.email,
         zone: f.zone, city: f.city, address: f.address, notes: f.notes,
@@ -183,13 +184,13 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
         <aside className="h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
           <h2 className="text-lg font-semibold">{tx("Order summary")}</h2>
           <ul className="mt-4 space-y-3">
-            {detailed.map(({ product, qty, lineTotal }) => (
+            {detailed.map(({ product, qty, lineTotal, every }) => (
               <li key={product.id} className="flex items-center gap-3 text-sm">
                 <span className="relative">
                   <ProductImage product={product} className="h-14 w-14 rounded-lg" />
                   <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-ink text-[10px] text-white">{qty}</span>
                 </span>
-                <span className="flex-1 leading-snug">{product.name}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /></span>
+                <span className="flex-1 leading-snug">{product.name}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><LinePlan productId={product.id} every={every} readOnly /></span>
                 <span className="font-medium">{money(lineTotal)}</span>
               </li>
             ))}

@@ -1,5 +1,6 @@
 "use client";
 
+import { LinePlan } from "./SubscribePlan";
 import Link from "next/link";
 import { useSettings, useT } from "@/lib/site-context";
 import { CouponBox, GiftPicker, Totals } from "./CartPromos";
@@ -47,7 +48,7 @@ export function CartDrawer() {
             <p className="py-16 text-center text-muted">Your cart is empty.</p>
           ) : (
             <ul className="space-y-4">
-              {detailed.map(({ product, qty, lineTotal }) => (
+              {detailed.map(({ product, qty, lineTotal, every }) => (
                 <li key={product.id} className="flex gap-3">
                   <ProductImage product={product} className="h-20 w-20 shrink-0 rounded-lg" />
                   <div className="flex flex-1 flex-col">
@@ -55,6 +56,7 @@ export function CartDrawer() {
                     <p className="text-sm font-medium leading-snug">{product.name}</p>
                     {product.variant && <p className="text-xs text-muted">{product.variant}</p>}
                     <ShipBadge p={product} className="mt-1 self-start" />
+                    <LinePlan productId={product.id} every={every} />
                     <div className="mt-auto flex items-center justify-between">
                       <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                       <span className="text-right text-sm font-semibold">

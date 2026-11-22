@@ -7,6 +7,7 @@ import { checkoutMethods, startPayment } from "@/lib/payments";
 export async function POST(req: NextRequest) {
   const parsed = checkoutSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please check the highlighted fields.", issues: parsed.error.issues }, { status: 400 });
+  delete parsed.data.subscriptionId; // only the subscription engine sets this
   if (!(await checkoutMethods()).some((m) => m.id === parsed.data.paymentMethod))
     return NextResponse.json({ error: "That payment method isn't available." }, { status: 400 });
 

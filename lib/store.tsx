@@ -22,7 +22,8 @@ export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
   ...("origin" in p && p.origin ? { origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax } : {}),
 });
 
-export type CartLine = { productId: string; qty: number; product: ProductSnap };
+/** every: subscription interval in months (1 or 3); none = one-time purchase. */
+export type CartLine = { productId: string; qty: number; product: ProductSnap; every?: 1 | 3 };
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
@@ -42,7 +43,8 @@ export type ServerQuote = {
 type ShopState = {
   lines: CartLine[];
   wishlist: ProductSnap[];
-  add: (product: AnyProduct | ProductSnap, qty?: number) => void;
+  add: (product: AnyProduct | ProductSnap, qty?: number, every?: 1 | 3 | null) => void;
+  setEvery: (productId: string, every?: 1 | 3) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
@@ -125,7 +127,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       fetch("/api/cart/quote/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: lines.map((l) => ({ productId: l.productId, qty: l.qty })), code, zone, giftCard: giftCard || undefined }),
+        body: JSON.stringify({ items: lines.map((l) => ({ productId: l.productId, qty: l.qty, ...(l.every ? { every: l.every } : {}) })), code, zone, giftCard: giftCard || undefined }),
         signal: ctl.signal,
       })
         .then((r) => (r.ok ? r.json() : null))
@@ -163,20 +165,22 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const discountTotal = fresh ? quote.discountTotal : 0;
     const delivery = fresh ? quote.delivery : deliveryFor(settings, subtotal, zone);
     const giftCardAmount = fresh && quote.giftCard ? quote.giftCard.amount : 0;
-    const add = (product: AnyProduct | ProductSnap, qty = 1) => {
+    const add = (product: AnyProduct | ProductSnap, qty = 1, every?: 1 | 3 | null) => {
       const s = snap(product);
       setLines((prev) => {
         const found = prev.find((l) => l.productId === s.id);
+        // Adding from the product page sets the delivery plan; a plain "add" keeps whatever was chosen.
         return found
-          ? prev.map((l) => (l.productId === s.id ? { ...l, qty: l.qty + qty, product: s } : l))
-          : [...prev, { productId: s.id, qty, product: s }];
+          ? prev.map((l) => (l.productId === s.id ? { ...l, qty: l.qty + qty, product: s, ...(every !== undefined ? { every: every ?? undefined } : {}) } : l))
+          : [...prev, { productId: s.id, qty, product: s, ...(every ? { every } : {}) }];
       });
     };
     return {
       lines,
       wishlist,
-      add: (product, qty = 1) => {
-        add(product, qty);
+      setEvery: (productId, every) => setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, every } : l))),
+      add: (product, qty = 1, every) => {
+        add(product, qty, every);
         track({ type: "add_to_cart", item: { id: product.id, name: product.name, brand: product.brand, price: product.price, qty } });
         setDrawerOpen(true);
       },

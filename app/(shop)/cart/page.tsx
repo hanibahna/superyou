@@ -1,5 +1,6 @@
 "use client";
 
+import { LinePlan } from "@/components/SubscribePlan";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
 
@@ -52,7 +53,7 @@ export default function CartPage() {
         <h1 className="mb-4 text-3xl font-semibold">{tx("Cart")}</h1>
         <div className="mb-6"><FreeDeliveryBar /></div>
         <ul className="divide-y divide-line border-y border-line">
-          {detailed.map(({ product, qty, lineTotal }) => (
+          {detailed.map(({ product, qty, lineTotal, every }) => (
             <li key={product.id} className="flex gap-4 py-5">
               <ProductImage product={product} className="h-24 w-24 shrink-0 rounded-lg" />
               <div className="flex flex-1 flex-col">
@@ -60,6 +61,7 @@ export default function CartPage() {
                 <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{product.name}</Link>
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
                 <ShipBadge p={product} className="mt-1 self-start" />
+                <LinePlan productId={product.id} every={every} />
                 <div className="mt-auto flex items-center gap-4">
                   <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                   <button onClick={() => remove(product.id)} className="text-sm text-muted hover:underline">{tx("Remove")}</button>

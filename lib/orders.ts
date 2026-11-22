@@ -15,7 +15,8 @@ import { countCouponUse } from "@/lib/site-store";
 import { attributionSchema, type Attribution } from "@/lib/marketing";
 
 export const checkoutSchema = z.object({
-  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20) })).min(1),
+  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20), every: z.union([z.literal(1), z.literal(3)]).optional() })).min(1),
+  subscriptionId: z.string().max(40).optional(), // set when the order is placed by a subscription (server only)
   customer: z.object({
     firstName: z.string().min(1).max(60),
     lastName: z.string().min(1).max(60),
@@ -77,7 +78,8 @@ export type Order = {
   paymentMethod: CheckoutInput["paymentMethod"];
   paymentProvider?: string;
   paymentRef?: string; // gateway charge/session id
-  lines: Array<{ productId: string; name: string; brand: string; unitPrice: number; qty: number; lineTotal: number; gift?: boolean }>;
+  lines: Array<{ productId: string; name: string; brand: string; unitPrice: number; qty: number; lineTotal: number; gift?: boolean; every?: 1 | 3 }>;
+  subscriptionId?: string; // placed automatically by this subscription
   subtotal: number;
   discount?: number;
   discounts?: { name: string; code?: string; amount: number }[];
@@ -110,6 +112,7 @@ export const orderValue = (o: Order) => +(o.total + (o.giftCard?.amount ?? 0)).t
 /** Recompute every price, discount, gift and delivery fee on the server — never trust client totals. */
 export async function priceOrder(input: CheckoutInput) {
   const q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone });
+  const everyOf = (id: string) => input.items.find((i) => i.productId === id)?.every;
   for (const i of input.items) {
     const l = q.lines.find((x) => x.productId === i.productId);
     if (!l) throw new Error("A product in your cart is no longer available. Please review your cart.");
@@ -133,7 +136,7 @@ export async function priceOrder(input: CheckoutInput) {
     referral = input.code.trim().toUpperCase();
   }
   if (q._settings.checkout.minOrder > 0 && q.subtotal < q._settings.checkout.minOrder) throw new Error(`The minimum order is $${q._settings.checkout.minOrder}.`);
-  const lines: Order["lines"] = q._lines.map((l) => ({ productId: l.productId, name: l.name, brand: l.brand, unitPrice: l.price, qty: l.qty, lineTotal: +(l.price * l.qty).toFixed(2) }));
+  const lines: Order["lines"] = q._lines.map((l) => ({ productId: l.productId, name: l.name, brand: l.brand, unitPrice: l.price, qty: l.qty, lineTotal: +(l.price * l.qty).toFixed(2), ...(everyOf(l.productId) ? { every: everyOf(l.productId) } : {}) }));
   for (const g of allowedGifts(q, input.gifts ?? []))
     lines.push({ productId: g.id, name: `FREE GIFT: ${g.name}`, brand: g.brand, unitPrice: 0, qty: 1, lineTotal: 0, gift: true });
   // Club members-only price: an extra % off (a collection or everything), recognised by phone number.
@@ -197,6 +200,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     currency: "USD",
     customer: input.customer,
     ...(input.attribution && Object.keys(input.attribution).length ? { attribution: input.attribution } : {}),
+    ...(input.subscriptionId ? { subscriptionId: input.subscriptionId } : {}),
     history: [{ at: new Date().toISOString(), status, by: "customer" }],
   };
   const moves = await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => ({ productId: l.productId, delta: -l.qty })), `Order ${order.id}`).catch((e) => (console.error("[stock]", e), []));
@@ -206,6 +210,8 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   const c = order.customer;
   await (await import("@/lib/address-store")).rememberServerAddress(c.phone, { zone: c.zone, city: c.city, address: c.address, notes: c.notes || undefined, lat: c.lat, lng: c.lng }).catch(() => {});
   await onOrderCreated(order, input).catch((e) => console.error("[whatsapp] order", e));
+  // New subscriptions (not for orders a subscription placed itself).
+  if (!input.subscriptionId && order.lines.some((l) => l.every)) await (await import("@/lib/subscriptions")).startSubscriptions(order, input).catch((e) => console.error("[subscriptions]", e));
   return order;
 }
 

@@ -71,6 +71,8 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           : brand.length === 1
             ? brand[0]
             : "All products";
+  const whoLabel = query.for === "men" ? tx("Men") : query.for === "women" ? tx("Women") : "";
+  const fullTitle = whoLabel && !query.q && !heading ? (title === "All products" ? whoLabel : `${title} · ${whoLabel}`) : title;
 
   const brandList = useMemo(() => {
     const t = brandFilter.trim().toLowerCase();
@@ -79,7 +81,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
     return [...chosen, ...list.filter((b) => !brand.includes(b.name)).slice(0, t ? 60 : 25)];
   }, [brandFilter, facets.brands, brand]);
 
-  const activeCount = concern.length + brand.length + (query.instock ? 1 : 0) + (query.category ? 1 : 0) + (query.sale ? 1 : 0) + (query.origin ? 1 : 0) + (query.min !== undefined || query.max !== undefined ? 1 : 0);
+  const activeCount = concern.length + brand.length + (query.instock ? 1 : 0) + (query.category ? 1 : 0) + (query.sale ? 1 : 0) + (query.origin ? 1 : 0) + (query.for ? 1 : 0) + (query.min !== undefined || query.max !== undefined ? 1 : 0);
 
   const Filters = (
     <div className="space-y-7 text-sm">
@@ -115,6 +117,10 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           </form>
         </FilterGroup>
       )}
+      {facets.who && <FilterGroup title="For">
+        <Check label={tx("Women")} count={facets.who.women} checked={query.for === "women"} onChange={() => set("for", query.for === "women" ? null : "women")} />
+        <Check label={tx("Men")} count={facets.who.men} checked={query.for === "men"} onChange={() => set("for", query.for === "men" ? null : "men")} />
+      </FilterGroup>}
       {facets.origins && facets.origins.international > 0 && <FilterGroup title="Ships from">
         <Check label={tx("Lebanon (1–3 days)")} count={facets.origins.local} checked={query.origin === "local"} onChange={() => set("origin", query.origin === "local" ? null : "local")} />
         <Check label={tx("Imported (10–14 days)")} count={facets.origins.international} checked={query.origin === "international"} onChange={() => set("origin", query.origin === "international" ? null : "international")} />
@@ -129,12 +135,12 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
   return (
     <div className="container-x py-8">
       <nav className="mb-2 text-xs text-muted">
-        <Link href="/" className="hover:underline">Home</Link> / <span>{title}</span>
+        <Link href="/" className="hover:underline">Home</Link> / <span>{fullTitle}</span>
       </nav>
       {section && !query.q && <SectionBanner s={section} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold">{title}</h1>
+          <h1 className="text-3xl font-semibold">{fullTitle}</h1>
           {(intro || (category?.description && !query.q)) && <p className="mt-1 max-w-2xl whitespace-pre-line text-sm text-muted">{intro || category?.description}</p>}
           <p className="mt-1 text-sm text-muted">{total.toLocaleString("en-US")} products{pending ? " · updating…" : ""}</p>
         </div>
@@ -155,6 +161,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           {concern.map((c) => <Chip key={c} label={taxonomy.concerns.find((k) => k.slug === c)?.name ?? c} onClear={() => set("concern", c, true)} />)}
           {brand.map((b) => <Chip key={b} label={b} onClear={() => set("brand", b, true)} />)}
           {query.instock && <Chip label="In stock" onClear={() => set("instock", null)} />}
+          {query.for && <Chip label={query.for === "men" ? tx("Men") : tx("Women")} onClear={() => set("for", null)} />}
           {query.origin && <Chip label={query.origin === "international" ? "Imported" : "Ships from Lebanon"} onClear={() => set("origin", null)} />}
           {query.sale && <Chip label={tx("On sale")} onClear={() => set("sale", null)} />}
           {(query.min !== undefined || query.max !== undefined) && <Chip label={`$${query.min ?? 0}–${query.max ?? "∞"}`} onClear={() => { const n = new URLSearchParams(sp.toString()); n.delete(tx("min")); n.delete("max"); go(n); }} />}

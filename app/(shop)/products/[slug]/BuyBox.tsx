@@ -1,5 +1,6 @@
 "use client";
 
+import { SubscribeChoice } from "@/components/SubscribePlan";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { track } from "@/lib/track";
@@ -24,7 +25,9 @@ export function BuyBox({
   concernNames,
   freeOver,
   children,
+  subOk = true,
 }: {
+  subOk?: boolean;
   variants: ProductLite[];
   initialId: string;
   gallery: string[];
@@ -36,6 +39,7 @@ export function BuyBox({
   const { add, toggleWish, isWished } = useShop();
   const [id, setId] = useState(initialId);
   const [qty, setQty] = useState(1);
+  const [plan, setPlan] = useState<0 | 1 | 3>(0);
   const v = variants.find((x) => x.id === id) ?? variants[0];
   const [shown, setShown] = useState<string | undefined>(v.image ?? gallery[0]);
   const pct = discountPct(v);
@@ -117,11 +121,12 @@ export function BuyBox({
           </div>
         )}
 
+        {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={setPlan} />}
         <div className="mt-6 flex items-center gap-3">
           {v.inStock ? (
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
-              <button onClick={() => add(v, qty)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{t("Add to cart")}</button>
+              <button onClick={() => add(v, qty, plan || null)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
             </>
           ) : (
             <button disabled className="flex-1 rounded-lg bg-line py-3 font-semibold text-muted">{t("Sold out")}</button>
@@ -154,7 +159,7 @@ export function BuyBox({
               <p className="truncate text-xs text-muted">{v.brand}</p>
               <p className={`font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</p>
             </div>
-            <button onClick={() => add(v, qty)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{t("Add to bag")}</button>
+            <button onClick={() => add(v, qty, plan || null)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
           </div>
         )}
         {children}

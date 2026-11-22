@@ -16,6 +16,7 @@ export function parseQuery(sp: SP): ShopQuery {
     tag: one(sp.tag),
     instock: one(sp.instock) === "1",
     sale: one(sp.sale) === "1",
+    for: one(sp.for) === "men" || one(sp.for) === "women" ? (one(sp.for) as "men" | "women") : undefined,
     origin: one(sp.origin) === "international" || one(sp.origin) === "local" ? (one(sp.origin) as "local" | "international") : undefined,
     min: one(sp.min) ? Number(one(sp.min)) || undefined : undefined,
     max: one(sp.max) ? Number(one(sp.max)) || undefined : undefined,

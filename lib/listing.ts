@@ -2,6 +2,7 @@ import "server-only";
 
 // Server-side catalog queries: grouping variants into cards, filtering, search, facets, paging.
 
+import { forShopper } from "@/lib/gender";
 import { brandKey, getTaxonomy } from "@/lib/catalog";
 import { discountPct, type ProductLite, type Tag, type Taxonomy } from "@/lib/data/catalog";
 import { shopImg } from "@/lib/img";
@@ -39,6 +40,7 @@ export type ShopQuery = {
   tag?: string;
   instock?: boolean;
   origin?: "local" | "international";
+  for?: "men" | "women";
   sale?: boolean;
   min?: number;
   max?: number;
@@ -57,6 +59,7 @@ export type ShopResult = {
     concerns: { slug: string; name: string; count: number }[];
     brands: { name: string; count: number }[];
     origins: { local: number; international: number };
+    who: { women: number; men: number };
   };
   taxonomy: Taxonomy;
   search: Pick<SearchSettings, "filters" | "popular">;
@@ -88,6 +91,8 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
   const slugsOf = (a: ProductLite[]) => new Set(a.map((p) => p.slug)).size;
   const origins = { local: slugsOf(filtered.filter((p) => p.origin !== "international")), international: slugsOf(filtered.filter((p) => p.origin === "international")) };
   if (q.origin) filtered = filtered.filter((p) => (q.origin === "international" ? p.origin === "international" : p.origin !== "international"));
+  const who = { women: slugsOf(filtered.filter((p) => forShopper(p, "women"))), men: slugsOf(filtered.filter((p) => forShopper(p, "men"))) };
+  if (q.for) filtered = filtered.filter((p) => forShopper(p, q.for!));
 
   let cards = toCards(filtered);
   if (q.instock) cards = cards.filter((c) => c.inStock);
@@ -126,6 +131,7 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
       concerns: taxonomy.concerns.map((c) => ({ slug: c.slug, name: c.name, count: conCounts.get(c.slug)?.size ?? 0 })).filter((c) => c.count > 0 || q.concern?.includes(c.slug)),
       brands: [...brandCounts.entries()].map(([name, s]) => ({ name, count: s.size })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
       origins,
+      who,
     },
     taxonomy,
     search: { filters: ss.filters, popular: ss.popular },
