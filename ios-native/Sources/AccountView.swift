@@ -15,7 +15,7 @@ struct AccountView: View {
                     if let m = a.member {
                         Section("SuperYou Club") {
                             Text("\(m.tier) member · \(m.name)").font(.headline)
-                            Row("Points", "\(m.points)")
+                            LineRow("Points", "\(m.points)")
                         }
                     }
                     Section("Your orders") {

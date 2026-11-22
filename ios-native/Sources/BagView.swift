@@ -52,10 +52,10 @@ struct BagView: View {
                         }
                         Section {
                             let q = bag.quote
-                            Row("Subtotal", money(q?.subtotal ?? bag.subtotal))
-                            ForEach(q?.discounts ?? [], id: \.name) { d in Row(d.name, "−" + money(d.amount)).foregroundStyle(Color.rose) }
-                            Row("Delivery", q.map { $0.delivery == 0 ? "Free" : money($0.delivery) } ?? "—")
-                            Row("Total", money(q?.total ?? bag.subtotal)).font(.headline)
+                            LineRow("Subtotal", money(q?.subtotal ?? bag.subtotal))
+                            ForEach(q?.discounts ?? [], id: \.name) { d in LineRow(d.name, "−" + money(d.amount)).foregroundStyle(Color.rose) }
+                            LineRow("Delivery", q.map { $0.delivery == 0 ? "Free" : money($0.delivery) } ?? "—")
+                            LineRow("Total", money(q?.total ?? bag.subtotal)).font(.headline)
                             Text("Pay cash when it arrives.").font(.footnote).foregroundStyle(.secondary)
                         }
                     }
@@ -77,7 +77,7 @@ struct BagView: View {
     func refresh() { Task { await bag.refresh(zone: zone, code: code) } }
 }
 
-struct Row: View {
+struct LineRow: View {
     let l: String; let r: String
     init(_ l: String, _ r: String) { self.l = l; self.r = r }
     var body: some View { HStack { Text(l); Spacer(); Text(r) } }
@@ -128,7 +128,7 @@ struct CheckoutView: View {
                     Toggle("Order updates on WhatsApp", isOn: $waUpdates)
                 }
                 Section {
-                    Row("Total", money(bag.quote?.total ?? bag.subtotal)).font(.headline)
+                    LineRow("Total", money(bag.quote?.total ?? bag.subtotal)).font(.headline)
                     Text("Payment: cash on delivery").font(.footnote).foregroundStyle(.secondary)
                     if let e = error { Text(e).foregroundStyle(Color.rose).font(.footnote) }
                     Button { Task { await place() } } label: { Text(busy ? "Placing order…" : "Place order").frame(maxWidth: .infinity) }
