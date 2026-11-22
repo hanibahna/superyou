@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   const birthdays = await gs.sendBirthdays().catch(() => 0);
   const carts = await (await import("@/lib/carts")).sweepCarts(true).catch(() => 0);
   const videos = await (await import("@/lib/youtube")).prefillVideos(40).catch(() => 0);
+  const scanFollowUps = await (await import("@/lib/scans")).runScanFollowUps().catch(() => 0);
   const subscriptions = await (await import("@/lib/subscriptions")).runSubscriptions().catch((e) => (console.error("[cron subscriptions]", e), null));
   // Live courier tracking for everything still on its way.
   let tracked = 0;
@@ -27,5 +28,5 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[cron tracking]", e);
   }
-  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts, tracked, subscriptions, videos });
+  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts, tracked, subscriptions, videos, scanFollowUps });
 }

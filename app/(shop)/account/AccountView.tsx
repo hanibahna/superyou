@@ -86,6 +86,7 @@ export function AccountView() {
             </details>
           )}
           <MyAddresses phone={creds.phone} order={creds.order} />
+          <MyScans phone={creds.phone} order={creds.order} />
           <div>
             <h2 className="mb-3 text-xl font-semibold">{t("Your orders")}</h2>
             <ul className="divide-y divide-line rounded-2xl border border-line">
@@ -193,5 +194,34 @@ function MyAddresses({ phone, order }: { phone: string; order: string }) {
       </div>
       {list ? <AddressBook addresses={list} onChange={change} /> : <p className="text-sm text-muted">Loading…</p>}
     </div>
+  );
+}
+
+/** Saved AI skin scans (results and routine, never the photo), newest first. */
+function MyScans({ phone, order }: { phone: string; order: string }) {
+  const t = useT();
+  const [list, setList] = useState<{ id: string; link: string; createdAt: string; skinType?: string; concerns: string[] }[] | null>(null);
+  useEffect(() => {
+    fetch(`/api/skin-scan/history/?phone=${encodeURIComponent(phone)}&order=${encodeURIComponent(order)}`).then((r) => (r.ok ? r.json() : { scans: [] })).then((d) => setList(d.scans ?? [])).catch(() => setList([]));
+  }, [phone, order]);
+  return (
+    <section className="mt-10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold">{t("My skin scans")}</h2>
+        <Link href={list?.[0] ? `/skin-scan/?from=${list[0].id}&t=${new URL(list[0].link, "https://x").searchParams.get("t")}` : "/skin-scan/"} className="scan-glow inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-semibold text-white">{list?.length ? t("Rescan and compare") : t("Take the AI skin scan")}</Link>
+      </div>
+      {list === null ? <p className="mt-3 text-sm text-muted">{t("Loading…")}</p> : !list.length ? (
+        <p className="mt-3 text-sm text-muted">{t("No scans yet. Take a selfie to get your skin type and a routine from products in stock.")}</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-line rounded-2xl border border-line">
+          {list.map((s) => (
+            <li key={s.id}><Link href={s.link} className="flex items-center justify-between gap-3 p-4 hover:bg-[#faf7f8]">
+              <span><b>{s.skinType} {t("skin")}</b>{s.concerns.length ? <span className="text-muted"> · {s.concerns.join(" · ")}</span> : null}</span>
+              <span className="shrink-0 text-sm text-muted">{new Date(s.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} →</span>
+            </Link></li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

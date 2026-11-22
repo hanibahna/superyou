@@ -8,6 +8,7 @@ import { PharmacistButton } from "@/components/Growth";
 import { ProductCard } from "@/components/ProductCard";
 import type { CardItem } from "@/lib/listing";
 import { useShop } from "@/lib/store";
+import { PreviousScan, SendRoutine, ShareScan } from "./ScanExtras";
 
 type Step = { id: string; name: string; time: string; tip: string; picks: CardItem[] };
 type Analysis = { skinType?: string; concerns: string[]; sensitive: boolean; observations: string[]; advice: string; zones?: { zone: string; note: string }[]; confidence?: "high" | "medium" | "low"; photoTips?: string; redFlags?: string[] };
@@ -127,6 +128,13 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const [camera, setCamera] = useState(false);
   const [warn, setWarn] = useState("");
   const live = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+  // Coming back from the 6-week reminder: show the previous reading to compare.
+  const [prev, setPrev] = useState<{ createdAt: string; analysis: Analysis } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("from"), t = q.get("t");
+    if (id && t) fetch(`/api/skin-scan/save/?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setPrev(d)).catch(() => {});
+  }, []);
 
   async function pick(f?: File) {
     if (!f) return;
@@ -203,6 +211,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
           </details>
         </div>
         <div>
+          {prev && <PreviousScan prev={prev} />}
           {res ? (
             <>
               <div className="rounded-2xl border border-line p-5">
@@ -243,6 +252,8 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
                   </div>
                 ))}
               </div>
+              <SendRoutine analysis={res.analysis} steps={res.steps} />
+              <ShareScan analysis={res.analysis} steps={res.steps} />
               <PharmacistButton product="my skin scan results" className="mt-6" />
             </>
           ) : (
