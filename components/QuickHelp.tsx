@@ -16,10 +16,11 @@ const Icon = ({ d }: { d: React.ReactNode }) => <svg width="16" height="16" view
 export function QuickHelp({ className = "" }: { className?: string }) {
   const t = useT();
   const s = useSettings();
-  const pill = "inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-[13px] font-semibold transition hover:border-ink";
+  const base = "inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition";
+  const pill = `${base} border-line bg-white hover:border-ink`;
   return (
     <div className={`no-scrollbar flex gap-2 overflow-x-auto ${className}`}>
-      <Link href="/services/?book=video-consult" className={`${pill} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>
+      <Link href="/services/?book=video-consult" className={`${base} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>
       <a href={`https://wa.me/${s.store.whatsapp}`} target="_blank" rel="noreferrer" className={pill}><Icon d={I.wa} />WhatsApp</a>
       <button onClick={() => window.dispatchEvent(new Event("open-advisor"))} className={pill}><Icon d={I.ai} />{t("Ask AI")}</button>
       <Link href="/routine/" className={pill}><Icon d={I.routine} />{t("Routine finder")}</Link>
