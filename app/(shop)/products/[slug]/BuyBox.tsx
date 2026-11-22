@@ -27,8 +27,10 @@ export function BuyBox({
   freeOver,
   children,
   subOk = true,
+  underImage,
 }: {
   subOk?: boolean;
+  underImage?: React.ReactNode;
   variants: ProductLite[];
   initialId: string;
   gallery: string[];
@@ -78,6 +80,7 @@ export function BuyBox({
             ))}
           </div>
         )}
+        {underImage}
       </div>
 
       <div>

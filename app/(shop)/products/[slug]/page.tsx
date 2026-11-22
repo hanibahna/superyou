@@ -11,7 +11,7 @@ import { getGrowth, productReviews } from "@/lib/growth-store";
 import { toCards } from "@/lib/listing";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { VideoPlayer, VideoStrip, isVertical } from "@/components/Video";
-import { ProductYouTube } from "@/components/ProductYouTube";
+import { ImageVideos } from "@/components/ImageVideos";
 import { HowToUse } from "@/components/HowToUse";
 import { QuickHelp } from "@/components/QuickHelp";
 import { TipLine } from "@/components/TipLine";
@@ -123,7 +123,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <QuickHelp className="mb-3" />
         {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
 
-        <BuyBox subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
+        <BuyBox underImage={<ImageVideos slug={slug} brand={initial.brand} name={initial.name} />} subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} />
           <div className="mt-8 divide-y divide-line border-y border-line">
             {detail.description && <Section title={tx("Description")} open>{L(detail.description)}</Section>}
@@ -151,7 +151,6 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{toCards(pairs).map((p) => <ProductCard key={p.id} product={p} />)}</div>
         </section>
       )}
-      <ProductYouTube slug={slug} />
       {videos.length > 0 && <div className="container-x"><VideoStrip videos={videos} title={tx("Watch & learn")} eyebrow={tx("Videos")} /></div>}
       {growth.reviews.enabled && <Reviews slug={slug} product={`${initial.brand} ${initial.name}`} reviews={reviews.map(({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }) => ({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }))} />}
       <ProductCarousel eyebrow="You may also like" title="Related products" products={related} />

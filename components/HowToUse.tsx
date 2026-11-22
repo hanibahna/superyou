@@ -12,6 +12,11 @@ export function HowToUse({ slug, name, brand, how, tips }: { slug: string; name:
   const [videos, setVideos] = useState<V[] | null>(null);
   const [playing, setPlaying] = useState("");
   useEffect(() => {
+    const h = () => setOpen(true);
+    window.addEventListener("open-howto", h);
+    return () => window.removeEventListener("open-howto", h);
+  }, []);
+  useEffect(() => {
     if (!open || videos) return;
     fetch(`/api/products/videos/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setVideos(d.videos ?? [])).catch(() => setVideos([]));
   }, [open, videos, slug]);
