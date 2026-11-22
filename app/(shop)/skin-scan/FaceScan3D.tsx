@@ -5,7 +5,7 @@ import { useT } from "@/lib/site-context";
 
 // Face ID-style guided scan: live 3D face tracking in the browser (on the phone, nothing uploaded while
 // tracking), a ring that fills as the head turns in a circle, and three photos taken automatically:
-// front, one side, the other side. Falls back to a plain selfie if tracking can't start.
+// front, one side, the other side. Falls back to a single live camera shot if tracking can't start.
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
 const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 const TICKS = 60;
@@ -43,7 +43,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
     (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
-      } catch { return fail(t("We couldn't open your camera. Allow camera access in your browser settings, or upload a photo instead.")); }
+      } catch { return fail(t("We couldn't open your camera. Allow camera access in your browser settings, then try again.")); }
       const v = video.current!;
       v.srcObject = stream; await v.play().catch(() => {});
       try {
@@ -146,7 +146,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       {stage === "error" ? (
         <div className="max-w-sm text-center text-white">
           <p>{msg}</p>
-          <button onClick={onFallback} className="mt-5 min-h-[48px] rounded-full bg-white px-6 font-semibold text-ink">{t("Take a simple selfie instead")}</button>
+          <button onClick={onFallback} className="mt-5 min-h-[48px] rounded-full bg-white px-6 font-semibold text-ink">{t("Use a single camera shot instead")}</button>
         </div>
       ) : (
         <>
@@ -158,7 +158,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
           <p className="mt-4 min-h-[1.5em] text-center text-lg font-semibold text-white" aria-live="polite">{msg}</p>
           {stage === "circle" && <p className="text-sm text-white/70">{pct}%</p>}
           <p className="mt-2 max-w-sm text-center text-xs text-white/60">{t("Face a window, no make-up, hair back. Tracking runs on your phone; only the 3 finished photos are sent to read your skin, then deleted.")}</p>
-          <button onClick={onFallback} className="mt-3 text-xs text-white/60 underline">{t("Take a simple selfie instead")}</button>
+          <button onClick={onFallback} className="mt-3 text-xs text-white/60 underline">{t("Use a single camera shot instead")}</button>
         </>
       )}
     </div>

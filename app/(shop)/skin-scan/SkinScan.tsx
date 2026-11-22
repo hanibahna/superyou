@@ -30,17 +30,6 @@ async function decode(file: File): Promise<{ src: CanvasImageSource; w: number; 
 }
 
 /** Shrinks the photo in the browser (max 1024 px JPEG) before upload. */
-async function shrink(file: File) {
-  const { src, w, h } = await decode(file);
-  if (!w || !h) throw new Error("empty");
-  const k = Math.min(1, 1024 / Math.max(w, h));
-  const c = document.createElement("canvas");
-  c.width = Math.round(w * k);
-  c.height = Math.round(h * k);
-  c.getContext("2d")!.drawImage(src, 0, 0, c.width, c.height);
-  return c.toDataURL("image/jpeg", 0.85);
-}
-
 /** Average brightness 0–255 of a picture, to warn about photos that are too dark or too bright. */
 function brightness(data: string): Promise<number> {
   return new Promise((res) => {
@@ -60,7 +49,7 @@ function brightness(data: string): Promise<number> {
   });
 }
 
-/** Live selfie camera: front camera, mirrored preview, oval face guide and a 3-second countdown. */
+/** Fallback when 3D tracking can't run: live front camera, oval guide and a 3-second countdown (no uploads). */
 function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onClose: () => void }) {
   const tx = useT();
   const video = useRef<HTMLVideoElement>(null);
@@ -71,7 +60,7 @@ function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onC
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false })
       .then((s) => { stream = s; if (video.current) { video.current.srcObject = s; video.current.play().catch(() => {}); } })
-      .catch(() => setErr(tx("We couldn't open your camera. Allow camera access in your browser settings, or upload a photo instead.")));
+      .catch(() => setErr(tx("We couldn't open your camera. Allow camera access in your browser settings, then try again.")));
     return () => stream?.getTracks().forEach((t) => t.stop());
   }, [tx]);
   const snap = () => {
@@ -91,7 +80,7 @@ function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onC
     const t = setInterval(() => { n -= 1; setCount(n); if (n <= 0) { clearInterval(t); snap(); } }, 1000);
   };
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black p-4" role="dialog" aria-modal="true" aria-label={tx("Take a selfie")}>
+    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black p-4" role="dialog" aria-modal="true" aria-label={tx("Face scan")}>
       <button onClick={onClose} aria-label={tx("Close")} className="absolute end-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
@@ -119,7 +108,6 @@ function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onC
 
 export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const tx = useT();
-  const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -139,13 +127,6 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     if (id && t) fetch(`/api/skin-scan/save/?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setPrev(d)).catch(() => {});
   }, []);
 
-  async function pick(f?: File) {
-    if (!f) return;
-    const data = await shrink(f).catch(() => "");
-    if (!data) return setErr(tx("We couldn't open that photo. Try a JPG or PNG."));
-    await analyse(data, false, []);
-  }
-
   async function analyse(data: string, force = false, extra: string[] = sides) {
     setErr("");
     setSides(extra);
@@ -162,7 +143,6 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data, sides: extra }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
-    if (input.current) input.current.value = ""; // so the same photo can be picked again
     if (!r) return setErr(tx("No connection, or the scan took too long. Please try again."));
     if (!r.ok) return setErr(d.error === "not_configured" ? tx("The AI skin scan isn't switched on yet. Use the quiz instead — it takes a minute.") : tx(d.error ?? "Please try again"));
     setRes(d);
@@ -183,7 +163,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="Your photo" className="h-full w-full object-cover" />
             ) : (
-              <p className="p-6 text-center text-sm text-muted">{tx("Face the light, no make-up, hair away from your face.")}</p>
+              <p className="p-6 text-center text-sm text-muted">{tx("Your 3D face scan will appear here. Face the light, no make-up, hair back.")}</p>
             )}
           </div>
           {sides.length > 0 && (
@@ -193,19 +173,17 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <p className="self-center text-xs text-muted">{tx("3D scan: front and both sides")}</p>
             </div>
           )}
-          <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that my photo is sent once to an AI service to read my skin. It isn't stored.")}</label>
-          <input ref={input} type="file" accept="image/*" capture={live ? undefined : "user"} className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-          <input id="skin-upload" type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <button disabled={!consent || busy || !ready} onClick={() => (live ? setScan3d(true) : input.current?.click())} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
+          <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that the 3 photos from my face scan are sent once to an AI service to read my skin. They aren't stored.")}</label>
+          <button disabled={!consent || busy || !ready || !live} onClick={() => setScan3d(true)} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-            {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : live ? tx("Start 3D face scan") : tx("Take a selfie")}
+            {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : tx("Start 3D face scan")}
           </button>
-          <label htmlFor="skin-upload" aria-disabled={!consent || busy || !ready} className={`tap mt-2 flex w-full cursor-pointer items-center justify-center rounded-full border border-line font-semibold ${!consent || busy || !ready ? "pointer-events-none opacity-40" : ""}`}>{tx("Upload a photo")}</label>
-          {!consent && <p className="mt-2 text-center text-xs text-muted">{tx("Tick the box above to start.")}</p>}
+          {!live && <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs">{tx("The 3D face scan needs a camera. Open this page on your phone, or allow camera access in your browser.")}</p>}
+          {live && !consent && <p className="mt-2 text-center text-xs text-muted">{tx("Tick the box above to start.")}</p>}
           {warn && (
             <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
               <p>{warn}</p>
-              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), live ? setScan3d(true) : input.current?.click())} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true, sides)} className="text-muted underline">{tx("Use it anyway")}</button></div>
+              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), setScan3d(true))} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true, sides)} className="text-muted underline">{tx("Use it anyway")}</button></div>
             </div>
           )}
           {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d, false, []); }} />}
@@ -271,14 +249,14 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
           ) : (
             <>
             <ol className="space-y-4 text-sm">
-              {["Take a selfie in daylight, facing the window.", tx("The AI reads visible skin type, shine, redness, dryness and spots."), "We build a morning and evening routine from products in stock — add it to your bag in one tap."].map((x, i) => (
+              {[tx("Start the 3D face scan facing a window, then slowly turn your head in a circle."), tx("The AI reads visible skin type, shine, redness, dryness and spots."), tx("We build a morning and evening routine from products in stock — add it to your bag in one tap.")].map((x, i) => (
                 <li key={x} className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-xs font-bold text-white">{i + 1}</span><span className="pt-1">{x}</span></li>
               ))}
             </ol>
             <div className="mt-6 rounded-2xl bg-[#f6f1f3] p-5">
               <p className="font-semibold">{tx("For the most accurate reading")}</p>
               <ul className="mt-2 grid gap-1.5 text-sm sm:grid-cols-2">
-                {["Clean, bare skin: no make-up, no tinted sunscreen", "Daylight from a window in front of you, not behind", "No flash, no beauty filters or portrait mode", "Hair back, glasses off, face straight to the camera", "Hold the phone at eye level, about an arm's length away", "Wait 30 minutes after washing so redness settles"].map((x) => (
+                {["Clean, bare skin: no make-up, no tinted sunscreen", "Daylight from a window in front of you, not behind", "No flash, no beauty filters or portrait mode", "Hair back, glasses off, turn your head slowly", "Hold the phone at eye level, about an arm's length away", "Wait 30 minutes after washing so redness settles"].map((x) => (
                   <li key={x} className="flex gap-2"><span aria-hidden className="text-brand-700">✓</span><span>{tx(x)}</span></li>
                 ))}
               </ul>

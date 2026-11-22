@@ -19,7 +19,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <Link href={`/skin-scan/?from=${s.id}&t=${s.token}`} className="scan-glow inline-flex min-h-[48px] items-center rounded-full px-6 font-semibold text-white">Rescan and compare</Link>
         <Link href="/services/?book=video-consult" className="inline-flex min-h-[48px] items-center rounded-full border border-line px-6 font-semibold">Ask a pharmacist</Link>
       </div>
-      <p className="mt-6 text-xs text-muted">Cosmetic AI assessment from a selfie, not a medical diagnosis. The photo was not stored.</p>
+      <p className="mt-6 text-xs text-muted">Cosmetic AI assessment from a 3D face scan, not a medical diagnosis. The photos were not stored.</p>
     </div>
   );
 }

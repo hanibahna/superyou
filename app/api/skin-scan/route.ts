@@ -8,7 +8,7 @@ import { buildRoutine } from "@/lib/routine";
 import { getRoutine } from "@/lib/site-store";
 import { anthropicKey } from "@/lib/extras";
 
-// AI skin scan: a selfie is read once by an AI vision model (photo never stored), the result
+// AI 3D skin scan: front + side photos from the guided face scan are read once by an AI vision model (photo never stored), the result
 // is mapped to the routine finder's answers, and a routine is built from products in stock.
 // Needs ANTHROPIC_API_KEY (optional ANTHROPIC_MODEL). Cosmetic guidance only, not a diagnosis.
 export const maxDuration = 60;
@@ -76,7 +76,7 @@ Return only JSON:
   } catch {
     return NextResponse.json({ error: "We couldn't read that photo. Try again in daylight, facing the camera." }, { status: 422 });
   }
-  if (!a.ok) return NextResponse.json({ error: "We couldn't see your face clearly. Take a selfie facing a window, face in the oval, no filters." }, { status: 422 });
+  if (!a.ok) return NextResponse.json({ error: "We couldn't see your face clearly. Scan again facing a window, face inside the circle, no filters." }, { status: 422 });
 
   const answers = {
     skinType: types.includes(a.skinType ?? "") ? a.skinType! : "normal",

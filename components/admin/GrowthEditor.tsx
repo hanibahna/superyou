@@ -214,7 +214,7 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
 
       {tab === "Tools" && (
         <div className="space-y-5">
-          <Card title="AI skin scan" sub="Page /skin-scan/: a selfie is read by an AI vision model and a routine is built from stock. The photo is not stored.">
+          <Card title="AI skin scan" sub="Page /skin-scan/: a guided 3D face scan (front and both sides, camera only, no uploads) is read by an AI vision model and a routine is built from stock. Photos are not stored.">
             <Toggle label="Skin scan page is on" checked={g.skinScan.enabled} onChange={(enabled) => up("skinScan", { enabled })} />
             <div className="mt-3"><Area label="Intro" value={g.skinScan.intro} onChange={(intro) => up("skinScan", { intro })} /></div>
             <p className={`mt-3 text-sm ${aiReady ? "text-green-700" : "text-sale"}`}>{aiReady ? "✓ AI key found — the scan works." : "Not connected: paste a Claude API key in Admin → Sections & AI. Until then the page offers the quiz."}</p>
