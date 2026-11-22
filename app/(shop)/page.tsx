@@ -3,7 +3,7 @@ import { shopImgDeep } from "@/lib/img-server";
 import { autoCategories, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
 import { CampaignHero, Circles, OffersGrid, PromoTiles } from "@/components/Campaign";
 import { ProductCarousel } from "@/components/ProductCarousel";
-import { PharmacistBand, PromiseStrip, QuickJump } from "@/components/HomeExtras";
+import { PharmacistBand, PromiseStrip, QuickJump, ScanBanner } from "@/components/HomeExtras";
 import { publicGrowth } from "@/lib/growth";
 import { getGrowth } from "@/lib/growth-store";
 import { ProductCard } from "@/components/ProductCard";
@@ -101,7 +101,7 @@ export default async function HomePage() {
         if (!wrapped) return null;
         const extra = [];
         // Right under the first big banner: the promise, then one-tap jumps to the main aisles.
-        if (n === firstHero) extra.push(<PromiseStrip key="promise" t={t} freeOver={settings.delivery.freeThreshold} />, <QuickJump key="jump" t={t} links={jumps} />);
+        if (n === firstHero) extra.push(<PromiseStrip key="promise" t={t} freeOver={settings.delivery.freeThreshold} />, <QuickJump key="jump" t={t} links={jumps} />, ...(scanOn ? [<ScanBanner key="scan" t={t} />] : []));
         // Halfway down, an invitation to ask a pharmacist.
         if (n === bandAfter) extra.push(<PharmacistBand key="band" t={t} whatsapp={settings.store.whatsapp} scan={scanOn} />);
         // Product rows alternate on a soft band so the page reads as distinct chapters.

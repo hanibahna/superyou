@@ -82,3 +82,22 @@ export function PharmacistBand({ t, whatsapp, scan }: { t: (s: string) => string
     </section>
   );
 }
+
+/** Home: the AI skin scan, right under the first banner. */
+export function ScanBanner({ t }: { t: (s: string) => string }) {
+  return (
+    <section className="container-x py-4">
+      <Link href="/skin-scan/" className="scan-glow group flex flex-wrap items-center gap-4 overflow-hidden rounded-3xl p-5 text-white md:flex-nowrap md:gap-6 md:p-7">
+        <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/20 md:h-20 md:w-20">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2" /><path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 005 0" /></svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider">{t("New · free")}</span>
+          <span className="mt-1 block text-xl font-bold leading-tight md:text-2xl">{t("AI skin scan: take a selfie, get your routine")}</span>
+          <span className="mt-1 block text-sm text-white/85">{t("Reads your skin type, shine, redness and spots in seconds, then picks products in stock. Your photo isn't stored.")}</span>
+        </span>
+        <span className="inline-flex min-h-[48px] shrink-0 items-center rounded-full bg-white px-6 font-semibold text-ink transition group-hover:scale-105">{t("Scan my skin")} →</span>
+      </Link>
+    </section>
+  );
+}

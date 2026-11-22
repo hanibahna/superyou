@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useSettings, useT } from "@/lib/site-context";
+import { useGrowth, useSettings, useT } from "@/lib/site-context";
+import { ScanIcon } from "./ScanIcon";
 
 const I = {
   video: <path d="M3 7a2 2 0 012-2h9a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2zM16 10l5-3v10l-5-3" />,
@@ -16,10 +17,12 @@ const Icon = ({ d }: { d: React.ReactNode }) => <svg width="16" height="16" view
 export function QuickHelp({ className = "" }: { className?: string }) {
   const t = useT();
   const s = useSettings();
+  const scanOn = !!useGrowth().skinScan?.enabled;
   const base = "inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition";
   const pill = `${base} border-line bg-white hover:border-ink`;
   return (
     <div className={`no-scrollbar flex gap-2 overflow-x-auto ${className}`}>
+      {scanOn && <Link href="/skin-scan/" className={`${base} scan-glow border-transparent text-white`}><ScanIcon size={16} />{t("AI skin scan")}<span className="rounded-full bg-white/25 px-1.5 text-[10px] font-bold">NEW</span></Link>}
       <Link href="/services/?book=video-consult" className={`${base} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>
       <a href={`https://wa.me/${s.store.whatsapp}`} target="_blank" rel="noreferrer" className={pill}><Icon d={I.wa} />WhatsApp</a>
       <button onClick={() => window.dispatchEvent(new Event("open-advisor"))} className={pill}><Icon d={I.ai} />{t("Ask AI")}</button>

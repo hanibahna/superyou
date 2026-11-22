@@ -1,5 +1,6 @@
 "use client";
 
+import { ScanIcon } from "./ScanIcon";
 import { createPortal } from "react-dom";
 
 import Link from "next/link";
@@ -48,6 +49,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
   const tx = useT();
   const { count, wishlist, setDrawerOpen } = useShop();
   const { settings, routineEnabled, growth } = useSite();
+  const scanOn = !!growth?.skinScan?.enabled;
   const t = useT();
   const store = settings.store;
   const [menuOpen, setMenuOpenRaw] = useState(false);
@@ -104,7 +106,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
 
       {/* Desktop category nav with mega menu */}
       {settings.menu.length > 0 ? (
-        <MegaMenu items={settings.menu} extra={routineEnabled ? <li className="ml-auto h-full"><Link href="/routine/" className="glow-link flex h-full items-center gap-1.5 font-semibold text-brand-600">✨ {t("Routine finder")}<span className="new-pill">NEW</span></Link></li> : null} />
+        <MegaMenu items={settings.menu} extra={<>{scanOn && <li className="ml-auto h-full"><Link href="/skin-scan/" className="flex h-full items-center"><span className="scan-glow inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold text-white"><ScanIcon size={16} />{t("AI skin scan")}</span></Link></li>}{routineEnabled ? <li className={`${scanOn ? "ms-4" : "ml-auto"} h-full`}><Link href="/routine/" className="glow-link flex h-full items-center gap-1.5 font-semibold text-brand-600">✨ {t("Routine finder")}<span className="new-pill">NEW</span></Link></li> : null}</>} />
       ) : (
       <nav className="hidden border-t border-line lg:block">
           <ul className="container-x no-scrollbar flex h-11 items-center gap-5 whitespace-nowrap text-sm font-medium xl:gap-7">

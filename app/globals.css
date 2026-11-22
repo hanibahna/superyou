@@ -402,3 +402,8 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 @keyframes howto-pulse { 0% { box-shadow: 0 0 0 0 rgb(192 88 122 / .55); } 70% { box-shadow: 0 0 0 12px rgb(192 88 122 / 0); } 100% { box-shadow: 0 0 0 0 rgb(192 88 122 / 0); } }
 .howto-glow { animation: howto-pulse 1.8s ease-out 0.6s 4; }
 @media (prefers-reduced-motion: reduce) { .howto-glow { animation: none; } }
+
+/* AI skin scan: an eye-catching moving gradient wherever it's offered */
+@keyframes scan-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+.scan-glow { background: linear-gradient(110deg, #8a3656, #c0587a, #6d4bb8, #c0587a, #8a3656); background-size: 300% 300%; animation: scan-shift 8s ease infinite; box-shadow: 0 8px 24px -10px rgb(138 54 86 / .7); }
+@media (prefers-reduced-motion: reduce) { .scan-glow { animation: none; } }

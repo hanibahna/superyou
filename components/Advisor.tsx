@@ -28,6 +28,12 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
     return () => window.removeEventListener("open-advisor", h);
   }, []);
   useEffect(() => {
+    if (!open || window.matchMedia("(min-width: 768px)").matches) return;
+    const o = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = o; };
+  }, [open]);
+  useEffect(() => {
     try { sessionStorage.setItem(KEY, JSON.stringify(msgs.slice(-24))); } catch {}
     end.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [msgs, busy, open]);
@@ -62,7 +68,7 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
       </button>
 
       {open && (
-        <div role="dialog" aria-modal="false" aria-label={cfg.name} className="fixed inset-x-0 bottom-0 z-[60] flex h-[85vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl md:inset-x-auto md:bottom-5 md:end-5 md:h-[640px] md:w-[400px] md:rounded-3xl">
+        <div role="dialog" aria-modal="false" aria-label={cfg.name} className="fixed inset-x-0 bottom-0 z-[60] flex h-[88dvh] max-h-[calc(100dvh-env(safe-area-inset-top)-8px)] w-full max-w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl md:inset-x-auto md:bottom-5 md:end-5 md:h-[min(640px,calc(100dvh-40px))] md:w-[400px] md:rounded-3xl">
           <div className="flex items-center justify-between gap-3 bg-ink px-5 py-4 text-white">
             <div>
               <p className="font-semibold">{cfg.name}</p>
@@ -76,8 +82,8 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
             </div>
           </div>
 
-          <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[#faf7f8] p-4 text-sm">
-            <div className="max-w-[85%] rounded-2xl rounded-ss-sm bg-white p-3 shadow-sm">{cfg.greeting}</div>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden overscroll-contain bg-[#faf7f8] p-4 text-sm">
+            <div className="max-w-[85%] rounded-2xl rounded-ss-sm bg-white p-3 shadow-sm [overflow-wrap:anywhere]">{cfg.greeting}</div>
             {msgs.length === 0 && (
               <div className="flex flex-wrap gap-2">
                 {cfg.suggestions.map((s) => (
@@ -87,11 +93,11 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
             )}
             {msgs.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
-                <div className={`max-w-[88%] whitespace-pre-line rounded-2xl p-3 ${m.role === "user" ? "rounded-se-sm bg-ink text-white" : "rounded-ss-sm bg-white shadow-sm"}`}>{m.content}</div>
+                <div className={`max-w-[88%] whitespace-pre-line rounded-2xl p-3 [overflow-wrap:anywhere] ${m.role === "user" ? "rounded-se-sm bg-ink text-white" : "rounded-ss-sm bg-white shadow-sm"}`}>{m.content}</div>
                 {!!m.products?.length && (
                   <div className="mt-2 space-y-2">
                     {m.products.map((p) => (
-                      <div key={p.slug} className="flex items-center gap-3 rounded-2xl bg-white p-2 shadow-sm">
+                      <div key={p.slug} className="flex min-w-0 items-center gap-3 rounded-2xl bg-white p-2 shadow-sm">
                         <Link href={`/products/${p.slug}/`} onClick={() => setOpen(false)} className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f6f1f3]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           {p.image && <img src={p.image} alt="" className="h-full w-full object-contain" />}
@@ -119,7 +125,7 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
 
           <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex gap-2 border-t border-line p-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
             <label htmlFor="advisor-q" className="sr-only">Your question</label>
-            <input id="advisor-q" value={text} onChange={(e) => setText(e.target.value)} maxLength={1500} placeholder="What are you looking for?" className="min-h-[48px] flex-1 rounded-full border border-line px-4 text-sm outline-none focus:border-ink" />
+            <input id="advisor-q" value={text} onChange={(e) => setText(e.target.value)} maxLength={1500} placeholder="What are you looking for?" className="min-h-[48px] min-w-0 flex-1 rounded-full border border-line px-4 text-base outline-none focus:border-ink md:text-sm" />
             <button disabled={busy || !text.trim()} aria-label="Send" className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ink text-white disabled:opacity-40">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="rtl-flip"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
