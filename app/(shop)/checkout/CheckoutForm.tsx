@@ -121,10 +121,10 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
           <fieldset className="min-w-0">
             <legend className="mb-3 text-lg font-semibold">{tx("1. Contact")}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input name="firstName" required placeholder={tx("First name")} autoComplete="given-name" className={input} />
-              <input name="lastName" required placeholder="Last name" autoComplete="family-name" className={input} />
-              <input name="phone" required type="tel" placeholder="Mobile (e.g. 03 123 456)" autoComplete="tel" className={input} />
-              <input name="email" type="email" placeholder={tx("Email (optional, for receipt)")} autoComplete="email" className={input} />
+              <input name="firstName" required placeholder={tx("First name")} aria-label={tx("First name")} autoComplete="given-name" className={input} />
+              <input name="lastName" required placeholder="Last name" aria-label="Last name" autoComplete="family-name" className={input} />
+              <input name="phone" required type="tel" placeholder="Mobile (e.g. 03 123 456)" aria-label="Mobile (e.g. 03 123 456)" autoComplete="tel" className={input} />
+              <input name="email" type="email" placeholder={tx("Email (optional, for receipt)")} aria-label={tx("Email (optional, for receipt)")} autoComplete="email" className={input} />
             </div>
           </fieldset>
 
@@ -136,9 +136,9 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
                 <option value="" disabled>{tx("Area")}</option>
                 {settings.delivery.zones.map((z) => <option key={z.name} value={z.name}>{z.name}{z.fee !== undefined ? ` (delivery $${z.fee})` : ""}</option>)}
               </select>
-              <input name="city" required placeholder="Town / neighbourhood" className={input} />
-              <input name="address" required placeholder={tx("Street, building, floor, landmark")} className={`${input} sm:col-span-2`} />
-              <textarea name="notes" placeholder="Delivery notes (optional)" rows={2} className={`${input} sm:col-span-2`} />
+              <input name="city" required placeholder="Town / neighbourhood" aria-label="Town / neighbourhood" className={input} />
+              <input name="address" required placeholder={tx("Street, building, floor, landmark")} aria-label={tx("Street, building, floor, landmark")} className={`${input} sm:col-span-2`} />
+              <textarea name="notes" placeholder="Delivery notes (optional)" aria-label="Delivery notes (optional)" rows={2} className={`${input} sm:col-span-2`} />
               <div className="space-y-2 text-sm sm:col-span-2">
                 <label className="flex items-start gap-2"><input type="checkbox" name="waUpdates" defaultChecked className="mt-0.5" /> {tx("Send me order updates on WhatsApp")}</label>
                 <label className="flex items-start gap-2"><input type="checkbox" name="waOffers" className="mt-0.5" /> {tx("Send me offers and new arrivals on WhatsApp (reply STOP anytime)")}</label>

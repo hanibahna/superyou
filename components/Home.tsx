@@ -47,7 +47,7 @@ export function HeroSlider({ slides, interval = 6, height = "medium" }: { slides
         <div className={`relative grid items-center gap-6 px-8 py-12 md:grid-cols-2 md:px-16 ${heights[height]}`}>
           <div>
             {s.eyebrow && <p className={`text-xs font-bold uppercase tracking-[0.25em] ${light ? "text-brand-700" : "opacity-80"}`}>{s.eyebrow}</p>}
-            <h1 className="hero-title mt-3 text-4xl font-bold leading-tight md:text-5xl">{s.title}</h1>
+            <h2 className="hero-title mt-3 text-4xl font-bold leading-tight md:text-5xl">{s.title}</h2>
             {s.text && <p className="mt-3 text-lg opacity-90">{s.text}</p>}
             {s.cta && (
               <Link href={s.href || "/shop/"} className={`mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold ${light ? "bg-ink text-white hover:bg-black" : "bg-white text-ink hover:bg-brand-50"}`}>

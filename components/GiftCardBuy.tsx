@@ -65,8 +65,8 @@ export function GiftCardBuy({ amounts, methods, enabled, validMonths }: { amount
             <legend className="mb-3 text-lg font-semibold">{tx("2. Who is it for?")}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               <input value={recipient} onChange={(e) => setRecipient(e.target.value)} required placeholder={tx("Their name")} className={`${input} sm:col-span-2`} />
-              <input name="rPhone" type="tel" placeholder={tx("Their mobile (we send it on WhatsApp)")} className={input} />
-              <input name="rEmail" type="email" placeholder={tx("…or their email")} className={input} />
+              <input name="rPhone" type="tel" placeholder={tx("Their mobile (we send it on WhatsApp)")} aria-label={tx("Their mobile (we send it on WhatsApp)")} className={input} />
+              <input name="rEmail" type="email" placeholder={tx("…or their email")} aria-label={tx("…or their email")} className={input} />
               <textarea value={message} onChange={(e) => setMessage(e.target.value.slice(0, 300))} rows={3} placeholder={tx("Your message (optional)")} className={`${input} sm:col-span-2`} />
             </div>
           </fieldset>
@@ -74,10 +74,10 @@ export function GiftCardBuy({ amounts, methods, enabled, validMonths }: { amount
           <fieldset>
             <legend className="mb-3 text-lg font-semibold">{tx("3. From")}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input name="firstName" required placeholder={tx("First name")} autoComplete="given-name" className={input} />
-              <input name="lastName" required placeholder={tx("Last name")} autoComplete="family-name" className={input} />
-              <input name="phone" required type="tel" placeholder={tx("Your mobile")} autoComplete="tel" className={input} />
-              <input name="email" type="email" placeholder={tx("Your email (optional, for the receipt)")} autoComplete="email" className={input} />
+              <input name="firstName" required placeholder={tx("First name")} aria-label={tx("First name")} autoComplete="given-name" className={input} />
+              <input name="lastName" required placeholder={tx("Last name")} aria-label={tx("Last name")} autoComplete="family-name" className={input} />
+              <input name="phone" required type="tel" placeholder={tx("Your mobile")} aria-label={tx("Your mobile")} autoComplete="tel" className={input} />
+              <input name="email" type="email" placeholder={tx("Your email (optional, for the receipt)")} aria-label={tx("Your email (optional, for the receipt)")} autoComplete="email" className={input} />
             </div>
           </fieldset>
 

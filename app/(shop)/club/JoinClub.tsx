@@ -28,13 +28,13 @@ export function JoinClub() {
   return (
     <form onSubmit={submit} className="space-y-3">
       <h2 className="text-2xl font-semibold">{tx("Join free")}</h2>
-      <input name="name" required placeholder={tx("Full name")} className={box} />
-      <input name="phone" required inputMode="tel" placeholder="WhatsApp number" className={box} />
-      <input name="email" type="email" placeholder="Email (optional)" className={box} />
+      <input name="name" required placeholder={tx("Full name")} aria-label={tx("Full name")} className={box} />
+      <input name="phone" required inputMode="tel" placeholder="WhatsApp number" aria-label="WhatsApp number" className={box} />
+      <input name="email" type="email" placeholder="Email (optional)" aria-label="Email (optional)" className={box} />
       <div className="flex items-center gap-2 text-sm text-muted">
         Birthday:
-        <select name="day" className="rounded-lg border border-line px-2 py-2" defaultValue=""><option value="">{tx("Day")}</option>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}</select>
-        <select name="month" className="rounded-lg border border-line px-2 py-2" defaultValue=""><option value="">{tx("Month")}</option>{["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select>
+        <select name="day" aria-label="Birthday day" className="rounded-lg border border-line px-2 py-2" defaultValue=""><option value="">{tx("Day")}</option>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}</select>
+        <select name="month" aria-label="Birthday month" className="rounded-lg border border-line px-2 py-2" defaultValue=""><option value="">{tx("Month")}</option>{["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select>
       </div>
       <div className="rounded-2xl bg-[#faf7f8] p-4">
         <button type="button" onClick={() => setAddrOpen(!addrOpen)} className="flex w-full items-center justify-between text-left text-sm font-semibold">

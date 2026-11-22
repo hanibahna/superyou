@@ -8,7 +8,7 @@ import { getCollections, getSettings } from "@/lib/site-store";
 
 // One sitemap with every live product page, collection, category, brand and info page.
 // (Google accepts up to 50,000 URLs per sitemap; the shop has about 22,000.)
-export const dynamic = "force-dynamic";
+// Built in the background and refreshed hourly, so Google never waits for it.
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
