@@ -14,5 +14,14 @@ export async function GET(req: NextRequest) {
   const followUps = await gs.sendDueReminders(500).catch(() => 0); // review requests + restock reminders
   const birthdays = await gs.sendBirthdays().catch(() => 0);
   const carts = await (await import("@/lib/carts")).sweepCarts(true).catch(() => 0);
-  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts });
+  // Live courier tracking for everything still on its way.
+  let tracked = 0;
+  try {
+    const { listOrders } = await import("@/lib/orders");
+    const { refreshShipment } = await import("@/lib/tracking");
+    for (const o of (await listOrders(0, 500)).orders.filter((x) => x.status === "shipped")) (await refreshShipment(o, 360), tracked++);
+  } catch (e) {
+    console.error("[cron tracking]", e);
+  }
+  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts, tracked });
 }

@@ -7,5 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const t = req.nextUrl.searchParams.get("t") ?? "";
   const ok = order && t.length === order.accessToken.length && timingSafeEqual(Buffer.from(t), Buffer.from(order.accessToken));
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(publicOrder(order));
+  // Shipped with a courier that has live tracking: ask it again if the last check is over an hour old.
+  const fresh = order.status === "shipped" ? await (await import("@/lib/tracking")).refreshShipment(order, 60).catch(() => order) : order;
+  return NextResponse.json(publicOrder(fresh));
 }

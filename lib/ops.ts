@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 
-export type Courier = { id: string; name: string; trackingUrl: string; phone: string };
+export type Courier = { id: string; name: string; trackingUrl: string; phone: string; api?: "" | "aramex" | "dhl" | "track17" };
 
 export type Ops = {
   stock: { lowAt: number; alertEmail: string; restockOnCancel: boolean };
@@ -18,7 +18,9 @@ export const defaultOps: Ops = {
   couriers: [
     { id: "own", name: "Our driver", trackingUrl: "", phone: "" },
     { id: "wakilni", name: "Wakilni", trackingUrl: "https://portal.wakilni.com/orders/{tracking}", phone: "" },
-    { id: "aramex", name: "Aramex", trackingUrl: "https://t.17track.net/en#nums={tracking}", phone: "" },
+    { id: "aramex", name: "Aramex", trackingUrl: "https://www.aramex.com/lb/en/track/results?ShipmentNumber={tracking}", phone: "", api: "aramex" },
+    { id: "dhl", name: "DHL Express", trackingUrl: "https://www.dhl.com/lb-en/home/tracking/tracking-express.html?tracking-id={tracking}", phone: "", api: "dhl" },
+    { id: "libanpost", name: "LibanPost", trackingUrl: "https://t.17track.net/en#nums={tracking}", phone: "", api: "track17" },
     { id: "toters", name: "Toters", trackingUrl: "", phone: "" },
   ],
   invoice: { title: "Invoice", businessName: "", taxId: "", footer: "Thank you for shopping with SuperYou. Questions? WhatsApp us on +961 70 777 608." },
@@ -33,6 +35,7 @@ export const opsSchema = z.object({
     id: z.string().regex(/^[a-z0-9-]{1,30}$/, "Courier id: lowercase letters, numbers and -"),
     name: t(60).min(1), phone: t(40),
     trackingUrl: z.union([z.literal(""), z.string().url("Tracking link must start with https://").max(300)]),
+    api: z.enum(["", "aramex", "dhl", "track17"]).optional(),
   })).max(20),
   invoice: z.object({ title: t(40), businessName: t(120), taxId: t(60), footer: t(400) }),
   giftCards: z.object({ enabled: z.boolean(), validMonths: z.number().int().min(0).max(60) }),

@@ -1,8 +1,9 @@
 "use client";
 
+import { TRACK_APIS, type TrackApi } from "@/lib/tracking-apis";
 import { useState } from "react";
 import type { Ops } from "@/lib/ops";
-import { Area, Card, Header, Num, Text, Toggle, useSaver } from "./fields";
+import { Area, Card, Header, Num, Text, Toggle, useSaver, Select } from "./fields";
 
 export function OperationsEditor({ initial, emailReady }: { initial: Ops; emailReady: boolean }) {
   const [o, setO] = useState(initial);
@@ -25,10 +26,11 @@ export function OperationsEditor({ initial, emailReady }: { initial: Ops; emailR
       <Card title="Couriers" sub="Pick one when you ship an order. Tracking link: paste the courier's tracking page address with {tracking} where the number goes, e.g. https://courier.com/track?n={tracking}. Leave it empty if they don't have one.">
         <div className="space-y-2">
           {o.couriers.map((c, i) => (
-            <div key={i} className="grid items-end gap-2 md:grid-cols-[1fr_1fr_2fr_40px]">
+            <div key={i} className="grid items-end gap-2 rounded-xl border border-line p-2 md:grid-cols-[1fr_1fr_2fr_1.4fr_40px] md:border-0 md:p-0">
               <Text label={i ? "" : "Name"} value={c.name} onChange={(name) => setCouriers(o.couriers.map((x, j) => (j === i ? { ...x, name, id: x.id || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) } : x)))} />
               <Text label={i ? "" : "Phone"} value={c.phone} onChange={(phone) => setCouriers(o.couriers.map((x, j) => (j === i ? { ...x, phone } : x)))} />
               <Text label={i ? "" : "Tracking link"} value={c.trackingUrl} placeholder="https://…{tracking}" onChange={(trackingUrl) => setCouriers(o.couriers.map((x, j) => (j === i ? { ...x, trackingUrl } : x)))} />
+              <Select label={i ? "" : "Live tracking"} value={(c.api ?? "") as TrackApi} onChange={(api) => setCouriers(o.couriers.map((x, j) => (j === i ? { ...x, api } : x)))} options={TRACK_APIS} />
               <button onClick={() => setCouriers(o.couriers.filter((_, j) => j !== i))} className="pb-2 text-sale" aria-label={`Remove ${c.name}`}>✕</button>
             </div>
           ))}

@@ -88,7 +88,11 @@ export type Order = {
   customer: CheckoutInput["customer"];
   giftCard?: { code: string; amount: number };
   stockTaken?: boolean; // tracked stock was taken off for this order
-  shipment?: { courier: string; courierName: string; tracking: string; link: string; shippedAt: string; by: string };
+  shipment?: {
+    courier: string; courierName: string; tracking: string; link: string; shippedAt: string; by: string;
+    /** Live tracking from the courier's system (lib/tracking). */
+    status?: "pending" | "in_transit" | "out_for_delivery" | "delivered" | "exception"; events?: { at: string; text: string; place?: string }[]; checkedAt?: string; error?: string;
+  };
   refunds?: Refund[];
   /** A gift card bought on the site: issued and sent to the recipient once paid. */
   giftCardPurchase?: { amount: number; recipient: string; phone: string; email: string; message: string; from: string; code?: string; sentAt?: string };
@@ -344,7 +348,7 @@ export function publicOrder(o: Order) {
   const { accessToken: _t, history: _h, refunds: _r, stockTaken: _s, shipment, ...rest } = o;
   const gcp = rest.giftCardPurchase;
   return {
-    ...rest, refunded: refunded(o), shipment: shipment && { courierName: shipment.courierName, tracking: shipment.tracking, link: shipment.link },
+    ...rest, refunded: refunded(o), shipment: shipment && { courierName: shipment.courierName, tracking: shipment.tracking, link: shipment.link, status: shipment.status, events: shipment.events, checkedAt: shipment.checkedAt },
     giftCardPurchase: gcp && { amount: gcp.amount, recipient: gcp.recipient, sent: !!gcp.code }, // the code goes to the recipient only
   };
 }

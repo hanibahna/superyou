@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { track } from "@/lib/track";
+import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { money } from "@/lib/format";
 import { useSettings, useT } from "@/lib/site-context";
 
@@ -17,7 +18,7 @@ type PublicOrder = {
   total: number;
   giftCard?: { code: string; amount: number };
   refunded?: number;
-  shipment?: { courierName: string; tracking: string; link: string };
+  shipment?: { courierName: string; tracking: string; link: string; status?: "pending" | "in_transit" | "out_for_delivery" | "delivered" | "exception"; events?: { at: string; text: string; place?: string }[]; checkedAt?: string };
   giftCardPurchase?: { amount: number; recipient: string; sent: boolean };
   customer: { firstName: string; phone: string; city: string; zone: string; address: string };
 };
@@ -106,6 +107,7 @@ function OrderView() {
           <div className="mt-4 rounded-xl bg-brand-50 p-4 text-sm">
             <p className="font-semibold">{tx("Shipped with")} {order.shipment.courierName}{order.shipment.tracking ? ` · ${order.shipment.tracking}` : ""}</p>
             {order.shipment.link && <a href={order.shipment.link} target="_blank" rel="noreferrer" className="mt-1 inline-block font-semibold text-brand-700 underline">{tx("Track your parcel")} ↗</a>}
+            <ShipmentTimeline status={order.shipment.status} events={order.shipment.events} />
           </div>
         )}
         {!order.giftCardPurchase && <div className="mt-4 border-t border-line pt-4 text-sm text-muted">

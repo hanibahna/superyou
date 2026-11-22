@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderActions } from "@/components/admin/OrderActions";
+import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { OrderStatusControl } from "@/components/admin/OrderStatusControl";
 import { requireAdmin } from "@/lib/admin-auth";
 import { money } from "@/lib/format";
@@ -105,6 +106,8 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
               <p>{o.shipment.courierName}{o.shipment.tracking ? ` · ${o.shipment.tracking}` : ""}</p>
               {o.shipment.link && <a href={o.shipment.link} target="_blank" className="text-brand-700 underline">Track parcel ↗</a>}
               <p className="text-xs text-muted">Shipped {when(o.shipment.shippedAt)} by {o.shipment.by}</p>
+              {o.shipment.error && <p className="mt-1 text-xs text-sale">Tracking: {o.shipment.error}</p>}
+              <ShipmentTimeline status={o.shipment.status} events={o.shipment.events} checkedAt={o.shipment.checkedAt} refreshUrl={o.shipment.tracking ? `/api/admin/orders/${encodeURIComponent(o.id)}/track/` : undefined} />
             </div>
           )}
           <div className="rounded-xl bg-white p-5 text-sm shadow-sm">
