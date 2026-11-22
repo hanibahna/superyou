@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getIndex } from "@/lib/catalog";
@@ -17,6 +18,8 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "reviews", 20);
+  if (tooMany) return tooMany;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please add a star rating, your name and a few words" }, { status: 400 });
   const g = await getGrowth();

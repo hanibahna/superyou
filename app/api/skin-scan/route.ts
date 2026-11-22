@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getGrowth } from "@/lib/growth-store";
@@ -15,6 +16,8 @@ export const maxDuration = 60;
 const bodySchema = z.object({ image: z.string().regex(/^data:image\/(jpeg|png|webp);base64,/).max(6_000_000) });
 
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "skinscan", 20);
+  if (tooMany) return tooMany;
   const [g, cfg] = await Promise.all([getGrowth(), getRoutine()]);
   if (!g.skinScan.enabled) return NextResponse.json({ error: "Skin scan is switched off" }, { status: 404 });
   const key = await anthropicKey();

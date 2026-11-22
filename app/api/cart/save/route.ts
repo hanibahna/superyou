@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { saveCart, sweepCarts } from "@/lib/carts";
@@ -13,6 +14,8 @@ const schema = z.object({
 
 // Checkout saves the bag against the shopper's mobile so it can be picked up again later.
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "cartsave", 60);
+  if (tooMany) return tooMany;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 });
   const d = parsed.data;

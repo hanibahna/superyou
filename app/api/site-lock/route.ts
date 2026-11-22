@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { lockToken, safeEqual } from "@/lib/admin-session";
 
@@ -5,6 +6,8 @@ const tries = new Map<string, { n: number; until: number }>();
 
 // The private-preview password form posts here.
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "lock", 30);
+  if (tooMany) return tooMany;
   const pw = process.env.SITE_PASSWORD;
   const f = await req.formData();
   const next = String(f.get("next") ?? "/");

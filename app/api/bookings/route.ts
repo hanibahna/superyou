@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { bookingVars, type Booking } from "@/lib/services";
@@ -20,6 +21,8 @@ const schema = z.object({
 
 // Book a service slot or sign up for an event.
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "bookings", 20);
+  if (tooMany) return tooMany;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please fill in your name and phone number" }, { status: 400 });
   const d = parsed.data;

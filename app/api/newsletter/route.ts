@@ -1,9 +1,12 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 
 // Newsletter sign-ups (listed and exported in Admin → Subscribers).
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "newsletter", 20);
+  if (tooMany) return tooMany;
   const parsed = z.object({ email: z.string().email().max(200).or(z.literal("")).optional(), phone: z.string().max(30).optional() }).safeParse(await req.json().catch(() => null));
   if (!parsed.success || (!parsed.data.email && !parsed.data.phone)) return NextResponse.json({ error: "Please enter your email or WhatsApp number" }, { status: 400 });
   if (parsed.data.email) await db.cmd(["ZADD", "subscribers", Date.now(), parsed.data.email.toLowerCase()]);

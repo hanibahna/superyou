@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -7,6 +8,8 @@ import { normPhone } from "@/lib/wa";
 
 // Pop-up sign-up: saves the subscriber and returns a personal one-time discount code.
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "signup", 20);
+  if (tooMany) return tooMany;
   const parsed = z.object({ email: z.string().email().max(200).optional().or(z.literal("")), phone: z.string().max(30).optional().or(z.literal("")), source: z.enum(["popup", "cart"]).default("popup") }).safeParse(await req.json().catch(() => null));
   if (!parsed.success || (!parsed.data.email && !parsed.data.phone)) return NextResponse.json({ error: "Please enter your email or WhatsApp number" }, { status: 400 });
   const g = await getGrowth();

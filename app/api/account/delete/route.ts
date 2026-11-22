@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -8,6 +9,8 @@ import { normPhone } from "@/lib/wa";
 // phone + one of their order numbers. Removes the Club membership, saved addresses and the WhatsApp/SMS
 // contact. Orders and invoices are kept, as the law requires for accounting.
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "acctdel", 10);
+  if (tooMany) return tooMany;
   const p = z.object({ phone: z.string().max(30), order: z.string().max(40), confirm: z.literal(true) }).safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: "Please confirm" }, { status: 400 });
   const ids = await orderIdsByPhone(p.data.phone);

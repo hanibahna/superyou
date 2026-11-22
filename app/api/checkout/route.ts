@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { sendServerConversions } from "@/lib/conversions";
 import { baseUrl } from "@/lib/http";
@@ -5,6 +6,8 @@ import { checkoutSchema, createOrder, saveOrder, updateOrder } from "@/lib/order
 import { checkoutMethods, startPayment } from "@/lib/payments";
 
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "checkout", 30);
+  if (tooMany) return tooMany;
   const parsed = checkoutSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please check the highlighted fields.", issues: parsed.error.issues }, { status: 400 });
   delete parsed.data.subscriptionId; // only the subscription engine sets this

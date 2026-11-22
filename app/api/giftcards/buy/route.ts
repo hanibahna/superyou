@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { buySchema, createGiftCardOrder } from "@/lib/giftcard-sale";
 import { baseUrl } from "@/lib/http";
@@ -6,6 +7,8 @@ import { checkoutMethods, startPayment } from "@/lib/payments";
 
 // Buy a gift card online (same payment flow as checkout).
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "giftcards", 10);
+  if (tooMany) return tooMany;
   const parsed = buySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Please check the form." }, { status: 400 });
   if (!(await checkoutMethods()).some((m) => m.id === parsed.data.paymentMethod)) return NextResponse.json({ error: "That payment method isn't available." }, { status: 400 });

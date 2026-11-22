@@ -1,3 +1,4 @@
+import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { tierFor } from "@/lib/growth";
@@ -22,6 +23,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const tooMany = await limited(req, "club", 30);
+  if (tooMany) return tooMany;
   const parsed = z.object({ phone: z.string().min(6).max(30), name: z.string().min(1).max(80), email: z.string().email().optional().or(z.literal("")), birthday: z.string().regex(/^\d{2}-\d{2}$/).optional().or(z.literal("")), addresses: addressListSchema.optional().catch(undefined) }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please enter your name and WhatsApp number" }, { status: 400 });
   const g = await getGrowth();
