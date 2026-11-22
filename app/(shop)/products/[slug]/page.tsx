@@ -77,7 +77,9 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   // Description etc. are shared by all sizes/shades of an item.
   const gallery = Array.from(new Set([...detail.images.map((x) => shopImg(x)!), ...variants.map((v) => v.image).filter((x): x is string => !!x)]));
   const subOk = !growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id));
-  const sec = await sectionFor(initial.category);
+  const sec0 = await sectionFor(initial.category);
+  const ptips = (await import("@/lib/tips")).tipsFor([...initial.concerns, ...initial.concerns.map((c) => concerns.find((x) => x.slug === c)?.name), initial.category, initial.name]);
+  const sec = sec0 ? { ...sec0, tips: ptips.length ? ptips : sec0.tips } : null;
   const how = detail.video;
   const videos = lib.show.product
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)

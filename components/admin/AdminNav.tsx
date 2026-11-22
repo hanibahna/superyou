@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { areaOf, can, roleInfo, type Role } from "@/lib/roles";
 
 const groups: { title: string; links: { href: string; label: string }[] }[] = [
-  { title: "", links: [{ href: "/admin/", label: "Dashboard" }, { href: "/admin/orders/", label: "Orders" }, { href: "/admin/sales/", label: "Sales" }, { href: "/admin/bookings/", label: "Bookings & sign-ups" }, { href: "/admin/subscriptions/", label: "Subscriptions" }, { href: "/admin/calls/", label: "Calls & appointments" }, { href: "/admin/sections/", label: "Sections & AI" }] },
+  { title: "", links: [{ href: "/admin/", label: "Dashboard" }, { href: "/admin/orders/", label: "Orders" }, { href: "/admin/sales/", label: "Sales" }, { href: "/admin/bookings/", label: "Bookings & sign-ups" }, { href: "/admin/subscriptions/", label: "Subscriptions" }, { href: "/admin/influencers/", label: "Referrals & influencers" }, { href: "/admin/calls/", label: "Calls & appointments" }, { href: "/admin/sections/", label: "Sections & AI" }] },
   {
     title: "Orders & stock",
     links: [

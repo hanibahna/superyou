@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareButton } from "@/components/ShareButton";
 import { SectionBanner, type SectionBannerData } from "@/components/SectionBanner";
 import { useT } from "@/lib/site-context";
 
@@ -148,6 +149,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           <button onClick={() => setFiltersOpen(true)} className="tap flex-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold lg:hidden">
             Filters{activeCount ? ` (${activeCount})` : ""}
           </button>
+          <ShareButton compact title={`${fullTitle} – SuperYou`} />
           <select value={query.sort ?? ""} onChange={(e) => set("sort", e.target.value)} className="tap flex-1 rounded-lg border border-line px-3 py-2 text-sm outline-none lg:flex-none">
             {!query.sort && <option value="">{tx("Sort by")}</option>}
             {Object.entries(sorts).map(([k, v]) => <option key={k} value={k}>{query.q && k === "featured" ? tx("Best match") : tx(v)}</option>)}

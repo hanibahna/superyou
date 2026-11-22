@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareButton } from "@/components/ShareButton";
 import Link from "next/link";
 import { useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
@@ -57,6 +58,7 @@ export function FinderView({ finder: f, others }: { finder: Finder; others: { id
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-bold">{busy ? tx("Finding your matches…") : exact ? tx("Your matches") : tx("Popular in this section")}</h2>
             <div className="flex gap-2">
+              <ShareButton title={`${f.title} – SuperYou`} />
               <button onClick={restart} className="rounded-full border border-line px-4 py-2.5 text-sm font-semibold">{tx("Start again")}</button>
               <button onClick={() => window.dispatchEvent(new Event("open-advisor"))} className="rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white">{tx("Ask AI about these")}</button>
             </div>

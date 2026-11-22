@@ -19,7 +19,7 @@ export function areaOf(path: string): Area | "any" {
   const seg = path.replace(/^\/(api\/)?admin\/?/, "").split("/")[0] ?? "";
   const map: Record<string, Area | "any"> = {
     "": "any", help: "any", upload: "any", lookup: "any", me: "any",
-    orders: "orders", bookings: "orders", calls: "orders", subscriptions: "orders", video: "orders", carts: "orders", giftcards: "orders", customers: "orders",
+    orders: "orders", bookings: "orders", calls: "orders", subscriptions: "orders", influencers: "marketing", video: "orders", carts: "orders", giftcards: "orders", customers: "orders",
     inventory: "inventory",
     products: "catalog", taxonomy: "catalog", collections: "catalog", visibility: "catalog", import: "catalog", "import-store": "catalog",
     catalog: "catalog", "photo-match": "catalog", rehost: "catalog", export: "catalog", template: "catalog",

@@ -9,6 +9,7 @@ import { redirectFor } from "@/lib/search";
 import { getSearchSettings } from "@/lib/site-store";
 import { parseQuery, videosFor, type SP } from "@/lib/shop-query";
 import { sectionFor } from "@/lib/extras";
+import { tipsFor } from "@/lib/tips";
 import { ShopView } from "./ShopView";
 
 // Category, brand and concern listings get their own title, description and canonical address;
@@ -42,6 +43,10 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const result = { ...raw, facets: await translateDeep(raw.facets, lang, ["name"]), taxonomy: tax };
   const category = tax.categories.find((c) => c.slug === query.category);
   const concern = query.concern?.length === 1 ? tax.concerns.find((c) => c.slug === query.concern![0]) : undefined;
-  const section = await sectionFor(query.category, concern?.group);
+  const base = await sectionFor(query.category, concern?.group);
+  // Tips follow the filters: each selected concern, then the category, then Men / Women.
+  const picked = (query.concern ?? []).flatMap((s) => [s, tax.concerns.find((c) => c.slug === s)?.name]);
+  const tips = tipsFor([...picked, query.category, tax.categories.find((c) => c.slug === query.category)?.name, query.for === "men" ? "men" : undefined, query.q]);
+  const section = base ? { ...base, tips: tips.length ? tips : base.tips } : null;
   return <ShopView result={result} query={query} videos={videos} category={category} section={section} />;
 }

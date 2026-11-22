@@ -143,6 +143,8 @@ function ReferralBox({ code }: { code: string }) {
   const tx = useT();
   const g = useGrowth();
   const [copied, setCopied] = useState(false);
+  // Remember the member's code so every Share button on the site carries it.
+  useEffect(() => { try { localStorage.setItem("sy:myref", code); } catch {} }, [code]);
   const link = typeof window === "undefined" ? "" : `${window.location.origin}/?ref=${code}`;
   const msg = `Get $${g.club.referral.friendAmount} off your first SuperYou order with my link: ${link}`;
   return (

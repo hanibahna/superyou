@@ -305,7 +305,14 @@ export function RefCapture() {
   const { code, setCode } = useShop();
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("ref");
-    if (ref && /^REF-[A-Z0-9]{3,12}$/i.test(ref)) set("sy:ref", ref.toUpperCase());
+    // Member referral links (REF-…) and influencer codes (/?ref=RANA10) both pre-fill the code.
+    if (ref && /^[A-Z0-9-]{3,20}$/i.test(ref)) {
+      set("sy:ref", ref.toUpperCase());
+      if (!/^REF-/i.test(ref) && !sessionStorage.getItem(`sy:clk:${ref}`)) {
+        sessionStorage.setItem(`sy:clk:${ref}`, "1");
+        fetch("/api/ref/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: ref }) }).catch(() => {});
+      }
+    }
     const saved = get("sy:ref");
     if (saved && !code) setCode(saved);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

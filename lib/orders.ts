@@ -210,6 +210,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   const c = order.customer;
   await (await import("@/lib/address-store")).rememberServerAddress(c.phone, { zone: c.zone, city: c.city, address: c.address, notes: c.notes || undefined, lat: c.lat, lng: c.lng }).catch(() => {});
   await onOrderCreated(order, input).catch((e) => console.error("[whatsapp] order", e));
+  if (order.code) await (await import("@/lib/influencers")).creditOrder(order).catch((e) => console.error("[influencer]", e));
   // New subscriptions (not for orders a subscription placed itself).
   if (!input.subscriptionId && order.lines.some((l) => l.every)) await (await import("@/lib/subscriptions")).startSubscriptions(order, input).catch((e) => console.error("[subscriptions]", e));
   return order;

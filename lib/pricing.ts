@@ -96,6 +96,11 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   if (input.code && !promos.discounts.some((d) => d.code && d.code.toLowerCase() === input.code!.trim().toLowerCase())) {
     ref = /^REF-/i.test(input.code.trim()) && growth.club.enabled && growth.club.referral.enabled ? await (await import("@/lib/growth-store")).memberByRef(input.code) : null;
     const v = ref ? null : await getVoucher(input.code);
+    const inf = ref || v ? null : await (await import("@/lib/influencers")).getInfluencer(input.code);
+    if (inf?.active && inf.percentOff > 0) {
+      // Influencer code: a one-off % off rule, recognised like any coupon.
+      promos.discounts.push({ id: `inf-${inf.code}`, name: `${inf.code}: ${inf.percentOff}% off (with ${inf.name.split(" ")[0]})`, enabled: true, type: "percent", value: inf.percentOff, scope: { kind: "all", values: [] }, exclude: { kind: "all", values: [] }, code: inf.code, minSubtotal: inf.minSubtotal, startsAt: "", endsAt: "", stack: true, usageLimit: 0, used: 0 });
+    } else if (inf && !inf.active) voucherError = "This code has ended";
     if (v) {
       const rule = voucherRule(v);
       if ("error" in rule) voucherError = rule.error;

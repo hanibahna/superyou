@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareButton } from "@/components/ShareButton";
 import { SubscribeChoice } from "@/components/SubscribePlan";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -134,6 +135,7 @@ export function BuyBox({
           <button onClick={() => toggleWish(v)} aria-label={tx("Wishlist")} className={`rounded-lg border border-line p-3 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}>
             <HeartIcon filled={wished} />
           </button>
+          <ShareButton compact title={`${v.brand} ${v.name}`} text={`${v.brand} ${v.name} at SuperYou`} />
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
