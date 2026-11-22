@@ -40,7 +40,7 @@ export const defaultSettings: Settings = {
   footerMenu: [],
   store: {
     name: "SuperYou",
-    tagline: "Your trusted online parapharmacy",
+    tagline: "Reveal the super in you",
     phone: "+961 70 777 608",
     whatsapp: "96170777608",
     email: "order@shopsuperyou.com",
@@ -115,7 +115,8 @@ export function withDefaults(s: Partial<Settings> | null | undefined): Settings 
   return {
     menu: s.menu ?? d.menu,
     footerMenu: s.footerMenu ?? d.footerMenu,
-    store: { ...d.store, ...s.store },
+    // The old default tagline gives way to the brand tagline; a tagline typed in Admin is kept.
+    store: { ...d.store, ...s.store, tagline: !s.store?.tagline || s.store.tagline === "Your trusted online parapharmacy" ? d.store.tagline : s.store.tagline },
     social: { ...d.social, ...s.social },
     announcement: { ...d.announcement, ...s.announcement },
     delivery: { ...d.delivery, ...s.delivery },

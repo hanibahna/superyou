@@ -17,8 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
   await getIndex();
   const s = await getSettings();
   return {
-    title: { default: s.seo.title || `${s.store.name} – ${s.store.tagline}`, template: `%s – ${s.store.name}` },
-    description: s.seo.description || s.store.tagline,
+    title: { default: s.seo.title || `${s.store.name} – Original beauty & parapharmacy in Lebanon`, template: `%s – ${s.store.name}` },
+    description: s.seo.description || `${s.store.tagline}. Every product original, every question answered by a pharmacist, every order at your door, paid when it arrives.`,
   };
 }
 

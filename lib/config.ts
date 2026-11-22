@@ -4,7 +4,7 @@
 
 export const store = {
   name: "SuperYou",
-  tagline: "Your trusted online parapharmacy",
+  tagline: "Reveal the super in you",
   currency: "USD",
   currencySymbol: "$",
   phone: "+961 00 000 000",
