@@ -56,7 +56,7 @@ Otherwise return only JSON: {"ok":true,"skinType": one of ${JSON.stringify(types
   } catch {
     return NextResponse.json({ error: "We couldn't read that photo. Try again in daylight, facing the camera." }, { status: 422 });
   }
-  if (!a.ok) return NextResponse.json({ error: a.reason || "Please use a clear photo of your face in daylight." }, { status: 422 });
+  if (!a.ok) return NextResponse.json({ error: "We couldn't see your face clearly. Take a selfie facing a window, face in the oval, no filters." }, { status: 422 });
 
   const answers = {
     skinType: types.includes(a.skinType ?? "") ? a.skinType! : "normal",
