@@ -181,7 +181,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
           {settings.checkout.note && <p className="rounded-lg bg-brand-50 p-3 text-sm">{settings.checkout.note}</p>}
         </div>
 
-        <aside className="h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
+        <aside className="summary-box h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
           <h2 className="text-lg font-semibold">{tx("Order summary")}</h2>
           <ul className="mt-4 space-y-3">
             {detailed.map(({ product, qty, lineTotal, every }) => (

@@ -74,7 +74,7 @@ export default function CartPage() {
         <DeliverySplit items={detailed.map((l) => l.product)} className="mt-4" />
         <div className="mt-6"><GiftPicker /></div>
       </div>
-      <aside className="h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
+      <aside className="summary-box h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
         <h2 className="text-lg font-semibold">{tx("Order summary")}</h2>
         <div className="mt-4"><CouponBox /></div>
         <div className="mt-4"><Totals /></div>

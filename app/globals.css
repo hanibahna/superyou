@@ -354,3 +354,44 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 
 [data-header="dark"] .site-header .site-id, [data-header="dark"] .site-header .site-id-sm { color: #fff; }
 [data-header="dark"] .site-header :is(.site-id, .site-id-sm) .text-brand-600 { color: var(--color-brand-100); }
+
+/* ══ Inner pages per look: product page, filters, bag & checkout summary, trust strip, footer ══ */
+/* Pop */
+[data-preset="pop"] .pdp-main { border: 0; border-radius: 32px; background-color: var(--pop-card); }
+[data-preset="pop"] .pdp-brand { text-transform: none; letter-spacing: 0; color: var(--color-ink); opacity: .7; }
+[data-preset="pop"] .pdp-title { font-size: clamp(1.9rem, 3.6vw, 3rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
+[data-preset="pop"] .pdp-price { font-family: var(--font-heading); font-size: 2.4rem; letter-spacing: -0.03em; }
+[data-preset="pop"] .pdp-opt { border-radius: 9999px; border-width: 1.5px; }
+[data-preset="pop"] .pdp-opt[class*="border-brand-500"] { background: var(--color-ink) !important; color: #fff !important; border-color: var(--color-ink) !important; }
+[data-preset="pop"] .pdp-trust { background: var(--pop-card); border-radius: 22px; }
+[data-preset="pop"] .shop-filters { background: var(--pop-card); border-radius: 24px; padding: 18px; align-self: start; }
+[data-preset="pop"] .ftitle { color: var(--color-ink); text-transform: none; letter-spacing: 0; font-size: 15px; font-family: var(--font-heading); }
+[data-preset="pop"] .summary-box { background: var(--pop-card); border: 0; border-radius: 28px; }
+[data-preset="pop"] .trust-strip { background: var(--pop-pink); border: 0; }
+[data-preset="pop"] .site-footer { border-radius: 36px 36px 0 0; }
+
+/* Atelier */
+[data-preset="atelier"] .pdp-main { border: 0; border-radius: 220px 220px 24px 24px; background-color: #f4ecef; }
+[data-preset="atelier"] .pdp-brand { letter-spacing: .28em; font-size: 11px; color: var(--color-brand-700); }
+[data-preset="atelier"] .pdp-title { font-family: var(--font-heading); font-weight: 400; font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 1; letter-spacing: -0.015em; }
+[data-preset="atelier"] .pdp-price { font-family: var(--font-heading); font-weight: 400; font-size: 2.2rem; }
+[data-preset="atelier"] .pdp-opt { border-radius: 9999px; }
+[data-preset="atelier"] .pdp-opt[class*="border-brand-500"] { background: transparent !important; color: var(--color-ink) !important; border-color: var(--color-ink) !important; }
+[data-preset="atelier"] .pdp-trust { background: transparent; border-top: 1px solid #ece4e7; border-bottom: 1px solid #ece4e7; border-radius: 0; padding-inline: 0; }
+[data-preset="atelier"] .ftitle { font-family: var(--font-heading); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 20px; color: var(--color-ink); }
+[data-preset="atelier"] .summary-box { background: #fff; border-color: #ece4e7; border-radius: 24px; }
+[data-preset="atelier"] .summary-box h2 { font-family: var(--font-heading); font-weight: 400; font-size: 1.8rem; }
+[data-preset="atelier"] .trust-strip { background: #fffaf8; }
+[data-preset="atelier"] .trust-strip p.text-sm { font-family: var(--font-heading); font-weight: 400; font-size: 1.15rem; }
+
+/* Ritual */
+[data-preset="ritual"] .pdp-main { border: 0; border-radius: 24px; background-color: #fff; }
+[data-preset="ritual"] .pdp-brand { text-transform: none; letter-spacing: 0; color: var(--color-brand-700); }
+[data-preset="ritual"] .pdp-title { font-family: var(--font-heading); font-weight: 400; font-size: clamp(2rem, 3.6vw, 3.2rem); line-height: 1.05; }
+[data-preset="ritual"] .pdp-opt { border-radius: 12px; background: #fff; }
+[data-preset="ritual"] .pdp-opt[class*="border-brand-500"] { background: var(--color-ink) !important; color: #fff !important; border-color: var(--color-ink) !important; }
+[data-preset="ritual"] .pdp-trust { background: #fff; border-radius: 18px; }
+[data-preset="ritual"] .shop-filters { background: #fff; border-radius: 22px; padding: 18px; align-self: start; }
+[data-preset="ritual"] .ftitle { color: var(--color-brand-700); text-transform: none; letter-spacing: 0; font-size: 14px; }
+[data-preset="ritual"] .summary-box { background: #fff; border: 0; border-radius: 22px; }
+[data-preset="ritual"] .trust-strip { background: #fff; border-color: transparent; }

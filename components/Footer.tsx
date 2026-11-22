@@ -13,7 +13,7 @@ export function TrustStrip() {
   const items = trust.filter((t) => t.title).map((t, n) => ({ ...t, icon: icons[n % icons.length] }));
   if (!items.length) return null;
   return (
-    <section className="border-y border-line bg-brand-50">
+    <section className="trust-strip border-y border-line bg-brand-50">
       <div className="container-x grid grid-cols-2 gap-6 py-8 md:grid-cols-4">
         {items.map((i) => (
           <div key={i.title} className="flex items-start gap-3">
@@ -34,7 +34,7 @@ export function Footer({ categories }: { categories: Category[] }) {
   const { store, pages, social, payments, footerMenu } = useSettings();
   const accepted = [payments.cod.enabled && tx("Cash on delivery"), payments.card.enabled && "Visa · Mastercard", payments.whish.enabled && "Whish"].filter(Boolean).join(" · ");
   return (
-    <footer className="bg-ink text-white/80">
+    <footer className="site-footer bg-ink text-white/80">
       <div className="container-x grid gap-10 py-14 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-3">

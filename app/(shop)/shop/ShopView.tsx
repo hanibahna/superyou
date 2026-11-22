@@ -178,7 +178,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
       {videos.length > 0 && page === 1 && <VideoStrip videos={videos} title="Watch: tips & tutorials" />}
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[240px_1fr]">
-        <aside className="hidden lg:block">{Filters}</aside>
+        <aside className="shop-filters hidden lg:block">{Filters}</aside>
         <div className={pending ? "opacity-60 transition" : ""}>
           {items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
@@ -233,7 +233,7 @@ function Pager({ page, pages, href }: { page: number; pages: number; href: (n: n
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">{title}</p>
+      <p className="ftitle mb-2 text-xs font-bold uppercase tracking-wider text-muted">{title}</p>
       <div className="space-y-1.5">{children}</div>
     </div>
   );

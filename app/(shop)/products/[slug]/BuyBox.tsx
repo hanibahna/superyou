@@ -67,7 +67,7 @@ export function BuyBox({
       <div className="relative">
         <TrackView product={snap(variants.find((x) => x.inStock) ?? v)} />
         {pct && <span dir="ltr" className="absolute start-4 top-4 z-10 rounded-md bg-sale px-2.5 py-1 text-sm font-bold text-white">-{pct}%</span>}
-        <ProductImage product={{ ...v, image: shown }} width={1000} className="aspect-square w-full rounded-2xl border border-line" />
+        <ProductImage product={{ ...v, image: shown }} width={1000} className="pdp-main aspect-square w-full rounded-2xl border border-line" />
         {gallery.length > 1 && (
           <div className="mt-3 grid grid-cols-5 gap-2">
             {gallery.slice(0, 10).map((src) => (
@@ -81,8 +81,8 @@ export function BuyBox({
       </div>
 
       <div>
-        <Link href={`/shop/?brand=${encodeURIComponent(v.brand)}`} className="text-sm font-bold uppercase tracking-wider text-brand-600 hover:underline">{v.brand}</Link>
-        <h1 className="mt-1 text-2xl font-semibold leading-tight md:text-3xl">{v.name}</h1>
+        <Link href={`/shop/?brand=${encodeURIComponent(v.brand)}`} className="pdp-brand text-sm font-bold uppercase tracking-wider text-brand-600 hover:underline">{v.brand}</Link>
+        <h1 className="pdp-title mt-1 text-2xl font-semibold leading-tight md:text-3xl">{v.name}</h1>
         {growth.reviews.enabled && reviewCount >= 3 && (
           <a href="#reviews" className="mt-1 inline-flex items-center gap-2 text-sm hover:underline">
             {rating ? <><Stars value={rating} size={15} /> <span>{rating.toFixed(1)} · {reviewCount} {t("Reviews")}</span></> : <span className="text-muted">{t("Write a review")}</span>}
@@ -91,7 +91,7 @@ export function BuyBox({
         {(v.variant || v.size) && <p className="mt-1 text-sm text-muted">{v.variant ?? v.size}</p>}
 
         <div className="mt-4 flex flex-wrap items-baseline gap-3">
-          <span className={`text-3xl font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</span>
+          <span className={`pdp-price text-3xl font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</span>
           {pct && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
           {pct && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
         </div>
@@ -104,7 +104,7 @@ export function BuyBox({
                 <button
                   key={x.id}
                   onClick={() => pick(x)}
-                  className={`rounded-lg border px-3 py-2 text-sm ${x.id === v.id ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line hover:border-ink"} ${x.inStock ? "" : "text-muted line-through decoration-1"}`}
+                  className={`pdp-opt rounded-lg border px-3 py-2 text-sm ${x.id === v.id ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line hover:border-ink"} ${x.inStock ? "" : "text-muted line-through decoration-1"}`}
                 >
                   {x.variant ?? x.size ?? x.sku}
                   <span className="ml-1.5 text-xs text-muted no-underline">{money(x.price)}</span>
@@ -147,7 +147,7 @@ export function BuyBox({
             {t("Imported for you from")} {v.shipFrom || t("abroad")}. {t("The price already includes international shipping, customs duty and VAT, with nothing more to pay at the door. Original product, ordered from an authorised supplier when you place your order.")}
           </p>
         )}
-        <ul className="mt-4 space-y-2 rounded-xl bg-[#f7f8f7] p-4 text-sm">
+        <ul className="pdp-trust mt-4 space-y-2 rounded-xl bg-[#f7f8f7] p-4 text-sm">
           {growth.trust.lines.map((l) => <li key={l}>✓ {l}</li>)}
           {freeOver && <li>✓ {t("Free delivery on orders over")} {freeOver}</li>}
           <li>✓ {t("Pay cash on delivery, by card or with Whish")}</li>
