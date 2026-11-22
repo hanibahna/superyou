@@ -3,7 +3,7 @@ import { z } from "zod";
 // SMS settings (Admin → SMS). Client-safe: types, providers, defaults, validation.
 // The calls themselves are in lib/sms.ts (server only).
 
-export type SmsProvider = "" | "twilio" | "infobip" | "vonage" | "plivo" | "sinch" | "unifonic" | "smsto" | "custom";
+export type SmsProvider = "" | "twilio" | "infobip" | "vonage" | "plivo" | "sinch" | "unifonic" | "smsto";
 
 export const SMS_PROVIDERS: { id: SmsProvider; name: string; about: string; signup: string; fields: { k: string; label: string; ph?: string; secret?: boolean }[] }[] = [
   { id: "twilio", name: "Twilio", about: "Global leader, very reliable, detailed delivery reports. About $0.36 per SMS to Lebanon.", signup: "https://console.twilio.com/",
@@ -20,8 +20,6 @@ export const SMS_PROVIDERS: { id: SmsProvider; name: string; about: string; sign
     fields: [{ k: "appSid", label: "App SID", secret: true }] },
   { id: "smsto", name: "SMS.to", about: "Simple prepaid SMS API, covers Alfa and touch.", signup: "https://sms.to/",
     fields: [{ k: "apiKey", label: "API key", secret: true }] },
-  { id: "custom", name: "Lebanese bulk SMS (custom HTTP)", about: "For a local bulk-SMS company on Alfa / touch: paste the web link they give you, with {to}, {text} and {sender} where those go.", signup: "",
-    fields: [{ k: "url", label: "Send URL", ph: "https://provider.lb/api/send?user=…&pass=…&to={to}&msg={text}&from={sender}", secret: true }, { k: "method", label: "Method", ph: "GET or POST" }, { k: "body", label: "POST body (optional)", ph: '{"to":"{to}","text":"{text}"}' }, { k: "contentType", label: "Content type for POST", ph: "application/json" }, { k: "okText", label: "Text in a successful reply (optional)", ph: "OK" }] },
 ];
 
 export const SMS_EVENTS = {
@@ -63,7 +61,7 @@ export const secretKeys = (p: SmsProvider) => SMS_PROVIDERS.find((x) => x.id ===
 
 export const smsSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(["", "twilio", "infobip", "vonage", "plivo", "sinch", "unifonic", "smsto", "custom"]),
+  provider: z.enum(["", "twilio", "infobip", "vonage", "plivo", "sinch", "unifonic", "smsto"]),
   senderId: z.string().trim().max(11).regex(/^[A-Za-z0-9 ]*$/, "Sender name: up to 11 letters or digits"),
   mode: z.enum(["fallback", "always"]),
   creds: z.record(z.string(), z.record(z.string(), z.string().max(1000))),

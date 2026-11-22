@@ -98,18 +98,6 @@ export async function sendSms(phone: string, text: string, cfg?: SmsConfig): Pro
         const j = (await r.json()) as { success?: boolean; message_id?: string; message?: string };
         return j.success ? { ok: true, id: j.message_id } : { ok: false, error: j.message ?? `SMS.to ${r.status}` };
       }
-      case "custom": {
-        if (!/^https:\/\//.test(c.url || "")) return { ok: false, error: "Custom provider: the send URL must start with https://" };
-        const enc = (v: string) => encodeURIComponent(v);
-        const vars = { to: to.slice(1), to_plus: to, text, sender: from };
-        const url = c.url.replace(/\{(to_plus|to|text|sender)\}/g, (_, k: keyof typeof vars) => enc(vars[k]));
-        const post = (c.method || "GET").toUpperCase() === "POST";
-        const body = post && c.body ? c.body.replace(/\{(to_plus|to|text|sender)\}/g, (_, k: keyof typeof vars) => (c.contentType?.includes("json") ? JSON.stringify(vars[k]).slice(1, -1) : enc(vars[k]))) : undefined;
-        const r = await fetch(url, { ...t, method: post ? "POST" : "GET", headers: post ? { "Content-Type": c.contentType || "application/x-www-form-urlencoded" } : undefined, body });
-        const reply = (await r.text()).slice(0, 300);
-        const ok = r.ok && (!c.okText || reply.toLowerCase().includes(c.okText.toLowerCase()));
-        return ok ? { ok: true, id: reply.slice(0, 60) } : { ok: false, error: `Provider replied ${r.status}: ${reply.slice(0, 120)}` };
-      }
     }
   } catch (e) {
     return { ok: false, error: (e as Error).message };

@@ -13,7 +13,7 @@ export function SmsEditor({ initial, log }: { initial: SmsConfig; log: Log[] }) 
   const prov = SMS_PROVIDERS.find((p) => p.id === s.provider);
   const creds = s.creds[s.provider] ?? {};
   const setCred = (k: string, v: string) => set({ creds: { ...s.creds, [s.provider]: { ...creds, [k]: v } } });
-  const ready = !!prov && prov.fields.filter((f) => !f.label.includes("optional") && !["method", "body", "contentType", "okText", "region"].includes(f.k)).every((f) => creds[f.k]);
+  const ready = !!prov && prov.fields.filter((f) => !f.label.includes("optional") && f.k !== "region").every((f) => creds[f.k]);
   const [phone, setPhone] = useState("");
   const [test, setTest] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +41,7 @@ export function SmsEditor({ initial, log }: { initial: SmsConfig; log: Log[] }) 
         </Card>
 
         {prov && (
-          <Card title={`${prov.name} keys`} sub={prov.signup ? <a href={prov.signup} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">Open {prov.name} console ↗</a> : "Your Lebanese SMS company gives you this link and the login it contains."}>
+          <Card title={`${prov.name} keys`} sub={prov.signup ? <a href={prov.signup} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">Open {prov.name} console ↗</a> : undefined}>
             <div className="grid gap-3 md:grid-cols-2">
               {prov.fields.map((f) =>
                 f.k === "body" ? (
