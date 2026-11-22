@@ -37,7 +37,6 @@ Otherwise return only JSON: {"ok":true,"skinType": one of ${JSON.stringify(types
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
-      temperature: 0,
       max_tokens: 700,
       messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data } }, { type: "text", text: prompt }] }],
     }),
