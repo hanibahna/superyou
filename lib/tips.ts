@@ -98,9 +98,9 @@ const RULES: Rule[] = [
     "Spray on pulse points and don't rub: it breaks down the top notes.",
     "If you have eczema or sensitive skin, spray on clothes rather than skin." ] },
   { match: /makeup|make-up|foundation|lip|mascara|eye/i, tips: [
-    "Replace mascara every 3 months to avoid eye infections.",
-    "Clean brushes and sponges weekly.",
     "Remove make-up every night; sleeping in it can clog pores.",
+    "Clean brushes and sponges weekly.",
+    "Replace mascara every 3 months to avoid eye infections.",
     "Stop any eye product that stings, and see a doctor if eye redness or pain lasts." ] },
   { match: /nail/i, tips: [
     "Cuticle oil daily keeps nails flexible and less likely to split.",
@@ -124,6 +124,13 @@ export function tipsFor(words: (string | undefined)[]): string[] {
 
 // Product-specific tips: matched on the product's own name (and ingredients when we have them).
 const PRODUCT: Rule[] = [
+  { match: /sponge|blender|puff/i, tips: ["Dampen the sponge and squeeze out the water, then bounce it on the skin rather than dragging.", "Wash make-up sponges after each use, let them dry fully and replace them every 1 to 3 months."] },
+  { match: /brush/i, tips: ["Wash make-up brushes weekly with a gentle shampoo and dry them flat so water doesn't loosen the bristles."] },
+  { match: /tweezer/i, tips: ["Clean tweezers with alcohol before and after use; plucking after a warm shower hurts less."] },
+  { match: /dryer|straightener|flat ?iron|curl(er|ing)|styler/i, tips: ["Always use a heat protectant first, and keep styling tools at the lowest heat that works for your hair."] },
+  { match: /razor|blade|shaver/i, tips: ["Change razor blades every 5 to 7 shaves and rinse them after each stroke to avoid irritation."] },
+  { match: /nail ?file|clipper|cuticle ?(pusher|nipper)/i, tips: ["File nails in one direction and disinfect clippers and nippers after each use."] },
+  { match: /eyelash ?curler/i, tips: ["Curl lashes before mascara, never after, and replace the curler pad every few months."] },
   { match: /retinol|retinal|retinoid|adapalene|bakuchiol/i, tips: ["Use retinol at night only, starting 2 to 3 times a week, and wear SPF 30+ every morning.", "Apply retinol to dry skin, a pea-sized amount for the whole face. Not for pregnancy or breastfeeding."] },
   { match: /vitamin\s*c|ascorbic|\bvit\.?\s*c\b/i, tips: ["Apply vitamin C in the morning under sunscreen; keep it closed and away from light so it stays effective."] },
   { match: /niacinamide/i, tips: ["Niacinamide suits most skin types and can be used morning and night, alongside other actives."] },
