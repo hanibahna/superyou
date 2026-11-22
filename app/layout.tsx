@@ -7,7 +7,7 @@ import { getGrowth } from "@/lib/growth-store";
 import { dirOf, type Lang } from "@/lib/i18n";
 import { getLang } from "@/lib/i18n-server";
 import { translateDeep } from "@/lib/translate";
-import { layoutAttrs, layoutCss } from "@/lib/layouts";
+import { layoutAttrs, layoutCss, layoutFontsHref } from "@/lib/layouts";
 import { SiteProvider } from "@/lib/site-context";
 import { getLayout, getMarketing, getRoutine, getSearchSettings, getSettings } from "@/lib/site-store";
 import { publicTracking } from "@/lib/marketing";
@@ -45,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={lang} dir={dirOf(lang)} data-motion={growth.motion === false ? "off" : "on"} {...layoutAttrs(layout)}>
       <head>
         <style id="shop-theme" dangerouslySetInnerHTML={{ __html: paletteCss(palette) + layoutCss(layout) + frame }} />
+        {layoutFontsHref(layout) && <><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" /><link rel="stylesheet" href={layoutFontsHref(layout)!} /></>}
         {lang === "ar" && <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;600;800&display=swap" />}
         <meta name="theme-color" content={palette["brand-600"]} />
         {marketing.tracking.gsc && <meta name="google-site-verification" content={marketing.tracking.gsc} />}

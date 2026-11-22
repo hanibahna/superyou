@@ -9,6 +9,8 @@ const fontCss: Record<string, string> = {
   serif: "Georgia, 'Times New Roman', serif",
   rounded: "ui-rounded, 'SF Pro Rounded', system-ui, sans-serif",
   mono: "ui-monospace, Menlo, monospace",
+  grotesk: "'Space Grotesk', sans-serif",
+  inter: "Inter, sans-serif",
   condensed: "'Avenir Next Condensed', 'Arial Narrow', sans-serif",
 };
 const radiusPx = { none: 0, small: 4, medium: 10, large: 18 };
@@ -36,8 +38,8 @@ export function LayoutEditor({ initial }: { initial: LayoutOptions }) {
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
         <Card title="Fine-tune" sub={o.preset === "custom" ? "Custom layout" : `Based on ${layoutPresets.find((p) => p.id === o.preset)?.name}`}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Heading font" value={o.headingFont} onChange={(headingFont) => up({ headingFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"], ["condensed", "Condensed"], ["mono", "Typewriter"]]} />
-            <Select label="Body font" value={o.bodyFont} onChange={(bodyFont) => up({ bodyFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"]]} />
+            <Select label="Heading font" value={o.headingFont} onChange={(headingFont) => up({ headingFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"], ["grotesk", "Bold grotesk"], ["condensed", "Condensed"], ["mono", "Typewriter"]]} />
+            <Select label="Body font" value={o.bodyFont} onChange={(bodyFont) => up({ bodyFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"], ["inter", "Inter"]]} />
             <Select label="Corners" value={o.radius} onChange={(radius) => up({ radius })} options={[["none", "Square"], ["small", "Slightly rounded"], ["medium", "Rounded"], ["large", "Very rounded"]]} />
             <Select label="Buttons" value={o.buttons} onChange={(buttons) => up({ buttons })} options={[["pill", "Pill"], ["rounded", "Rounded"], ["square", "Square"]]} />
             <Select label="Product cards" value={o.cards} onChange={(cards) => up({ cards })} options={[["plain", "Plain"], ["border", "Outlined"], ["shadow", "Shadow"], ["tinted", "Tinted"]]} />

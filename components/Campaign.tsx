@@ -44,28 +44,28 @@ export function CampaignHero(p: { eyebrow: string; title: string; text: string; 
   const parts = [["d", Math.floor(s / 86400)], ["h", Math.floor((s % 86400) / 3600)], ["m", Math.floor((s % 3600) / 60)], ["s", s % 60]] as const;
   const imgs = p.images.filter((t) => t.image).slice(0, 6);
   return (
-    <section className="bf-hero relative overflow-hidden bg-black text-white">
+    <section className={`bf-hero ${p.video ? "has-video" : ""} relative overflow-hidden bg-black text-white`}>
       {p.video && <HeroVideo src={p.video} poster={p.poster} overlay={p.overlay ?? 50} />}
       <div className="container-x relative grid items-center gap-8 py-10 md:py-14 lg:grid-cols-[1fr_1.1fr]">
         <div>
-          {p.eyebrow && <p className="inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
-          <h1 className="mt-5 text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-7xl">{highlight(p.title)}</h1>
-          {p.text && <p className="mt-4 max-w-md text-lg text-white/80">{p.text}</p>}
+          {p.eyebrow && <p className="bf-eyebrow inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
+          <h1 className="bf-title mt-5 text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-7xl">{highlight(p.title)}</h1>
+          {p.text && <p className="bf-text mt-4 max-w-md text-lg text-white/80">{p.text}</p>}
           {p.endsAt && left !== null && left > 0 && (
             <div dir="ltr" className="mt-6 flex items-end gap-2">
               {parts.map(([k, v]) => (
                 <div key={k} className="text-center">
-                  <div className="w-16 rounded bg-white/10 py-2 text-3xl font-bold tabular-nums">{String(v).padStart(2, "0")}</div>
+                  <div className="bf-count w-16 rounded bg-white/10 py-2 text-3xl font-bold tabular-nums">{String(v).padStart(2, "0")}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-widest text-white/60">{{ d: tx("days"), h: tx("hours"), m: tx("mins"), s: tx("secs") }[k]}</div>
                 </div>
               ))}
             </div>
           )}
           <div className="mt-7 flex flex-wrap gap-3">
-            {p.cta && <Link href={p.href || "/shop/"} className="rounded-full bg-white px-7 py-3.5 text-sm font-bold text-black hover:bg-brand-100">{p.cta}</Link>}
-            {p.cta2 && <Link href={p.href2 || "/shop/"} className="rounded-full border border-white/60 px-7 py-3.5 text-sm font-bold hover:bg-white/10">{p.cta2}</Link>}
+            {p.cta && <Link href={p.href || "/shop/"} className="bf-cta1 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-black hover:bg-brand-100">{p.cta}</Link>}
+            {p.cta2 && <Link href={p.href2 || "/shop/"} className="bf-cta2 rounded-full border border-white/60 px-7 py-3.5 text-sm font-bold hover:bg-white/10">{p.cta2}</Link>}
           </div>
-          <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/70">
+          <p className="bf-trust mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/70">
             <span>✓ {tx("Pay on delivery")}</span>
             {settings.delivery.freeThreshold > 0 && <span>✓ {tx("Free delivery over")} ${settings.delivery.freeThreshold}</span>}
             <span>✓ {tx("Free pharmacist advice")}</span>
@@ -78,7 +78,7 @@ export function CampaignHero(p: { eyebrow: string; title: string; text: string; 
         )}
       </div>
       {p.badge && (
-        <div className="overflow-hidden border-y border-white/15 bg-black py-2">
+        <div className="bf-ticker overflow-hidden border-y border-white/15 bg-black py-2">
           <div className="marquee flex w-max gap-10 whitespace-nowrap text-sm font-bold uppercase tracking-[0.25em]">
             {/* The hero already sells the offer, so the ticker carries the trust promises. */}
             {Array.from({ length: 4 }).flatMap((_, i) => [
@@ -192,7 +192,7 @@ export function PromoTiles({ eyebrow, title, items }: { eyebrow: string; title: 
       {title && <h2 className="mb-4 text-2xl font-bold">{title}</h2>}
       <Scroller label={title || "Promotions"}>
         {items.map((t, i) => (
-          <Link key={i} href={t.href || "/shop/"} className="group w-[78%] shrink-0 snap-start overflow-hidden rounded-lg sm:w-[45%] lg:w-[calc(25%-12px)]" style={{ background: t.bg || "#f5f0eb" }}>
+          <Link key={i} href={t.href || "/shop/"} className="promo-tile group w-[78%] shrink-0 snap-start overflow-hidden rounded-lg sm:w-[45%] lg:w-[calc(25%-12px)]" style={{ background: t.bg || "#f5f0eb" }}>
             <div className="relative aspect-[4/3]">
               <Img src={t.image} w={600} className="absolute inset-0 h-full w-full object-contain p-6 mix-blend-multiply transition duration-500 group-hover:scale-105" />
               {t.badge && <span className="absolute left-3 top-3 rounded bg-black px-2 py-1 text-xs font-bold uppercase tracking-wider text-white">{t.badge}</span>}
@@ -217,10 +217,10 @@ export function Circles({ title, items }: { title: string; items: Tile[] }) {
       <div className="no-scrollbar flex gap-5 overflow-x-auto pb-2 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(92px,1fr))] lg:gap-3 lg:overflow-visible">
         {items.map((t, i) => (
           <Link key={i} href={t.href || "/shop/"} className="group w-24 shrink-0 text-center lg:w-auto">
-            <span className="mx-auto block aspect-square w-full max-w-[120px] overflow-hidden rounded-full border border-line" style={{ background: t.bg || "#f6f6f6" }}>
+            <span className="circle-pic mx-auto block aspect-square w-full max-w-[120px] overflow-hidden rounded-full border border-line" style={{ background: t.bg || "#f6f6f6" }}>
               <Img src={t.image} w={300} className="h-full w-full object-contain p-4 mix-blend-multiply transition duration-300 group-hover:scale-110" />
             </span>
-            <span className="mt-2 block text-sm font-semibold group-hover:underline">{t.title}</span>
+            <span className="circle-label mt-2 block text-sm font-semibold group-hover:underline">{t.title}</span>
           </Link>
         ))}
       </div>
@@ -236,7 +236,7 @@ export function OffersGrid({ eyebrow, title, items }: { eyebrow: string; title: 
       {title && <h2 className="mb-5 text-2xl font-bold">{title}</h2>}
       <div className={`grid gap-4 sm:grid-cols-2 ${items.length % 4 === 0 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
         {items.map((t, i) => (
-          <Link key={i} href={t.href || "/shop/"} className={`group flex gap-4 rounded-lg border border-line bg-white p-4 transition hover:shadow-md ${items.length % 4 === 0 ? "lg:flex-col" : ""}`}>
+          <Link key={i} href={t.href || "/shop/"} className={`offer-tile group flex gap-4 rounded-lg border border-line bg-white p-4 transition hover:shadow-md ${items.length % 4 === 0 ? "lg:flex-col" : ""}`}>
             <span className={`relative block h-28 w-28 shrink-0 overflow-hidden rounded ${items.length % 4 === 0 ? "lg:h-40 lg:w-full" : ""}`} style={{ background: t.bg || "#f6f6f6" }}>
               <Img src={t.image} w={280} className="h-full w-full object-contain p-2 mix-blend-multiply" />
             </span>

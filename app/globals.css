@@ -205,3 +205,68 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 
 /* ── Hero background video ── */
 .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* ══ Pop preset (Admin → Appearance → Layout → Pop): big grotesk type, pastel blocks, soft cards, black pills ══ */
+[data-preset="pop"] { --pop-pink: #ffc2d4; --pop-peach: #ffe1c7; --pop-lilac: #e2dcff; --pop-butter: #fff3b8; --pop-mint: #cfeedd; --pop-card: #f6f1f3; }
+[data-preset="pop"] :is(h1, h2, h3) { font-weight: 700; letter-spacing: -0.03em; }
+[data-preset="pop"] .hsec h2, [data-preset="pop"] main h2.text-2xl { font-size: clamp(1.9rem, 4.2vw, 3.4rem); line-height: 1; }
+[data-preset="pop"] main h1 { letter-spacing: -0.035em; }
+
+/* Buttons: brand-coloured calls to action become black pills */
+[data-preset="pop"] :is(a, button)[class*="bg-brand-5"] { background-color: var(--color-ink) !important; color: #fff !important; border-radius: 9999px !important; }
+[data-preset="pop"] :is(a, button)[class*="bg-brand-5"]:hover { background-color: #000 !important; }
+[data-preset="pop"] :is(a, button)[class*="border-brand-5"] { border-color: var(--color-ink) !important; color: var(--color-ink) !important; border-radius: 9999px !important; border-width: 1.5px; }
+
+/* Header: grey search pill, black bag button */
+[data-preset="pop"] .site-header .hdr-search label { background: var(--pop-card); border-color: transparent; min-height: 48px; }
+[data-preset="pop"] .site-header .hdr-bag { background: var(--color-ink); color: #fff; border-radius: 9999px; margin-inline-start: 4px; }
+[data-preset="pop"] .site-header .hdr-bag:hover { color: #fff; background: #000; }
+
+/* Product cards: soft grey tile, white photo well, black pill button */
+[data-preset="pop"] .pcard { background: var(--pop-card); border-color: transparent; border-radius: 26px; padding: 12px; }
+[data-preset="pop"] .pcard > a:first-of-type { border-radius: 18px; background: #fff; }
+[data-preset="pop"] .pcard .pbrand { text-transform: none; letter-spacing: 0; font-size: 13px; }
+[data-preset="pop"] .pcard .pname { font-weight: 700; font-size: 15px; }
+[data-preset="pop"] .pcard .buy { background: var(--color-ink) !important; border-radius: 9999px !important; }
+[data-preset="pop"] .pcard .buy:hover { background: #000 !important; }
+[data-preset="pop"] .pcard .buy-alt { border-radius: 9999px !important; border-color: var(--color-ink) !important; color: var(--color-ink) !important; background: #fff; }
+@media (hover: hover) { [data-preset="pop"] .pcard:hover { box-shadow: 0 14px 30px -16px rgb(46 34 41 / .35); } }
+
+/* Home: the campaign hero becomes a big pastel block with huge type */
+[data-preset="pop"] .bf-hero:not(.has-video) { background: var(--pop-pink) !important; color: var(--color-ink) !important; margin: 8px 12px 0; border-radius: 32px; }
+@media (min-width: 1024px) { [data-preset="pop"] .bf-hero:not(.has-video) { margin: 10px auto 0; max-width: 1400px; border-radius: 40px; } }
+[data-preset="pop"] .bf-hero.has-video { margin: 8px 12px 0; border-radius: 32px; }
+[data-preset="pop"] .bf-title { text-transform: none; font-family: var(--font-heading); font-weight: 700; font-size: clamp(3.2rem, 9vw, 8.5rem); line-height: .88; letter-spacing: -0.045em; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-eyebrow { background: var(--color-ink); color: #fff; border: 0; border-radius: 9999px; letter-spacing: .08em; padding: 8px 14px; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-text { color: var(--color-ink); opacity: .85; font-size: 1.2rem; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-count { background: rgb(255 255 255 / .6); color: var(--color-ink); border-radius: 14px; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-count + div { color: var(--color-ink); opacity: .7; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-cta1 { background: var(--color-ink); color: #fff; padding: 1.05rem 2rem; font-size: 1rem; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-cta1:hover { background: #000; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-cta2 { background: #fff; color: var(--color-ink); border-color: #fff; padding: 1.05rem 2rem; font-size: 1rem; }
+[data-preset="pop"] .bf-hero:not(.has-video) .bf-cta2:hover { background: var(--color-brand-50); }
+[data-preset="pop"] .bf-trust { gap: 8px; color: var(--color-ink) !important; font-size: 13px; }
+[data-preset="pop"] .bf-hero.has-video .bf-trust { color: #fff !important; }
+[data-preset="pop"] .bf-trust > span { border: 1.5px solid currentColor; border-radius: 9999px; padding: 7px 14px; font-weight: 600; }
+[data-preset="pop"] .bf-ticker { background: var(--color-ink); border: 0; }
+
+/* Home: the gradient banner slider gets the same soft, rounded look */
+[data-preset="pop"] .hero-box { border-radius: 36px; }
+[data-preset="pop"] .hero-title { font-size: clamp(2.8rem, 7vw, 6rem); line-height: .9; letter-spacing: -0.045em; }
+
+/* Round category pictures: borderless pastel bubbles */
+[data-preset="pop"] .circle-pic { border: 0; max-width: 168px; }
+[data-preset="pop"] a:nth-child(5n+1) > .circle-pic { background: var(--pop-pink) !important; }
+[data-preset="pop"] a:nth-child(5n+2) > .circle-pic { background: var(--pop-peach) !important; }
+[data-preset="pop"] a:nth-child(5n+3) > .circle-pic { background: var(--pop-lilac) !important; }
+[data-preset="pop"] a:nth-child(5n+4) > .circle-pic { background: var(--pop-butter) !important; }
+[data-preset="pop"] a:nth-child(5n+5) > .circle-pic { background: var(--pop-mint) !important; }
+[data-preset="pop"] .circle-label { font-weight: 700; font-size: 15px; }
+
+/* Promo tiles, offers and banners: big rounded colour blocks */
+[data-preset="pop"] .promo-tile { border-radius: 28px; }
+[data-preset="pop"] .offer-tile { border-radius: 26px; border-color: transparent; background: var(--pop-card); }
+[data-preset="pop"] .banner-tile { border-radius: 32px; }
+
+/* Inputs and chips across the shop */
+[data-preset="pop"] main :is(input[type="text"], input[type="email"], input[type="tel"], input[type="search"], select, textarea) { border-radius: 14px; }

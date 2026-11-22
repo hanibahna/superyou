@@ -34,7 +34,7 @@ export function HeroSlider({ slides, interval = 6, height = "medium" }: { slides
   const light = !cover && isLight(s.from) && isLight(s.to);
   return (
     <section className="container-x pt-5">
-      <div className={`relative overflow-hidden rounded-2xl ${light ? "text-ink" : "text-white"}`} style={{ background: `linear-gradient(90deg, ${s.from}, ${s.to})` }}>
+      <div className={`hero-box relative overflow-hidden rounded-2xl ${light ? "text-ink" : "text-white"}`} style={{ background: `linear-gradient(90deg, ${s.from}, ${s.to})` }}>
         {cover && (
           <div className="absolute inset-0">
             {s.video ? <VideoPlayer url={s.video} background poster={s.image} /> : (
@@ -47,7 +47,7 @@ export function HeroSlider({ slides, interval = 6, height = "medium" }: { slides
         <div className={`relative grid items-center gap-6 px-8 py-12 md:grid-cols-2 md:px-16 ${heights[height]}`}>
           <div>
             {s.eyebrow && <p className={`text-xs font-bold uppercase tracking-[0.25em] ${light ? "text-brand-700" : "opacity-80"}`}>{s.eyebrow}</p>}
-            <h1 className="mt-3 text-4xl font-bold leading-tight md:text-5xl">{s.title}</h1>
+            <h1 className="hero-title mt-3 text-4xl font-bold leading-tight md:text-5xl">{s.title}</h1>
             {s.text && <p className="mt-3 text-lg opacity-90">{s.text}</p>}
             {s.cta && (
               <Link href={s.href || "/shop/"} className={`mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold ${light ? "bg-ink text-white hover:bg-black" : "bg-white text-ink hover:bg-brand-50"}`}>
@@ -222,7 +222,7 @@ export function Banners({ title, columns, items }: { title: string; columns: 1 |
       {title && <h2 className="mb-5 text-2xl font-semibold md:text-3xl">{title}</h2>}
       <div className={`grid gap-4 ${cols}`}>
         {items.map((b, n) => (
-          <Link key={n} href={b.href || "/shop/"} className={`group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-ink text-white ${columns === 1 ? "aspect-[21/8]" : "aspect-[16/9]"}`}>
+          <Link key={n} href={b.href || "/shop/"} className={`banner-tile group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-ink text-white ${columns === 1 ? "aspect-[21/8]" : "aspect-[16/9]"}`}>
             {b.video ? <div className="absolute inset-0"><VideoPlayer url={b.video} background poster={b.image} /></div> : b.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={b.image} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
