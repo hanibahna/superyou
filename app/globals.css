@@ -351,3 +351,6 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 /* Brand logos strip: endless scroll, pauses while hovered or touched */
 .brand-marquee:hover .marquee, .brand-marquee:active .marquee { animation-play-state: paused; }
 .brand-marquee { mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+
+[data-header="dark"] .site-header .site-id, [data-header="dark"] .site-header .site-id-sm { color: #fff; }
+[data-header="dark"] .site-header :is(.site-id, .site-id-sm) .text-brand-600 { color: var(--color-brand-100); }

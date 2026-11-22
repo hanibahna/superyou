@@ -72,6 +72,11 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
         </Link>
+        {/* Our web address (so people remember it) and our promise, next to the logo. */}
+        <div className="site-id -ms-1 hidden min-w-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex">
+          <span dir="ltr" className="text-[13px] font-extrabold tracking-[0.08em]"><span className="text-brand-600">SHOP</span>SUPERYOU<span className="text-brand-600">.COM</span></span>
+          {store.tagline && <span className="max-w-[260px] truncate text-[11px] text-muted">{store.tagline}</span>}
+        </div>
 
         <SearchBox className="hdr-search mx-auto hidden max-w-xl flex-1 lg:block" />
 
@@ -89,6 +94,10 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
             {count > 0 && <Badge n={count} />}
           </button>
         </nav>
+      </div>
+      <div className="site-id-sm container-x -mt-2 flex items-center justify-center gap-2 pb-1.5 text-center leading-tight xl:hidden">
+        <span dir="ltr" className="text-[11px] font-extrabold tracking-[0.12em]"><span className="text-brand-600">SHOP</span>SUPERYOU<span className="text-brand-600">.COM</span></span>
+        {store.tagline && <span className="hidden truncate text-[11px] text-muted sm:inline">· {store.tagline}</span>}
       </div>
       {/* Phones: on the home page, search sits in plain view under the logo. */}
       {path === "/" && <div className="container-x pb-3 lg:hidden"><SearchBox /></div>}
