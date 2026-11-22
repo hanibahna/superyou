@@ -69,10 +69,14 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
         <Link href="/" aria-label={`${store.name} home`} className="hdr-logo flex shrink-0 items-center gap-2 md:gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/superyou-mark.svg" alt="" aria-hidden className="h-7 w-7 rounded-md ring-1 ring-white/25 md:h-9 md:w-9" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/superyou-logo.svg" alt={store.name} className="logo-on-light h-5 w-auto md:h-7" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
+          <span className="flex flex-col items-start gap-0.5 xl:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/superyou-logo.svg" alt={store.name} className="logo-on-light h-5 w-auto md:h-7" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
+            {/* Phones & tablets: our address right under the name */}
+            <span dir="ltr" className="site-id-sm block text-[10px] font-extrabold leading-none tracking-[0.14em] md:text-[11px] xl:hidden"><span className="text-brand-600">SHOP</span>SUPERYOU<span className="text-brand-600">.COM</span></span>
+          </span>
         </Link>
         {/* Our web address (so people remember it) and our promise, next to the logo. */}
         <div className="site-id -ms-1 hidden min-w-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex">
@@ -97,10 +101,8 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
           </button>
         </nav>
       </div>
-      <div className="site-id-sm container-x -mt-2 flex items-center justify-center gap-2 pb-1.5 text-center leading-tight xl:hidden">
-        <span dir="ltr" className="text-[11px] font-extrabold tracking-[0.12em]"><span className="text-brand-600">SHOP</span>SUPERYOU<span className="text-brand-600">.COM</span></span>
-        {store.tagline && <span className="hidden truncate text-[11px] text-muted sm:inline">· {store.tagline}</span>}
-      </div>
+      {/* Phones & tablets: our promise as a slim line under the logo row */}
+      {store.tagline && <p className="site-id-sm container-x -mt-1.5 pb-1.5 text-center text-[10.5px] leading-snug text-muted md:text-xs xl:hidden">{store.tagline}</p>}
       {/* Phones: on the home page, search sits in plain view under the logo. */}
       {path === "/" && <div className="container-x pb-3 lg:hidden"><SearchBox /></div>}
 
