@@ -147,7 +147,9 @@ export async function cardsByTag(tag: Tag, limit = 16): Promise<CardItem[]> {
 }
 
 export async function liveCards(): Promise<CardItem[]> {
-  return toCards((await liveProducts()).list);
+  const live = await liveProducts();
+  // Same list for everyone until the catalogue or prices change: build the cards once per version.
+  return (await import("@/lib/memo")).memo(`cards:${live.key}`, 10 * 60_000, async () => toCards(live.list));
 }
 
 const listOf = (v: string) => v.split(/[,\n|]/).map((x) => x.trim()).filter(Boolean);

@@ -16,6 +16,7 @@ import { ReviewsStrip } from "@/components/ReviewsStrip";
 import { getLang, getT } from "@/lib/i18n-server";
 import { translateDeep } from "@/lib/translate";
 import { getLanding, getSettings, getVideoLibrary } from "@/lib/site-store";
+import { memo } from "@/lib/memo";
 
 export async function generateMetadata() {
   return { ...(await canonical("/")) };
@@ -49,16 +50,18 @@ export default async function HomePage() {
   const auto = autoCategories(await getTaxonomy(), nav);
   const onSale = landing.sections.filter((s) => s.enabled).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => shopImgDeep(liveHrefsDeep(s, nav)));
   const sections = await translateDeep(onSale, lang, ["eyebrow", "title", "text", "cta", "cta2", "badge", "body"]);
-  const rows = await Promise.all(sections.map((s) => (s.type === "products" ? cardsFor(s.source, s.limit, s.sort) : Promise.resolve(null))));
+  // Product rows, campaign products and reviews are the same for every visitor: worked out at most once a minute.
+  const minute = Math.floor(Date.now() / 60_000);
+  const rows = await memo(`home:rows:${lang}:${minute}`, 70_000, () => Promise.all(sections.map((s) => (s.type === "products" ? cardsFor(s.source, s.limit, s.sort) : Promise.resolve(null)))));
 
   const settings = await getSettings();
   // Latest approved reviews for the "Loved by our customers" section.
   const homeReviews = sections.some((x) => x.type === "reviews")
-    ? (await listReviews(300)).filter((r) => r.status === "approved" && r.body.length > 20).map((r) => ({ id: r.id, slug: r.slug, product: r.product, rating: r.rating, title: r.title, body: r.body, name: r.name, verified: r.verified, image: cards.find((c) => c.slug === r.slug)?.image }))
+    ? (await memo(`home:reviews:${minute}`, 70_000, () => listReviews(300))).filter((r) => r.status === "approved" && r.body.length > 20).map((r) => ({ id: r.id, slug: r.slug, product: r.product, rating: r.rating, title: r.title, body: r.body, name: r.name, verified: r.verified, image: cards.find((c) => c.slug === r.slug)?.image }))
     : [];
   // Products for the auto-scrolling campaign banner(s).
   const heroProducts = new Map<string, Awaited<ReturnType<typeof cardsFor>>>();
-  for (const s of landing.sections) if (s.type === "bfhero" && s.enabled && s.slider?.enabled) heroProducts.set(s.id, (await cardsFor(s.slider.source, s.slider.limit * 2, "featured")).filter((c) => c.image && c.inStock).slice(0, s.slider.limit));
+  for (const s of landing.sections) if (s.type === "bfhero" && s.enabled && s.slider?.enabled) heroProducts.set(s.id, (await memo(`home:hero:${s.id}:${minute}`, 70_000, () => cardsFor(s.slider!.source, s.slider!.limit * 2, "featured"))).filter((c) => c.image && c.inStock).slice(0, s.slider.limit));
   const base = siteUrl();
   const org = {
     "@context": "https://schema.org",
