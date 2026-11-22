@@ -11,6 +11,15 @@ import { VideoPlayer } from "./Video";
 // ── Hero slider ─────────────────────────────────────────────
 const heights = { small: "min-h-[240px] md:min-h-[300px]", medium: "min-h-[300px] md:min-h-[380px]", large: "min-h-[380px] md:min-h-[520px]" };
 
+/** True for pale colours (hex), so the banner switches to dark text. */
+function isLight(hex: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex?.trim() ?? "");
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 186;
+}
+
 export function HeroSlider({ slides, interval = 6, height = "medium" }: { slides: Slide[]; interval?: number; height?: "small" | "medium" | "large" }) {
   const [i, setI] = useState(0);
   useEffect(() => {
@@ -21,9 +30,11 @@ export function HeroSlider({ slides, interval = 6, height = "medium" }: { slides
   if (!slides.length) return null;
   const s = slides[Math.min(i, slides.length - 1)];
   const cover = s.layout === "cover" && (s.image || s.video);
+  // Light gradients (pastel banners) get dark text; dark ones and photo covers keep white text.
+  const light = !cover && isLight(s.from) && isLight(s.to);
   return (
     <section className="container-x pt-5">
-      <div className="relative overflow-hidden rounded-2xl text-white" style={{ background: `linear-gradient(90deg, ${s.from}, ${s.to})` }}>
+      <div className={`relative overflow-hidden rounded-2xl ${light ? "text-ink" : "text-white"}`} style={{ background: `linear-gradient(90deg, ${s.from}, ${s.to})` }}>
         {cover && (
           <div className="absolute inset-0">
             {s.video ? <VideoPlayer url={s.video} background poster={s.image} /> : (
@@ -35,18 +46,18 @@ export function HeroSlider({ slides, interval = 6, height = "medium" }: { slides
         )}
         <div className={`relative grid items-center gap-6 px-8 py-12 md:grid-cols-2 md:px-16 ${heights[height]}`}>
           <div>
-            {s.eyebrow && <p className="text-xs font-bold uppercase tracking-[0.25em] opacity-80">{s.eyebrow}</p>}
+            {s.eyebrow && <p className={`text-xs font-bold uppercase tracking-[0.25em] ${light ? "text-brand-700" : "opacity-80"}`}>{s.eyebrow}</p>}
             <h1 className="mt-3 text-4xl font-bold leading-tight md:text-5xl">{s.title}</h1>
             {s.text && <p className="mt-3 text-lg opacity-90">{s.text}</p>}
             {s.cta && (
-              <Link href={s.href || "/shop/"} className="mt-6 inline-block rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink hover:bg-brand-50">
+              <Link href={s.href || "/shop/"} className={`mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold ${light ? "bg-ink text-white hover:bg-black" : "bg-white text-ink hover:bg-brand-50"}`}>
                 {s.cta}
               </Link>
             )}
           </div>
           {!cover && (s.image || s.video) && (
-            <div className="hidden justify-end md:flex">
-              <div className="aspect-square w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="-order-1 flex justify-center md:order-none md:justify-end">
+              <div className={`w-full overflow-hidden rounded-2xl ${/\.svg($|\?)/i.test(s.image) ? "aspect-[4/3] max-w-[300px] md:max-w-md" : "hidden aspect-square max-w-sm md:block"}`}>
                 {s.video ? <VideoPlayer url={s.video} background poster={s.image} /> : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={s.image} alt="" className="h-full w-full object-cover" />
