@@ -3,7 +3,8 @@ import { z } from "zod";
 import { adminGuard } from "@/lib/admin-auth";
 import { getIndex } from "@/lib/catalog";
 import { upsertProducts } from "@/lib/catalog-admin";
-import { fetchSourcePage, mapSourceProduct, normaliseSourceUrl } from "@/lib/import/shopify-source";
+import { fetchSourcePage, mapSourceProduct, normaliseSourceUrl, type SourceProduct } from "@/lib/import/shopify-source";
+import { getSourcing } from "@/lib/site-store";
 
 export const maxDuration = 300;
 
@@ -14,6 +15,8 @@ const schema = z.object({
   round: z.enum(["cents", "quarter", "none"]).default("cents"),
   asDraft: z.boolean().default(false),
   skuPrefix: z.string().regex(/^[A-Z0-9]{2,8}$/).default("SRC"),
+  // When the server can't reach the store (bot check), the admin page sends the page it fetched itself.
+  products: z.array(z.any()).max(250).optional(),
 });
 
 // Imports ONE page (up to 250 source products) per call; the admin page loops until done.
@@ -29,8 +32,9 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
-  let products;
-  try {
+  let products: SourceProduct[];
+  if (o.products) products = o.products as SourceProduct[];
+  else try {
     products = await fetchSourcePage(origin, o.page);
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });
@@ -38,7 +42,10 @@ export async function POST(req: NextRequest) {
   if (!products.length) return NextResponse.json({ done: true, fetched: 0, rows: 0, created: 0, updated: 0, errors: [], skus: [], categories: {} });
 
   const sourceName = origin.hostname.replace(/^www\./, "");
-  const rows = products.flatMap((p) => mapSourceProduct(p, { adjustPct: o.adjustPct, round: o.round, asDraft: o.asDraft, skuPrefix: o.skuPrefix, sourceName }));
+  // International catalogs (Admin → Sourcing) are priced at landed cost: freight, duty, fees, VAT and margin.
+  const rule = (await getSourcing()).sources.find((s) => s.source.toLowerCase() === sourceName.toLowerCase());
+  const landedPricing = rule?.origin === "international" ? rule.pricing : undefined;
+  const rows = products.flatMap((p) => mapSourceProduct(p, { adjustPct: o.adjustPct, round: o.round, asDraft: o.asDraft, skuPrefix: o.skuPrefix, sourceName, landed: landedPricing }));
   // Products whose photos were replaced from another store keep those photos.
   const idx = await getIndex();
   for (const row of rows) {
@@ -59,5 +66,6 @@ export async function POST(req: NextRequest) {
     skus: rows.map((x) => x.sku),
     categories,
     sourceName,
+    pricing: landedPricing ? "landed" : "adjusted",
   });
 }

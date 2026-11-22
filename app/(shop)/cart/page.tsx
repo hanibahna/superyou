@@ -9,6 +9,7 @@ import { CouponBox, GiftPicker, Totals } from "@/components/CartPromos";
 import { FreeDeliveryBar, RecentlyViewed } from "@/components/Growth";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { ProductImage } from "@/components/ProductImage";
+import { DeliverySplit, ShipBadge } from "@/components/ShipBadge";
 import type { CardItem } from "@/lib/listing";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
@@ -58,6 +59,7 @@ export default function CartPage() {
                 <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
                 <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{product.name}</Link>
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
+                <ShipBadge p={product} className="mt-1 self-start" />
                 <div className="mt-auto flex items-center gap-4">
                   <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                   <button onClick={() => remove(product.id)} className="text-sm text-muted hover:underline">{tx("Remove")}</button>
@@ -67,6 +69,7 @@ export default function CartPage() {
             </li>
           ))}
         </ul>
+        <DeliverySplit items={detailed.map((l) => l.product)} className="mt-4" />
         <div className="mt-6"><GiftPicker /></div>
       </div>
       <aside className="h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">

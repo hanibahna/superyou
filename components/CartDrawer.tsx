@@ -7,6 +7,7 @@ import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
 import { CloseIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
+import { DeliverySplit, ShipBadge } from "./ShipBadge";
 
 export function CartDrawer() {
   const tx = useT();
@@ -53,6 +54,7 @@ export function CartDrawer() {
                     <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
                     <p className="text-sm font-medium leading-snug">{product.name}</p>
                     {product.variant && <p className="text-xs text-muted">{product.variant}</p>}
+                    <ShipBadge p={product} className="mt-1 self-start" />
                     <div className="mt-auto flex items-center justify-between">
                       <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                       <span className="text-right text-sm font-semibold">
@@ -67,6 +69,9 @@ export function CartDrawer() {
                 </li>
               ))}
             </ul>
+          )}
+          {detailed.length > 0 && (
+            <DeliverySplit items={detailed.map((l) => l.product)} className="mt-4" />
           )}
           {detailed.length > 0 && <div className="mt-5"><GiftPicker compact /></div>}
         </div>

@@ -40,7 +40,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const [raw, live] = await Promise.all([getGroupBySlug(slug), liveProducts()]);
   // Show live (sale) prices.
   const variants = raw.map((v) => live.byId.get(v.id)).filter((v): v is NonNullable<typeof v> => !!v) // hidden catalogs/brands are excluded
-    .map(({ source: _s, collections: _c, ...v }) => ({ ...v, image: shopImg(v.image) })); // the supplier's name never reaches the browser
+    .map(({ source: _s, cost: _cost, collections: _c, ...v }) => ({ ...v, image: shopImg(v.image) })); // the supplier's name never reaches the browser
   if (!variants.length) {
     const kept = live.dupOf.get(slug); // same product shown under the other catalog's listing
     if (kept) permanentRedirect(`/products/${kept}/`);

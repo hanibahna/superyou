@@ -14,6 +14,7 @@ import { deliveryBy } from "@/lib/growth";
 import { localeOf } from "@/lib/i18n";
 import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
+import { ShipBadge } from "@/components/ShipBadge";
 
 export function BuyBox({
   variants,
@@ -44,7 +45,7 @@ export function BuyBox({
   const settings = useSettings();
   const rating = variants.find((x) => x.reviewCount)?.rating;
   const reviewCount = variants.find((x) => x.reviewCount)?.reviewCount ?? 0;
-  const by = deliveryBy(settings.delivery.estimate || "3").toLocaleDateString(localeOf(lang), { weekday: "short", day: "numeric", month: "short" });
+  const by = deliveryBy(v.daysMax ? String(v.daysMax) : settings.delivery.estimate || "3").toLocaleDateString(localeOf(lang), { weekday: "short", day: "numeric", month: "short" });
 
   const pick = (x: ProductLite) => {
     setId(x.id);
@@ -128,7 +129,15 @@ export function BuyBox({
           </button>
         </div>
 
-        {v.inStock && <p className="mt-3 text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <ShipBadge p={v} size="md" />
+          {v.inStock && <p className="text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
+        </div>
+        {v.origin === "international" && (
+          <p className="mt-2 rounded-lg border border-[#c7d2fe] bg-[#eef2ff] p-3 text-xs leading-relaxed text-[#312e81]">
+            {t("Imported for you from")} {v.shipFrom || t("abroad")}. {t("The price already includes international shipping, customs duty and VAT, with nothing more to pay at the door. Original product, ordered from an authorised supplier when you place your order.")}
+          </p>
+        )}
         <ul className="mt-4 space-y-2 rounded-xl bg-[#f7f8f7] p-4 text-sm">
           {growth.trust.lines.map((l) => <li key={l}>✓ {l}</li>)}
           {freeOver && <li>✓ {t("Free delivery on orders over")} {freeOver}</li>}

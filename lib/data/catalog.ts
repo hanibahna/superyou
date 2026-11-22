@@ -56,6 +56,7 @@ export type Product = {
   group?: string; // products sharing a group are sizes/shades of one item (shown as one card)
   variant?: string; // this item's size/shade label within its group, e.g. "50 ml"
   source?: string; // where it was imported from, e.g. "neovitale.com"
+  cost?: number; // supplier price in USD (international catalogs: before freight, duty and VAT)
   collections?: string[]; // collection keys (e.g. "luxury-make-up", "vichy/Medical-Make-Up") used by menus
   photosFrom?: string; // photos replaced from another store (kept on re-import), e.g. "feel22.com"
   video?: string; // "how to use" video: YouTube, TikTok, Instagram, Vimeo link or uploaded file
@@ -63,7 +64,11 @@ export type Product = {
 };
 
 /** Lightweight record kept in the fast in-memory index (no long texts, first image only). */
-export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredients" | "images" | "video"> & { image?: string; imageCount: number; rating?: number; reviewCount?: number };
+export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredients" | "images" | "video"> & {
+  image?: string; imageCount: number; rating?: number; reviewCount?: number;
+  /** Filled in live from Admin → Sourcing: local stock or international drop shipping, and delivery time. */
+  origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;
+};
 
 export const toLite = (p: Product): ProductLite => {
   const { description: _d, howToUse: _h, ingredients: _i, images, video: _v, ...rest } = p;

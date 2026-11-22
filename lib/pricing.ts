@@ -6,7 +6,8 @@ import { shopImg } from "@/lib/img";
 import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
-import { getPromotions, getRoutine, getSettings, getVisibility } from "@/lib/site-store";
+import { getPromotions, getRoutine, getSettings, getSourcing, getVisibility } from "@/lib/site-store";
+import { shipInfo } from "@/lib/sourcing";
 import { bucketKey, nameTokens, sameNames, stepOf, type Growth } from "@/lib/growth";
 import { getGrowth, getVoucher, ratingMap, voucherRule } from "@/lib/growth-store";
 import type { ProductSnap, ServerQuote } from "@/lib/store";
@@ -14,7 +15,7 @@ import type { ProductSnap, ServerQuote } from "@/lib/store";
 const g = globalThis as unknown as { __live?: { key: string; list: ProductLite[]; byId: Map<string, ProductLite>; dupOf: Map<string, string> } };
 
 /** Same product in two catalogs → keep one listing (in stock first, then the preferred catalog or the cheapest). */
-function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"]) {
+function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"], preferLocal = true) {
   // Group by brand + size, then cluster names that are the same (allowing small spelling differences).
   const buckets = new Map<string, ProductLite[]>();
   for (const p of list) {
@@ -37,7 +38,8 @@ function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"]
   const drop = new Set<string>();
   const dupOf = new Map<string, string>(); // dropped slug → kept slug
   for (const arr of groups) {
-    const score = (p: ProductLite) => (p.inStock ? 0 : 1e6) + (prefer !== "cheapest" && p.source === prefer ? 0 : prefer !== "cheapest" ? 1e5 : 0) + p.price - (p.image ? 0.001 : 0);
+    // In stock first, then local stock over international drop shipping, then the preferred catalog or the cheapest.
+    const score = (p: ProductLite) => (p.inStock ? 0 : 1e6) + (preferLocal && p.origin === "international" ? 5e5 : 0) + (prefer !== "cheapest" && p.source === prefer ? 0 : prefer !== "cheapest" ? 1e5 : 0) + p.price - (p.image ? 0.001 : 0);
     const keep = arr.reduce((a, b) => (score(b) < score(a) ? b : a));
     for (const p of arr) if (p.source !== keep.source) (drop.add(p.id), p.slug !== keep.slug && dupOf.set(p.slug, keep.slug));
   }
@@ -51,10 +53,10 @@ function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"]
 
 /** Active products with automatic sale prices applied. Cached until the catalog or promotions change. */
 export async function liveProducts() {
-  const [idx, promos, vis, growth, ratings] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap()]);
+  const [idx, promos, vis, growth, ratings, sourcing] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing()]);
   const auto = promos.discounts.filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
   // Re-evaluate at least every minute so scheduled sales start and stop on time.
-  const key = `${idx.ver}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
+  const key = `${idx.ver}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${JSON.stringify(sourcing)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
   if (g.__live?.key === key) return g.__live;
   const hiddenSrc = new Set(vis.hiddenSources.map((x) => x.toLowerCase()));
   const hiddenBrand = new Set(vis.hiddenBrands.map((x) => x.toLowerCase()));
@@ -62,13 +64,14 @@ export async function liveProducts() {
   const shown = (p: ProductLite) => p.brand !== "SuperYou Clinic" && !hiddenBrand.has(p.brand.toLowerCase()) && !hiddenSrc.has((p.source || "manual").toLowerCase());
   let list = idx.all.filter((p) => p.status === "active" && shown(p)).map((p) => {
     const r = ratings.get(p.slug);
-    const q = r ? { ...p, rating: r.avg, reviewCount: r.count } : p;
+    const ship = shipInfo(p.source, sourcing);
+    const q: ProductLite = { ...p, ...(r ? { rating: r.avg, reviewCount: r.count } : {}), origin: ship.origin, shipFrom: ship.country, daysMin: ship.daysMin, daysMax: ship.daysMax };
     if (!auto.length) return q;
     const s = salePrice(q, auto);
     return s.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
   });
   let dupOf = new Map<string, string>();
-  if (growth.dedupe.enabled) ({ list, dupOf } = mergeDuplicates(list, growth.dedupe.prefer));
+  if (growth.dedupe.enabled) ({ list, dupOf } = mergeDuplicates(list, growth.dedupe.prefer, sourcing.preferLocal));
   g.__live = { key, list, byId: new Map(list.map((p) => [p.id, p])), dupOf };
   return g.__live;
 }
@@ -76,6 +79,7 @@ export async function liveProducts() {
 const snapOf = (p: ProductLite): ProductSnap => ({
   id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, compareAt: p.compareAt, size: p.size,
   variant: p.variant, image: shopImg(p.image), shape: p.shape, color: p.color, inStock: p.inStock,
+  origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
 export type QuoteInput = { items: { productId: string; qty: number }[]; code?: string; zone?: string; giftCard?: string };

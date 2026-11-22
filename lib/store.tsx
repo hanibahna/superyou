@@ -12,11 +12,13 @@ import { useSettings } from "@/lib/site-context";
 export type ProductSnap = {
   id: string; slug: string; name: string; brand: string; price: number; compareAt?: number;
   size: string; variant?: string; image?: string; shape: AnyProduct["shape"]; color: string; inStock: boolean;
+  origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;
 };
 
 export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
   id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, compareAt: p.compareAt,
   size: p.size, variant: p.variant, image: firstImage(p as { image?: string; images?: string[] }), shape: p.shape, color: p.color, inStock: p.inStock,
+  ...("origin" in p && p.origin ? { origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax } : {}),
 });
 
 export type CartLine = { productId: string; qty: number; product: ProductSnap };

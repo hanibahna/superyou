@@ -47,6 +47,7 @@ export const productInputSchema = z.object({
   group: z.string().trim().max(120).optional(),
   variant: z.string().trim().max(80).optional(),
   source: z.string().trim().max(80).optional(),
+  cost: z.coerce.number().min(0).max(100000).optional(),
   inStock: z.boolean().optional(),
 });
 
@@ -136,6 +137,7 @@ export function normaliseProduct(
     group: d.group || existing?.group || undefined,
     variant: d.variant || existing?.variant || undefined,
     source: d.source || existing?.source || undefined,
+    cost: d.cost ?? existing?.cost,
     photosFrom: existing?.photosFrom,
     collections: d.collections ?? existing?.collections,
   };

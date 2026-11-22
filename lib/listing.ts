@@ -24,7 +24,7 @@ export function toCards(list: ProductLite[]): CardItem[] {
     const live = vs.filter((v) => v.inStock);
     const pool = live.length ? live : vs;
     const rep = pool.reduce((a, b) => (b.price < a.price ? b : a), pool[0]);
-    const { source: _src, collections: _cols, ...card } = rep; // which supplier it came from never reaches the browser
+    const { source: _src, cost: _cost, collections: _cols, ...card } = rep; // which supplier it came from never reaches the browser
     out.push({ ...card, image: shopImg(rep.image ?? vs.find((v) => v.image)?.image), inStock: live.length > 0, variantCount: vs.length, priceMax: Math.max(...vs.map((v) => v.price)) });
   }
   return out;
@@ -38,6 +38,7 @@ export type ShopQuery = {
   brand?: string[];
   tag?: string;
   instock?: boolean;
+  origin?: "local" | "international";
   sale?: boolean;
   min?: number;
   max?: number;
@@ -55,6 +56,7 @@ export type ShopResult = {
     categories: { slug: string; name: string; count: number }[];
     concerns: { slug: string; name: string; count: number }[];
     brands: { name: string; count: number }[];
+    origins: { local: number; international: number };
   };
   taxonomy: Taxonomy;
   search: Pick<SearchSettings, "filters" | "popular">;
@@ -82,6 +84,10 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
   const wantBrands = new Set((q.brand ?? []).map(brandKey));
   let filtered = wantBrands.size ? byConcern.filter((p) => wantBrands.has(brandKey(p.brand))) : byConcern;
   if (q.tag) filtered = filtered.filter((p) => p.tags.includes(q.tag as Tag));
+  // Ships from Lebanon / imported: counted before this filter so both choices show their numbers.
+  const slugsOf = (a: ProductLite[]) => new Set(a.map((p) => p.slug)).size;
+  const origins = { local: slugsOf(filtered.filter((p) => p.origin !== "international")), international: slugsOf(filtered.filter((p) => p.origin === "international")) };
+  if (q.origin) filtered = filtered.filter((p) => (q.origin === "international" ? p.origin === "international" : p.origin !== "international"));
 
   let cards = toCards(filtered);
   if (q.instock) cards = cards.filter((c) => c.inStock);
@@ -119,6 +125,7 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
       categories: taxonomy.categories.map((c) => ({ ...c, count: catCounts.get(c.slug)?.size ?? 0 })).filter((c) => c.count > 0 || c.slug === q.category),
       concerns: taxonomy.concerns.map((c) => ({ slug: c.slug, name: c.name, count: conCounts.get(c.slug)?.size ?? 0 })).filter((c) => c.count > 0 || q.concern?.includes(c.slug)),
       brands: [...brandCounts.entries()].map(([name, s]) => ({ name, count: s.size })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+      origins,
     },
     taxonomy,
     search: { filters: ss.filters, popular: ss.popular },

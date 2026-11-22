@@ -11,6 +11,7 @@ import {
   type Landing, type Promotions, type SearchSettings, type Settings, type VideoLibrary,
 } from "@/lib/site";
 import { defaultLayout, type LayoutOptions } from "@/lib/layouts";
+import { withSourcingDefaults, type Sourcing } from "@/lib/sourcing";
 import { defaultRoutine, type RoutineConfig } from "@/lib/routine";
 import { defaultServices, type Booking, type ServicesConfig } from "@/lib/services";
 
@@ -102,3 +103,7 @@ export const saveVisibility = (v: Visibility) => write("visibility", v);
 /** For other server modules that keep their own admin document (e.g. lib/growth-store.ts). */
 export const readDoc = read;
 export const writeDoc = write;
+
+/** Local vs international catalogs: delivery times and import pricing (Admin → Sourcing). */
+export const getSourcing = () => read<Sourcing>("sourcing", withSourcingDefaults(null), (v) => withSourcingDefaults(v));
+export const saveSourcing = (v: Sourcing) => write("sourcing", withSourcingDefaults(v));

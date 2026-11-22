@@ -78,7 +78,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
     return [...chosen, ...list.filter((b) => !brand.includes(b.name)).slice(0, t ? 60 : 25)];
   }, [brandFilter, facets.brands, brand]);
 
-  const activeCount = concern.length + brand.length + (query.instock ? 1 : 0) + (query.category ? 1 : 0) + (query.sale ? 1 : 0) + (query.min !== undefined || query.max !== undefined ? 1 : 0);
+  const activeCount = concern.length + brand.length + (query.instock ? 1 : 0) + (query.category ? 1 : 0) + (query.sale ? 1 : 0) + (query.origin ? 1 : 0) + (query.min !== undefined || query.max !== undefined ? 1 : 0);
 
   const Filters = (
     <div className="space-y-7 text-sm">
@@ -114,6 +114,10 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           </form>
         </FilterGroup>
       )}
+      {facets.origins && facets.origins.international > 0 && <FilterGroup title="Ships from">
+        <Check label={tx("Lebanon (1–3 days)")} count={facets.origins.local} checked={query.origin === "local"} onChange={() => set("origin", query.origin === "local" ? null : "local")} />
+        <Check label={tx("Imported (10–14 days)")} count={facets.origins.international} checked={query.origin === "international"} onChange={() => set("origin", query.origin === "international" ? null : "international")} />
+      </FilterGroup>}
       {(f.availability || f.onSale) && <FilterGroup title="Availability & offers">
         {f.availability && <Check label="In stock only" checked={!!query.instock} onChange={() => set("instock", query.instock ? null : "1")} />}
         {f.onSale && <Check label={tx("On sale")} checked={!!query.sale} onChange={() => set("sale", query.sale ? null : "1")} />}
@@ -149,6 +153,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           {concern.map((c) => <Chip key={c} label={taxonomy.concerns.find((k) => k.slug === c)?.name ?? c} onClear={() => set("concern", c, true)} />)}
           {brand.map((b) => <Chip key={b} label={b} onClear={() => set("brand", b, true)} />)}
           {query.instock && <Chip label="In stock" onClear={() => set("instock", null)} />}
+          {query.origin && <Chip label={query.origin === "international" ? "Imported" : "Ships from Lebanon"} onClear={() => set("origin", null)} />}
           {query.sale && <Chip label={tx("On sale")} onClear={() => set("sale", null)} />}
           {(query.min !== undefined || query.max !== undefined) && <Chip label={`$${query.min ?? 0}–${query.max ?? "∞"}`} onClear={() => { const n = new URLSearchParams(sp.toString()); n.delete(tx("min")); n.delete("max"); go(n); }} />}
           <button onClick={() => router.push(query.q ? `${base}?q=${encodeURIComponent(query.q)}` : base)} className="text-xs font-semibold text-brand-600 hover:underline">Clear all</button>

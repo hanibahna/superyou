@@ -8,6 +8,7 @@ import "server-only";
 // (they were written against Neovitale's tags) and fall back to keyword matching.
 
 import type { ProductInput } from "@/lib/product-input";
+import { landed, type LandedPricing } from "@/lib/sourcing";
 
 export type SourceProduct = {
   id: number;
@@ -39,6 +40,7 @@ export type ImportOptions = {
   asDraft: boolean;
   skuPrefix: string; // e.g. "NEO"
   sourceName: string; // e.g. "neovitale.com"
+  landed?: LandedPricing; // international catalogs: shop price = landed cost (freight, duty, VAT) + margin
 };
 
 export function normaliseSourceUrl(input: string): URL {
@@ -206,8 +208,9 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
     .map((v) => {
       const srcPrice = Number(v.price);
       const srcCompare = v.compare_at_price ? Number(v.compare_at_price) : 0;
-      const price = roundPrice(srcPrice * (1 + opts.adjustPct / 100), opts.round);
-      const compareAt = srcCompare > price ? srcCompare : undefined;
+      const price = opts.landed ? roundPrice(landed(srcPrice, opts.landed).price, opts.round) : roundPrice(srcPrice * (1 + opts.adjustPct / 100), opts.round);
+      // Abroad the supplier's "was" price is a US price, not a SuperYou one: no strike-through for imports.
+      const compareAt = !opts.landed && srcCompare > price ? srcCompare : undefined;
       const discount = compareAt ? 1 - price / compareAt : 0;
       const label = v.title && v.title !== "Default Title" ? v.title.trim().replace(/\s+/g, " ").slice(0, 80) : "";
       const barcode = (v.barcode || (v.sku && /^\d{8,14}$/.test(v.sku) ? v.sku : "")) ?? "";
@@ -233,6 +236,7 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
         slug: p.handle,
         group,
         source: opts.sourceName,
+        cost: srcPrice,
         inStock: v.available, // the source publishes availability, not quantities
       } as ProductInput & { group: string };
     });

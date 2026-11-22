@@ -22,6 +22,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/taxonomy/", label: "Categories & concerns" },
       { href: "/admin/collections/", label: "Collections" },
       { href: "/admin/visibility/", label: "Catalog visibility" },
+      { href: "/admin/sourcing/", label: "Sourcing: local & imported" },
       { href: "/admin/import/", label: "Import / export" },
     ],
   },
