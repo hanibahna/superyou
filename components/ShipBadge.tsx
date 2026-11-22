@@ -16,7 +16,7 @@ export function ShipBadge({ p, size = "sm", className = "" }: { p: Ship; size?: 
       <span aria-hidden>{intl ? "✈" : "●"}</span>
       {/* Small cards: short form so it stays on one line on phones. */}
       {size === "sm" ? (intl ? (p.shipFrom || t("Imported")) : t("Lebanon")) : intl ? `${t("Imported")}${p.shipFrom ? ` · ${p.shipFrom}` : ""}` : t("Ships from Lebanon")}
-      {days && <span className="font-medium opacity-80">· {days} {size === "sm" ? t("d") : t("days")}</span>}
+      {days && <span className="font-medium opacity-80">· {days} {t("days")}</span>}
     </span>
   );
 }
