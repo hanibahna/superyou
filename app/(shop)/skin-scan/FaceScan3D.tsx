@@ -79,12 +79,18 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         // to canvas coords (mirrored)
         const pts = lm.map((p) => ({ x: W - ((p.x * vw - sx) / cw) * W, y: p.y * H }));
         const done = doneAt ? Math.min(1, (now - doneAt) / 900) : 0;
-        g.strokeStyle = `rgba(255,190,215,${0.28 - done * 0.2})`; g.lineWidth = 0.6;
+        const glow = 0.55 + 0.2 * Math.sin(now / 300);
+        g.strokeStyle = `rgba(255,170,205,${(glow - done * 0.45).toFixed(2)})`; g.lineWidth = 1.1;
         g.beginPath();
         for (const c of tess) { const a = pts[c.start], b = pts[c.end]; if (a && b) { g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); } }
         g.stroke();
-        g.fillStyle = "rgba(255,255,255,.75)";
-        for (let i = 0; i < pts.length; i += 3) { g.fillRect(pts[i].x - 1, pts[i].y - 1, 2, 2); }
+        g.fillStyle = "rgba(255,255,255,.95)";
+        for (let i = 0; i < pts.length; i += 2) { g.fillRect(pts[i].x - 1.5, pts[i].y - 1.5, 3, 3); }
+        // scanning line sweeping down the face
+        const ys = pts.map((p) => p.y), top = Math.min(...ys), bot = Math.max(...ys), sy = top + ((now / 1400) % 1) * (bot - top);
+        const grad = g.createLinearGradient(0, sy - 18, 0, sy + 2);
+        grad.addColorStop(0, "rgba(255,120,180,0)"); grad.addColorStop(1, "rgba(255,160,210,.8)");
+        g.fillStyle = grad; g.fillRect(Math.min(...pts.map((p) => p.x)), sy - 18, Math.max(...pts.map((p) => p.x)) - Math.min(...pts.map((p) => p.x)), 20);
         // head direction from the nose relative to the face outline (works without depth hardware)
         const L = lm[234], R = lm[454], N = lm[1], T = lm[10], C = lm[152];
         const dir = { x: (N.x - L.x) / (R.x - L.x) - 0.5, y: (N.y - T.y) / (C.y - T.y) };

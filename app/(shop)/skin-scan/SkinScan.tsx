@@ -127,6 +127,21 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     if (id && t) fetch(`/api/skin-scan/save/?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && setPrev(d)).catch(() => {});
   }, []);
 
+  // Inside the SuperYou iPhone app: the Face ID (TrueDepth) camera does the scan natively.
+  const meta = useRef<Record<string, unknown> | null>(null);
+  async function start() {
+    type FS = { isAvailable: () => Promise<{ available: boolean }>; scan: () => Promise<{ front: string; sides: string[]; distanceCm: number; light: number; colorTemp: number }> };
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; Plugins?: { FaceScan?: FS } } }).Capacitor;
+    const fs = cap?.isNativePlatform?.() ? cap.Plugins?.FaceScan : undefined;
+    if (fs && (await fs.isAvailable().catch(() => ({ available: false }))).available) {
+      const r = await fs.scan().catch(() => null);
+      if (r?.front) { meta.current = { depth: true, distanceCm: r.distanceCm, light: r.light, colorTemp: r.colorTemp }; analyse(r.front, false, r.sides ?? []); }
+      return;
+    }
+    meta.current = null;
+    setScan3d(true);
+  }
+
   async function analyse(data: string, force = false, extra: string[] = sides) {
     setErr("");
     setSides(extra);
@@ -140,7 +155,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     }
     setWarn("");
     setBusy(true);
-    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data, sides: extra }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
+    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data, sides: extra, meta: meta.current ?? undefined }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
     if (!r) return setErr(tx("No connection, or the scan took too long. Please try again."));
@@ -152,7 +167,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   return (
     <div className="container-x max-w-5xl py-10">
       <p className="text-xs font-bold uppercase tracking-[0.3em] text-sale">{tx("New")}</p>
-      <h1 className="mt-1 text-4xl font-black">{tx("AI skin scan")}</h1>
+      <h1 className="mt-1 text-4xl font-black">{tx("3D AI Skin Scan")}</h1>
       <p className="mt-3 max-w-2xl text-muted">{intro}</p>
       {!ready && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{tx("The AI scan isn't connected yet.")} <Link href="/routine/" className="font-semibold underline">Take the 1-minute routine quiz</Link> instead.</p>}
 
@@ -174,7 +189,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
             </div>
           )}
           <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that the 3 photos from my face scan are sent once to an AI service to read my skin. They aren't stored.")}</label>
-          <button disabled={!consent || busy || !ready || !live} onClick={() => setScan3d(true)} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
+          <button disabled={!consent || busy || !ready || !live} onClick={start} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
             {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : tx("Start 3D face scan")}
           </button>
@@ -183,7 +198,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
           {warn && (
             <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
               <p>{warn}</p>
-              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), setScan3d(true))} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true, sides)} className="text-muted underline">{tx("Use it anyway")}</button></div>
+              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), start())} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true, sides)} className="text-muted underline">{tx("Use it anyway")}</button></div>
             </div>
           )}
           {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d, false, []); }} />}

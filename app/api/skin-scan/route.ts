@@ -14,7 +14,7 @@ import { anthropicKey } from "@/lib/extras";
 export const maxDuration = 60;
 
 const img = z.string().regex(/^data:image\/(jpeg|png|webp);base64,/).max(6_000_000);
-const bodySchema = z.object({ image: img, sides: z.array(img.max(2_500_000)).max(2).default([]) });
+const bodySchema = z.object({ image: img, sides: z.array(img.max(2_500_000)).max(2).default([]), meta: z.object({ depth: z.boolean(), distanceCm: z.number(), light: z.number(), colorTemp: z.number() }).partial().optional() });
 
 export async function POST(req: NextRequest) {
   const tooMany = await limited(req, "skinscan", 20);
@@ -28,9 +28,11 @@ export async function POST(req: NextRequest) {
   const [, mediaType, data] = parsed.data.image.match(/^data:(image\/\w+);base64,(.+)$/)!;
 
   const extra = parsed.data.sides.map((u) => u.match(/^data:(image\/\w+);base64,(.+)$/)!).map(([, m, d]) => ({ type: "image" as const, source: { type: "base64" as const, media_type: m, data: d } }));
+  const m = parsed.data.meta;
+  const depthNote = m?.depth ? ` Captured with the iPhone Face ID (TrueDepth) camera at about ${Math.round(m.distanceCm ?? 0)} cm; measured light ${Math.round(m.light ?? 0)} lumens (1000 is normal indoor light) at ${Math.round(m.colorTemp ?? 0)} K colour temperature: allow for warm or cool light when judging redness and tone, and lower confidence if the light was dim.` : "";
   const types = cfg.skinTypes.map((s) => s.id);
   const concerns = cfg.concernOptions.map((c) => c.label);
-  const prompt = `You are a cosmetic skin assessor working alongside pharmacists in a beauty and parapharmacy shop. Assess this selfie${extra.length ? ` (photo 1 is the front of the face; photo${extra.length > 1 ? "s 2 and 3 are" : " 2 is"} the same face turned to the side, from a guided 3D scan: use them for the cheeks, jawline and sides of the nose, which a front photo shows poorly)` : ""} the way a cosmetic dermatologist does a visual skin exam, but stay strictly cosmetic: no diagnoses, no medical treatment, never guess age, ethnicity, gender or identity.
+  const prompt = `You are a cosmetic skin assessor working alongside pharmacists in a beauty and parapharmacy shop. Assess this selfie${extra.length ? ` (photo 1 is the front of the face; photo${extra.length > 1 ? "s 2 and 3 are" : " 2 is"} the same face turned to the side, from a guided 3D scan: use them for the cheeks, jawline and sides of the nose, which a front photo shows poorly)` : ""} the way a cosmetic dermatologist does a visual skin exam, but stay strictly cosmetic: no diagnoses, no medical treatment, never guess age, ethnicity, gender or identity.${depthNote}
 
 Method (think through it, but output only the JSON):
 1. Photo quality first: is a face clearly visible, in focus, evenly lit, without heavy make-up or beauty filters? If not usable, return {"ok":false,"reason":"short tip to retake"}.
