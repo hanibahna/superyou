@@ -195,6 +195,9 @@ const SIZE_OPTIONS = /^(size|sze|sizd|volume|capacity|quantity|weight)\s*$/i;
 export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (ProductInput & { group: string })[] {
   const tagList = (Array.isArray(p.tags) ? p.tags : String(p.tags || "").split(",")).map((t) => t.trim()).filter(Boolean);
   const tags = new Set(tagList.map((t) => t.toLowerCase()));
+  // A store's own house items (mystery boxes, bundles under its own name) would reveal the supplier: skip them.
+  const own = opts.sourceName.toLowerCase().replace(/^www\./, "").split(".")[0].replace(/[^a-z0-9]/g, "");
+  if (own.length > 3 && p.vendor.toLowerCase().replace(/[^a-z0-9]/g, "").includes(own)) return [];
   const category = categorize(p, tags);
   if (!category) return [];
   const concerns = concernsFor(p, tags, category);
