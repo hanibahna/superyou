@@ -11,6 +11,8 @@ import { useGrowth, useSettings, useT } from "@/lib/site-context";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
 import { readAttribution, track } from "@/lib/track";
+import { CheckoutAddress } from "@/components/CheckoutAddress";
+import { rememberAddress } from "@/lib/addresses";
 
 type Method = { id: "cod" | "card" | "whish"; label: string; description: string };
 
@@ -65,6 +67,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
       customer: {
         firstName: f.firstName, lastName: f.lastName, phone: f.phone, email: f.email,
         zone: f.zone, city: f.city, address: f.address, notes: f.notes,
+        ...(f.lat && f.lng ? { lat: Number(f.lat), lng: Number(f.lng) } : {}),
       },
       paymentMethod: method,
       waUpdates: f.waUpdates === "on",
@@ -96,6 +99,8 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
       const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
+      // Keep the address on this phone for next time.
+      rememberAddress({ label: f.addressLabel || undefined, zone: f.zone, city: f.city, address: f.address, notes: f.notes || undefined, ...(f.lat && f.lng ? { lat: Number(f.lat), lng: Number(f.lng) } : {}) });
       clear();
       setGiftCard("");
       window.location.href = data.next.redirect; // full navigation: may leave the site for a payment page
@@ -110,9 +115,9 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
   return (
     <div className="container-x py-10">
       <h1 className="text-3xl font-semibold">{tx("Checkout")}</h1>
-      <form ref={formRef} onSubmit={submit} onBlur={(e) => ["phone", "firstName", "waOffers"].includes((e.target as unknown as HTMLInputElement).name) && saveCart()} className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-8">
-          <fieldset>
+      <form ref={formRef} onSubmit={submit} onBlur={(e) => ["phone", "firstName", "waOffers"].includes((e.target as unknown as HTMLInputElement).name) && saveCart()} className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0 space-y-8">
+          <fieldset className="min-w-0">
             <legend className="mb-3 text-lg font-semibold">{tx("1. Contact")}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               <input name="firstName" required placeholder={tx("First name")} autoComplete="given-name" className={input} />
@@ -122,8 +127,9 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
             </div>
           </fieldset>
 
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-3 text-lg font-semibold">2. Delivery address</legend>
+            <CheckoutAddress form={formRef} setZone={setZone} />
             <div className="grid gap-3 sm:grid-cols-2">
               <select name="zone" required value={zone} onChange={(e) => setZone(e.target.value)} className={input}>
                 <option value="" disabled>{tx("Area")}</option>
@@ -155,7 +161,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
             <p className="mt-2 text-sm text-muted">🚚 Estimated delivery: {settings.delivery.estimate}</p>
           </fieldset>
 
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-3 text-lg font-semibold">3. Payment</legend>
             <div className="space-y-3">
               {methods.map((m) => (

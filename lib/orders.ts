@@ -25,6 +25,8 @@ export const checkoutSchema = z.object({
     city: z.string().min(1).max(80),
     address: z.string().min(3).max(300),
     notes: z.string().max(500).optional(),
+    lat: z.number().min(-90).max(90).optional(), // map pin
+    lng: z.number().min(-180).max(180).optional(),
   }),
   paymentMethod: z.enum(["cod", "card", "whish"]),
   code: z.string().max(40).optional(),
@@ -201,6 +203,8 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   order.stockTaken = moves.length > 0;
   await saveOrder(order);
   await (await import("@/lib/carts")).cartConverted(order.customer.phone, order.id).catch(() => {});
+  const c = order.customer;
+  await (await import("@/lib/address-store")).rememberServerAddress(c.phone, { zone: c.zone, city: c.city, address: c.address, notes: c.notes || undefined, lat: c.lat, lng: c.lng }).catch(() => {});
   await onOrderCreated(order, input).catch((e) => console.error("[whatsapp] order", e));
   return order;
 }

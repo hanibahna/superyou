@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AddressBook } from "@/components/AddressBook";
+import { localAddresses, sameAddress, saveLocalAddresses, type Address } from "@/lib/addresses";
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 import { useShop } from "@/lib/store";
@@ -83,6 +85,7 @@ export function AccountView() {
               </ul>
             </details>
           )}
+          <MyAddresses phone={creds.phone} order={creds.order} />
           <div>
             <h2 className="mb-3 text-xl font-semibold">{t("Your orders")}</h2>
             <ul className="divide-y divide-line rounded-2xl border border-line">
@@ -137,6 +140,42 @@ function ReferralBox({ code }: { code: string }) {
         <button onClick={() => (navigator.clipboard?.writeText(link), setCopied(true))} className="rounded-lg border border-ink px-3 py-2 text-sm font-semibold">{copied ? tx("Copied") : tx("Copy")}</button>
         <a href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer" className="rounded-lg bg-[#25D366] px-3 py-2 text-sm font-semibold text-white">WhatsApp</a>
       </div>
+    </div>
+  );
+}
+
+/** The customer's address book, saved against their phone number (and kept on this device for checkout). */
+function MyAddresses({ phone, order }: { phone: string; order: string }) {
+  const [list, setList] = useState<Address[] | null>(null);
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    fetch(`/api/account/addresses/?phone=${encodeURIComponent(phone)}&order=${encodeURIComponent(order)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        // Merge with addresses kept on this phone (e.g. from sign-up or an earlier checkout).
+        const server: Address[] = d.addresses ?? [];
+        const extra = localAddresses().filter((l) => !server.some((x) => sameAddress(x, l)));
+        const merged = [...server, ...extra].slice(0, 10);
+        setList(merged);
+        saveLocalAddresses(merged);
+      })
+      .catch(() => setList(localAddresses()));
+  }, [phone, order]);
+  const change = async (next: Address[]) => {
+    setList(next);
+    saveLocalAddresses(next);
+    setNote("Saving…");
+    const r = await fetch("/api/account/addresses/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, order, addresses: next }) }).catch(() => null);
+    setNote(r?.ok ? "Saved" : "Couldn't save, please try again");
+    setTimeout(() => setNote(""), 2000);
+  };
+  return (
+    <div>
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-xl font-semibold">My addresses</h2>
+        {note && <span className="text-xs text-muted">{note}</span>}
+      </div>
+      {list ? <AddressBook addresses={list} onChange={change} /> : <p className="text-sm text-muted">Loading…</p>}
     </div>
   );
 }

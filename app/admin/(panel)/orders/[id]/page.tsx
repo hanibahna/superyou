@@ -93,6 +93,12 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             <h3 className="mt-3 font-semibold">Delivery</h3>
             <p>{c.address}</p>
             <p>{c.city}, {c.zone}</p>
+            {c.lat && c.lng && (
+              <p className="mt-1 flex flex-wrap gap-3">
+                <a href={`https://www.google.com/maps?q=${c.lat},${c.lng}`} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">📍 Open pin in Google Maps</a>
+                <a href={`https://wa.me/?text=${encodeURIComponent(`Order ${o.id} · ${c.firstName} ${c.lastName} · ${c.phone}\n${c.address}, ${c.city}\nhttps://www.google.com/maps?q=${c.lat},${c.lng}`)}`} target="_blank" rel="noreferrer" className="text-brand-700 underline">Send to driver on WhatsApp</a>
+              </p>
+            )}
             {c.notes && <p className="mt-2 rounded bg-amber-50 p-2">Note: {c.notes}</p>}
           </div>
           <div className="rounded-xl bg-white p-5 text-sm shadow-sm">

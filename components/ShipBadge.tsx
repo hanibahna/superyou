@@ -12,10 +12,11 @@ export function ShipBadge({ p, size = "sm", className = "" }: { p: Ship; size?: 
   const intl = p.origin === "international";
   const cls = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full font-semibold ${cls} ${intl ? "bg-[#eef2ff] text-[#3730a3]" : "bg-[#ecfdf3] text-[#046c4e]"} ${className}`}>
+    <span title={intl ? t("Imported for you") : t("Ships from Lebanon")} className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full font-semibold ${cls} ${intl ? "bg-[#eef2ff] text-[#3730a3]" : "bg-[#ecfdf3] text-[#046c4e]"} ${className}`}>
       <span aria-hidden>{intl ? "✈" : "●"}</span>
-      {intl ? `${t("Imported")}${p.shipFrom ? ` · ${p.shipFrom}` : ""}` : t("Ships from Lebanon")}
-      {days && <span className="font-medium opacity-80">· {days} {t("days")}</span>}
+      {/* Small cards: short form so it stays on one line on phones. */}
+      {size === "sm" ? (intl ? (p.shipFrom || t("Imported")) : t("Lebanon")) : intl ? `${t("Imported")}${p.shipFrom ? ` · ${p.shipFrom}` : ""}` : t("Ships from Lebanon")}
+      {days && <span className="font-medium opacity-80">· {days} {size === "sm" ? t("d") : t("days")}</span>}
     </span>
   );
 }

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { tierFor } from "@/lib/growth";
 import { getGrowth, getMember, joinClub, orderIdsByPhone, yearSpend } from "@/lib/growth-store";
 import { getOrder, publicOrder } from "@/lib/orders";
+import { addressListSchema } from "@/lib/addresses";
+import { getAddresses, saveAddresses } from "@/lib/address-store";
 
 // Member lookup: phone + one of their order numbers (light check so balances aren't public).
 export async function GET(req: NextRequest) {
@@ -20,12 +22,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const parsed = z.object({ phone: z.string().min(6).max(30), name: z.string().min(1).max(80), email: z.string().email().optional().or(z.literal("")), birthday: z.string().regex(/^\d{2}-\d{2}$/).optional().or(z.literal("")) }).safeParse(await req.json().catch(() => null));
+  const parsed = z.object({ phone: z.string().min(6).max(30), name: z.string().min(1).max(80), email: z.string().email().optional().or(z.literal("")), birthday: z.string().regex(/^\d{2}-\d{2}$/).optional().or(z.literal("")), addresses: addressListSchema.optional().catch(undefined) }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please enter your name and WhatsApp number" }, { status: 400 });
   const g = await getGrowth();
   if (!g.club.enabled) return NextResponse.json({ error: "The club is closed" }, { status: 400 });
-  const m = await joinClub({ ...parsed.data, email: parsed.data.email || undefined, birthday: parsed.data.birthday || undefined });
+  const { addresses, ...join } = parsed.data;
+  const m = await joinClub({ ...join, email: parsed.data.email || undefined, birthday: parsed.data.birthday || undefined });
   if (!m) return NextResponse.json({ error: "Please check the phone number" }, { status: 400 });
+  // Addresses given at sign-up start the book; an existing book is never overwritten from here (no login on this form).
+  if (addresses?.length && !(await getAddresses(m.phone)).length) await saveAddresses(m.phone, addresses);
   const wa = await import("@/lib/whatsapp");
   await wa.upsertContact({ phone: m.phone, name: m.name, email: m.email, source: "club", offers: true });
   return NextResponse.json({ ok: true, points: m.points });
