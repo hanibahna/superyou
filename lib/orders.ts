@@ -227,7 +227,8 @@ async function onOrderCreated(order: Order, input: CheckoutInput) {
   await gs.indexOrderByPhone(order.customer.phone, order.id).catch(() => {});
   if (input.joinClub) await gs.joinClub({ phone: order.customer.phone, name: `${order.customer.firstName} ${order.customer.lastName}`, email: order.customer.email || undefined, birthday: input.birthday || undefined }).catch(() => {});
   const vars = orderVars(order);
-  await wa.trigger("orderPlaced", order.customer.phone, vars);
+  const sent = await wa.trigger("orderPlaced", order.customer.phone, vars);
+  await (await import("@/lib/sms")).smsForOrder("orderPlaced", order.customer.phone, vars, sent).catch((e) => console.error("[sms]", e));
   if (res?.newOptIn) await wa.trigger("welcomeOptIn", order.customer.phone, vars);
 }
 
@@ -335,7 +336,11 @@ export async function refundOrder(id: string, r: Omit<Refund, "id" | "at" | "gat
 export async function notifyOrderStatus(order: Order) {
   console.log(`[order] ${order.id} → ${order.status} (${order.total} ${order.currency})`);
   const key = ({ confirmed: "orderConfirmed", shipped: "orderShipped", delivered: "orderDelivered" } as const)[order.status as "confirmed" | "shipped" | "delivered"];
-  if (key) await (await import("@/lib/whatsapp")).trigger(key, order.customer.phone, orderVars(order));
+  if (key) {
+    const vars = orderVars(order);
+    const sent = await (await import("@/lib/whatsapp")).trigger(key, order.customer.phone, vars);
+    await (await import("@/lib/sms")).smsForOrder(key, order.customer.phone, vars, sent).catch((e) => console.error("[sms]", e));
+  }
   if (order.giftCardPurchase && !order.giftCardPurchase.code && (order.status === "paid" || order.status === "delivered")) {
     await (await import("@/lib/giftcard-sale")).deliverGiftCard(order.id).catch((e) => console.error("[giftcard]", e));
   }

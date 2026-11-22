@@ -168,17 +168,20 @@ export async function sendTemplate(m: SendInput): Promise<LogEntry> {
 }
 
 /** Fire an automation (order / booking events). Respects the contact's choices. */
-export async function trigger(key: AutomationKey, phone: string, vars: Record<string, string>) {
+/** Sends an automation; true when the WhatsApp message went out (lets SMS step in when it didn't). */
+export async function trigger(key: AutomationKey, phone: string, vars: Record<string, string>): Promise<boolean> {
   try {
     const cfg = await getWaConfig();
     const a = cfg.automations[key];
-    if (!a?.enabled || !a.template) return;
+    if (!a?.enabled || !a.template) return false;
     const c = await getContact(normPhone(phone));
     const marketing = automationInfo[key].category === "MARKETING";
-    if (marketing ? !c?.offers : c && !c.updates) return;
-    await sendTemplate({ to: phone, name: vars.first_name, template: a.template, language: a.language, params: a.params.map((s) => fill(s, vars)), kind: key });
+    if (marketing ? !c?.offers : c && !c.updates) return false;
+    const r = await sendTemplate({ to: phone, name: vars.first_name, template: a.template, language: a.language, params: a.params.map((s) => fill(s, vars)), kind: key });
+    return r.status !== "failed";
   } catch (e) {
     console.error("[whatsapp]", key, e);
+    return false;
   }
 }
 
