@@ -8,6 +8,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { firstImage, type AnyProduct } from "@/lib/data/catalog";
 import { deliveryFor } from "@/lib/site";
 import { useSettings } from "@/lib/site-context";
+import { track } from "@/lib/track";
 
 export type ProductSnap = {
   id: string; slug: string; name: string; brand: string; price: number; compareAt?: number;
@@ -176,6 +177,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       wishlist,
       add: (product, qty = 1) => {
         add(product, qty);
+        track({ type: "add_to_cart", item: { id: product.id, name: product.name, brand: product.brand, price: product.price, qty } });
         setDrawerOpen(true);
       },
       addMany: (products) => {

@@ -12,6 +12,7 @@ import {
 } from "@/lib/site";
 import { defaultLayout, type LayoutOptions } from "@/lib/layouts";
 import { withSourcingDefaults, type Sourcing } from "@/lib/sourcing";
+import { MASK, SECRET_KEYS, withMarketingDefaults, type Marketing } from "@/lib/marketing";
 import { defaultRoutine, type RoutineConfig } from "@/lib/routine";
 import { defaultServices, type Booking, type ServicesConfig } from "@/lib/services";
 
@@ -103,6 +104,17 @@ export const saveVisibility = (v: Visibility) => write("visibility", v);
 /** For other server modules that keep their own admin document (e.g. lib/growth-store.ts). */
 export const readDoc = read;
 export const writeDoc = write;
+
+/** Ad platforms, tracking tags and campaigns (Admin → Campaigns & ads). Holds secrets: server only. */
+export const getMarketing = () => read<Marketing>("marketing", withMarketingDefaults(null), (v) => withMarketingDefaults(v));
+export async function saveMarketing(v: Marketing) {
+  // The admin page sees secrets masked; a masked value means "keep what's saved".
+  const old = await getMarketing();
+  const tracking = { ...v.tracking };
+  for (const k of SECRET_KEYS) if (tracking[k] === MASK) tracking[k] = old.tracking[k];
+  const campaigns = v.campaigns.map((c) => ({ ...c, id: c.id || Math.random().toString(36).slice(2, 10) }));
+  await write("marketing", withMarketingDefaults({ tracking, campaigns }));
+}
 
 /** Local vs international catalogs: delivery times and import pricing (Admin → Sourcing). */
 export const getSourcing = () => read<Sourcing>("sourcing", withSourcingDefaults(null), (v) => withSourcingDefaults(v));

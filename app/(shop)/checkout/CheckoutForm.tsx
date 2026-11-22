@@ -10,6 +10,7 @@ import { DEMO_MODE } from "@/lib/config";
 import { useGrowth, useSettings, useT } from "@/lib/site-context";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
+import { readAttribution, track } from "@/lib/track";
 
 type Method = { id: "cod" | "card" | "whish"; label: string; description: string };
 
@@ -17,6 +18,12 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
   const tx = useT();
   const { detailed, subtotal, delivery, total, clear, code, zone, setZone, giftPicks, quote, giftCard, setGiftCard } = useShop();
   const formRef = useRef<HTMLFormElement>(null);
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || !detailed.length) return;
+    started.current = true;
+    track({ type: "begin_checkout", value: subtotal, items: detailed.map((l) => ({ id: l.productId, name: l.product.name, brand: l.product.brand, price: l.product.price, qty: l.qty })) });
+  }, [detailed, subtotal]);
   // Save the bag against the mobile number so the shopper can pick it up later (abandoned-cart reminder).
   const saveCart = () => {
     const f = formRef.current;
@@ -53,6 +60,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
     setError("");
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const payload = {
+      attribution: readAttribution(),
       items: detailed.map((l) => ({ productId: l.productId, qty: l.qty })),
       customer: {
         firstName: f.firstName, lastName: f.lastName, phone: f.phone, email: f.email,

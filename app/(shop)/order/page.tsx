@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { track } from "@/lib/track";
 import { money } from "@/lib/format";
 import { useSettings, useT } from "@/lib/site-context";
 
@@ -57,6 +58,17 @@ function OrderView() {
       .then(setOrder)
       .catch(() => setMissing(true));
   }, [sp]);
+
+  // Count the sale once per order with the ad platforms (same id as the server event, so it isn't doubled).
+  useEffect(() => {
+    if (!order || sp.get("demo") || ["payment_failed", "cancelled", "awaiting_payment"].includes(order.status)) return;
+    try {
+      const k = `sy:tracked:${order.id}`;
+      if (localStorage.getItem(k)) return;
+      localStorage.setItem(k, "1");
+    } catch {}
+    track({ type: "purchase", orderId: order.id, value: order.total, items: order.lines.filter((l) => l.lineTotal > 0).map((l) => ({ id: l.productId, name: l.name, brand: l.brand, price: +(l.lineTotal / l.qty).toFixed(2), qty: l.qty })) });
+  }, [order, sp]);
 
   if (missing) return <p className="text-muted">We couldn't find that order.</p>;
   if (!order) return <p className="text-muted">{tx("Loading your order…")}</p>;

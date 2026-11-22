@@ -12,6 +12,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { allowedGifts, serverQuote } from "@/lib/pricing";
 import { countCouponUse } from "@/lib/site-store";
+import { attributionSchema, type Attribution } from "@/lib/marketing";
 
 export const checkoutSchema = z.object({
   items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20) })).min(1),
@@ -33,6 +34,8 @@ export const checkoutSchema = z.object({
   joinClub: z.boolean().optional(), // SuperYou Club loyalty
   birthday: z.string().regex(/^\d{2}-\d{2}$/).optional().or(z.literal("")),
   giftCard: z.string().max(30).optional(),
+  // Where the shopper came from (campaign tags); a bad value is dropped, never blocks the order.
+  attribution: attributionSchema.optional().catch(undefined),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -78,6 +81,7 @@ export type Order = {
   discounts?: { name: string; code?: string; amount: number }[];
   code?: string;
   referral?: string; // a member's REF- code used on a first order
+  attribution?: Attribution; // campaign the shopper came from (Admin → Campaigns & ads)
   delivery: number;
   total: number; // what the customer pays now (after any gift card)
   currency: string;
@@ -186,6 +190,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     ...priced,
     currency: "USD",
     customer: input.customer,
+    ...(input.attribution && Object.keys(input.attribution).length ? { attribution: input.attribution } : {}),
     history: [{ at: new Date().toISOString(), status, by: "customer" }],
   };
   const moves = await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => ({ productId: l.productId, delta: -l.qty })), `Order ${order.id}`).catch((e) => (console.error("[stock]", e), []));

@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { sendServerConversions } from "@/lib/conversions";
 import { baseUrl } from "@/lib/http";
 import { checkoutSchema, createOrder, saveOrder, updateOrder } from "@/lib/orders";
 import { checkoutMethods, startPayment } from "@/lib/payments";
@@ -15,6 +16,15 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 409 });
   }
+  // Tell the ad platforms about the sale after the response (card orders are counted by the browser tag once paid).
+  const ctx = {
+    ip: (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || undefined,
+    ua: req.headers.get("user-agent") ?? undefined,
+    fbp: req.cookies.get("_fbp")?.value, fbc: req.cookies.get("_fbc")?.value, ttp: req.cookies.get("_ttp")?.value,
+    url: req.headers.get("referer") ?? undefined,
+  };
+  const placed = order;
+  if (placed.paymentMethod !== "card") after(() => sendServerConversions(placed, ctx).catch((e) => console.error("[conversions]", e)));
 
   // Fully paid by gift card: nothing to collect.
   if (order.total === 0) {

@@ -29,6 +29,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Marketing",
     links: [
+      { href: "/admin/marketing/", label: "Campaigns & ads" },
       { href: "/admin/growth/", label: "Growth & loyalty" },
       { href: "/admin/promotions/", label: "Discounts & free gifts" },
       { href: "/admin/reviews/", label: "Reviews" },

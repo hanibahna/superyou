@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { track } from "@/lib/track";
 import { Qty } from "@/components/CartDrawer";
 import { HeartIcon } from "@/components/Icons";
 import { ProductImage } from "@/components/ProductImage";
@@ -39,6 +40,7 @@ export function BuyBox({
   const [shown, setShown] = useState<string | undefined>(v.image ?? gallery[0]);
   const pct = discountPct(v);
   const wished = isWished(v.id);
+  useEffect(() => track({ type: "view_item", item: { id: v.id, name: v.name, brand: v.brand, price: v.price } }), [v.id, v.name, v.brand, v.price]);
   const t = useT();
   const lang = useLang();
   const growth = useGrowth();
