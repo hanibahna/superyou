@@ -279,6 +279,15 @@ export async function joinClub(input: { phone: string; name: string; email?: str
 
 export const yearSpend = (m: Member) => +m.purchases.filter((p) => Date.parse(p.at) > Date.now() - 365 * 864e5).reduce((s, p) => s + p.amount, 0).toFixed(2);
 
+/** "Delete my account": removes the Club membership, points and referral code. */
+export async function deleteMember(phone: string) {
+  const m = await getMember(phone);
+  if (!m) return false;
+  await db.cmd(["HDEL", "club:m", m.phone]);
+  if (m.ref) await db.cmd(["DEL", `club:ref:${m.ref}`]).catch(() => {});
+  return true;
+}
+
 export async function allMembers(): Promise<Member[]> {
   const out: Member[] = [];
   let cursor = "0";

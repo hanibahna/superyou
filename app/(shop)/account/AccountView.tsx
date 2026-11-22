@@ -92,7 +92,21 @@ export function AccountView() {
               {data.orders.map((o) => <OrderRow key={o.id} o={o} />)}
             </ul>
           </div>
-          <button onClick={() => { sessionStorage.removeItem("sy:acct"); setData(null); }} className="text-sm text-muted underline">Sign out</button>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <button onClick={() => { sessionStorage.removeItem("sy:acct"); setData(null); }} className="text-sm text-muted underline">Sign out</button>
+            <button
+              onClick={async () => {
+                if (!confirm("Delete your account? This removes your Club points, saved addresses and WhatsApp updates. Your past orders stay on record for accounting.")) return;
+                const r = await fetch("/api/account/delete/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: creds.phone, order: creds.order, confirm: true }) }).catch(() => null);
+                if (r?.ok) {
+                  try { sessionStorage.removeItem("sy:acct"); localStorage.removeItem("sy:addresses"); } catch {}
+                  setData(null);
+                  alert("Your account has been deleted.");
+                } else alert("We couldn't delete it. Please try again or WhatsApp us.");
+              }}
+              className="text-sm text-sale underline"
+            >Delete my account</button>
+          </div>
         </div>
       )}
     </div>
