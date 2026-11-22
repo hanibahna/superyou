@@ -131,7 +131,8 @@ def hero_pharmacist():
 
 # ── Category tiles (600×600) ───────────────────────────────────────────────────────────
 def tile(bg, body):
-    return svg(600, 600, f'<circle cx="300" cy="320" r="220" fill="{WHITE}" opacity=".55"/>' + body, bg)
+    # Transparent, cropped to the drawing: the page's circle or card supplies the colour (bg is kept for the admin).
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="110 110 400 400" width="400" height="400" data-bg="{bg}">{body}</svg>'
 
 
 TILES = {
