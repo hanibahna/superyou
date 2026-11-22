@@ -12,6 +12,7 @@ import { toCards } from "@/lib/listing";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { VideoPlayer, VideoStrip, isVertical } from "@/components/Video";
 import { ProductYouTube } from "@/components/ProductYouTube";
+import { HowToUse } from "@/components/HowToUse";
 import { QuickHelp } from "@/components/QuickHelp";
 import { TipLine } from "@/components/TipLine";
 import { sectionFor } from "@/lib/extras";
@@ -123,6 +124,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
 
         <BuyBox subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
+          <HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} />
           <div className="mt-8 divide-y divide-line border-y border-line">
             {detail.description && <Section title={tx("Description")} open>{L(detail.description)}</Section>}
             {(detail.howToUse || how) && (
