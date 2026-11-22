@@ -8,6 +8,7 @@ import { PharmacistButton } from "@/components/Growth";
 import { ProductCard } from "@/components/ProductCard";
 import type { CardItem } from "@/lib/listing";
 import { useShop } from "@/lib/store";
+import { FaceScan3D } from "./FaceScan3D";
 import { PreviousScan, SendRoutine, ShareScan } from "./ScanExtras";
 
 type Step = { id: string; name: string; time: string; tip: string; picks: CardItem[] };
@@ -126,6 +127,8 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const [consent, setConsent] = useState(false);
   const { addMany, setDrawerOpen } = useShop();
   const [camera, setCamera] = useState(false);
+  const [scan3d, setScan3d] = useState(false);
+  const [sides, setSides] = useState<string[]>([]);
   const [warn, setWarn] = useState("");
   const live = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
   // Coming back from the 6-week reminder: show the previous reading to compare.
@@ -140,11 +143,12 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     if (!f) return;
     const data = await shrink(f).catch(() => "");
     if (!data) return setErr(tx("We couldn't open that photo. Try a JPG or PNG."));
-    await analyse(data);
+    await analyse(data, false, []);
   }
 
-  async function analyse(data: string, force = false) {
+  async function analyse(data: string, force = false, extra: string[] = sides) {
     setErr("");
+    setSides(extra);
     setRes(null);
     setPreview(data);
     // Light check first: a dark or washed-out photo gives a poor reading.
@@ -155,7 +159,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     }
     setWarn("");
     setBusy(true);
-    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
+    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data, sides: extra }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
     if (input.current) input.current.value = ""; // so the same photo can be picked again
@@ -182,22 +186,30 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <p className="p-6 text-center text-sm text-muted">{tx("Face the light, no make-up, hair away from your face.")}</p>
             )}
           </div>
+          {sides.length > 0 && (
+            <div className="mt-2 flex gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {sides.map((s, i) => <img key={i} src={s} alt={tx("Side view")} className="h-20 w-16 rounded-lg object-cover" />)}
+              <p className="self-center text-xs text-muted">{tx("3D scan: front and both sides")}</p>
+            </div>
+          )}
           <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that my photo is sent once to an AI service to read my skin. It isn't stored.")}</label>
           <input ref={input} type="file" accept="image/*" capture={live ? undefined : "user"} className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
           <input id="skin-upload" type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <button disabled={!consent || busy || !ready} onClick={() => (live ? setCamera(true) : input.current?.click())} className="tap mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-ink font-semibold text-white disabled:opacity-40">
+          <button disabled={!consent || busy || !ready} onClick={() => (live ? setScan3d(true) : input.current?.click())} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-            {busy ? tx("Reading your skin…") : preview ? tx("Take another selfie") : tx("Take a selfie")}
+            {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : live ? tx("Start 3D face scan") : tx("Take a selfie")}
           </button>
           <label htmlFor="skin-upload" aria-disabled={!consent || busy || !ready} className={`tap mt-2 flex w-full cursor-pointer items-center justify-center rounded-full border border-line font-semibold ${!consent || busy || !ready ? "pointer-events-none opacity-40" : ""}`}>{tx("Upload a photo")}</label>
           {!consent && <p className="mt-2 text-center text-xs text-muted">{tx("Tick the box above to start.")}</p>}
           {warn && (
             <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
               <p>{warn}</p>
-              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), live ? setCamera(true) : input.current?.click())} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true)} className="text-muted underline">{tx("Use it anyway")}</button></div>
+              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), live ? setScan3d(true) : input.current?.click())} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true, sides)} className="text-muted underline">{tx("Use it anyway")}</button></div>
             </div>
           )}
-          {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d); }} />}
+          {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d, false, []); }} />}
+          {scan3d && <FaceScan3D onClose={() => setScan3d(false)} onFallback={() => { setScan3d(false); setCamera(true); }} onDone={([front, ...rest]) => { setScan3d(false); if (front) analyse(front, false, rest); }} />}
           {err && <p className="mt-3 text-sm text-sale">{err}</p>}
           <details className="mt-4 rounded-xl border border-line p-3 text-[12px] text-muted">
             <summary className="cursor-pointer font-semibold text-ink">{tx("Important: what this scan is and isn't")}</summary>

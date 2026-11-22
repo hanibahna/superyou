@@ -13,7 +13,8 @@ import { anthropicKey } from "@/lib/extras";
 // Needs ANTHROPIC_API_KEY (optional ANTHROPIC_MODEL). Cosmetic guidance only, not a diagnosis.
 export const maxDuration = 60;
 
-const bodySchema = z.object({ image: z.string().regex(/^data:image\/(jpeg|png|webp);base64,/).max(6_000_000) });
+const img = z.string().regex(/^data:image\/(jpeg|png|webp);base64,/).max(6_000_000);
+const bodySchema = z.object({ image: img, sides: z.array(img.max(2_500_000)).max(2).default([]) });
 
 export async function POST(req: NextRequest) {
   const tooMany = await limited(req, "skinscan", 20);
@@ -26,9 +27,10 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Please upload a JPG or PNG photo under 4 MB" }, { status: 400 });
   const [, mediaType, data] = parsed.data.image.match(/^data:(image\/\w+);base64,(.+)$/)!;
 
+  const extra = parsed.data.sides.map((u) => u.match(/^data:(image\/\w+);base64,(.+)$/)!).map(([, m, d]) => ({ type: "image" as const, source: { type: "base64" as const, media_type: m, data: d } }));
   const types = cfg.skinTypes.map((s) => s.id);
   const concerns = cfg.concernOptions.map((c) => c.label);
-  const prompt = `You are a cosmetic skin assessor working alongside pharmacists in a beauty and parapharmacy shop. Assess this selfie the way a cosmetic dermatologist does a visual skin exam, but stay strictly cosmetic: no diagnoses, no medical treatment, never guess age, ethnicity, gender or identity.
+  const prompt = `You are a cosmetic skin assessor working alongside pharmacists in a beauty and parapharmacy shop. Assess this selfie${extra.length ? ` (photo 1 is the front of the face; photo${extra.length > 1 ? "s 2 and 3 are" : " 2 is"} the same face turned to the side, from a guided 3D scan: use them for the cheeks, jawline and sides of the nose, which a front photo shows poorly)` : ""} the way a cosmetic dermatologist does a visual skin exam, but stay strictly cosmetic: no diagnoses, no medical treatment, never guess age, ethnicity, gender or identity.
 
 Method (think through it, but output only the JSON):
 1. Photo quality first: is a face clearly visible, in focus, evenly lit, without heavy make-up or beauty filters? If not usable, return {"ok":false,"reason":"short tip to retake"}.
@@ -56,7 +58,7 @@ Return only JSON:
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
       max_tokens: 1200,
-      messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data } }, { type: "text", text: prompt }] }],
+      messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data } }, ...extra, { type: "text", text: prompt }] }],
     }),
     signal: AbortSignal.timeout(55_000),
   }).catch((e) => (console.error("skin-scan: AI request failed", e), null));
