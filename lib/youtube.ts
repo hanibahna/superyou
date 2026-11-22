@@ -45,3 +45,23 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
 }
 
 const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
+/** Daily: find videos ahead of time for products nobody has opened yet, bestsellers first. Stays well
+ * inside YouTube's free daily allowance, leaving room for pages shoppers open during the day. */
+export async function prefillVideos(limit = 40) {
+  const cfg = (await getExtras()).youtube;
+  if (!cfg.enabled || !(cfg.key || process.env.YOUTUBE_API_KEY)) return 0;
+  const { liveProducts } = await import("@/lib/pricing");
+  const list = (await liveProducts()).list
+    .filter((p) => p.inStock && p.status !== "draft")
+    .sort((a, b) => Number(b.tags.includes("favorite")) - Number(a.tags.includes("favorite")) || (b.reviewCount ?? 0) - (a.reviewCount ?? 0));
+  let done = 0;
+  for (const p of list) {
+    if (done >= limit) break;
+    if (cfg.pins[p.slug]) continue;
+    if (await db.cmd<number>(["EXISTS", `yt:v2:${p.slug}`]).catch(() => 1)) continue;
+    await videosForProduct({ slug: p.slug, brand: p.brand, name: p.name });
+    done++;
+  }
+  return done;
+}
