@@ -206,7 +206,7 @@ function Pager({ page, pages, href }: { page: number; pages: number; href: (n: n
       {nums.map((n, i) => (
         <span key={n} className="flex items-center gap-1">
           {i > 0 && n - nums[i - 1] > 1 && <span className="px-1 text-muted">…</span>}
-          <Link href={href(n)} aria-current={n === page ? "page" : undefined} className={`min-w-9 rounded-lg px-3 py-1.5 text-center ${n === page ? "bg-brand-500 font-semibold text-white" : "border border-line hover:bg-brand-50"}`}>{n}</Link>
+          <Link href={href(n)} aria-current={n === page ? "page" : undefined} className={`min-w-11 rounded-lg px-3 py-2.5 text-center ${n === page ? "bg-brand-500 font-semibold text-white" : "border border-line hover:bg-brand-50"}`}>{n}</Link>
         </span>
       ))}
       {page < pages && <Link href={href(page + 1)} className="rounded-lg border border-line px-3 py-1.5 hover:bg-brand-50">{tx("Next")}</Link>}

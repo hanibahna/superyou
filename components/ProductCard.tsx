@@ -26,7 +26,7 @@ export function ProductCard({ product }: { product: Card }) {
       <button
         onClick={() => toggleWish(product)}
         aria-label={wished ? tx("Remove from wishlist") : tx("Add to wishlist")}
-        className={`absolute end-3 top-3 z-10 rounded-full bg-white/90 p-1.5 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}
+        className={`absolute end-2 top-2 z-10 rounded-full bg-white/90 p-2.5 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}
       >
         <HeartIcon filled={wished} width={18} height={18} />
       </button>

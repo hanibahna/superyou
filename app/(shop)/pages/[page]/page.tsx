@@ -12,6 +12,7 @@ import { translateDeep } from "@/lib/translate";
 // Info pages (edited in Admin → Settings → Pages) and brand/range pages, which show live products.
 const niceTitle = (title: string, brand?: string) => {
   const t = title.replace(/\s*\|.*$/, "").trim();
+  if (brand && t.toLowerCase().replace(/[^a-z0-9]/g, "") === brand.toLowerCase().replace(/[^a-z0-9]/g, "")) return brand;
   return !t || /^(shop by range|our categories|monthly activations|sale off)$/i.test(t) || (brand && t.length > 60) ? brand ?? t : t;
 };
 

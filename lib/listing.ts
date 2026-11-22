@@ -2,7 +2,7 @@ import "server-only";
 
 // Server-side catalog queries: grouping variants into cards, filtering, search, facets, paging.
 
-import { getTaxonomy } from "@/lib/catalog";
+import { brandKey, getTaxonomy } from "@/lib/catalog";
 import { discountPct, type ProductLite, type Tag, type Taxonomy } from "@/lib/data/catalog";
 import { shopImg } from "@/lib/img";
 import { liveProducts } from "@/lib/pricing";
@@ -79,7 +79,8 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
   // so customers can see how many items each choice would give.
   const byCategory = q.category ? list.filter((p) => p.category === q.category) : list;
   const byConcern = q.concern?.length ? byCategory.filter((p) => q.concern!.some((c) => p.concerns.includes(c))) : byCategory;
-  let filtered = q.brand?.length ? byConcern.filter((p) => q.brand!.includes(p.brand)) : byConcern;
+  const wantBrands = new Set((q.brand ?? []).map(brandKey));
+  let filtered = wantBrands.size ? byConcern.filter((p) => wantBrands.has(brandKey(p.brand))) : byConcern;
   if (q.tag) filtered = filtered.filter((p) => p.tags.includes(q.tag as Tag));
 
   let cards = toCards(filtered);

@@ -3,9 +3,10 @@
 import { createPortal } from "react-dom";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { Category, Taxonomy } from "@/lib/data/catalog";
-import { useSettings, useSite, useT } from "@/lib/site-context";
+import { useGrowth, useSettings, useSite, useT } from "@/lib/site-context";
 import { useShop } from "@/lib/store";
 import { BagIcon, CloseIcon, HeartIcon, MenuIcon, UserIcon } from "./Icons";
 import { LangSwitch } from "./Growth";
@@ -16,6 +17,7 @@ import { BrandList } from "./BrandList";
 export function AnnouncementBar() {
   const tx = useT();
   const { announcement: a, store, social } = useSettings();
+  const { club } = useGrowth();
   if (!a.enabled || !a.text) return null;
   return (
     <div className="announce bg-brand-600 text-white">
@@ -32,6 +34,7 @@ export function AnnouncementBar() {
           <p className="mx-auto truncate font-medium sm:mx-0">{a.text}</p>
         )}
         <div className="hidden gap-3 opacity-90 sm:flex">
+          {club.enabled && <Link href="/club/" className="font-semibold">{club.name}</Link>}
           {a.showContacts && (["instagram", "facebook", "tiktok", "youtube"] as const).filter((k) => social[k]).map((k) => (
             <a key={k} href={social[k]} target="_blank" rel="noreferrer" className="capitalize">{k === "tiktok" ? "TikTok" : k === "youtube" ? "YouTube" : k}</a>
           ))}
@@ -50,6 +53,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
   const [menuOpen, setMenuOpenRaw] = useState(false);
   const [brandsOpen, setBrandsOpen] = useState(false);
   const setMenuOpen = (v: boolean) => (setMenuOpenRaw(v), v || setBrandsOpen(false));
+  const path = usePathname();
   const categories = all.filter((c) => c.menu !== false);
   const groupFor = (slug: string, g?: Category["concernGroup"]) =>
     g !== undefined ? g : slug === "hair" ? "hair" : slug === "supplements" ? "wellness" : slug === "skincare" ? "skin" : "";
@@ -57,7 +61,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
       <div className="hdr-row container-x flex h-16 items-center gap-4">
-        <button className="lg:hidden" onClick={() => setMenuOpen(true)} aria-label={tx("Open menu")}>
+        <button className="-ms-2.5 grid h-11 w-11 place-items-center lg:hidden" onClick={() => setMenuOpen(true)} aria-label={tx("Open menu")}>
           <MenuIcon />
         </button>
         <Link href="/" aria-label={`${store.name} home`} className="hdr-logo flex shrink-0 items-center gap-2 md:gap-2.5">
@@ -71,21 +75,23 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
 
         <SearchBox className="hdr-search mx-auto hidden max-w-xl flex-1 lg:block" />
 
-        <nav className="ms-auto flex items-center gap-4 lg:ms-0">
-          <LangSwitch className="hidden text-sm hover:text-brand-600 sm:block" />
-          <Link href="/account/" aria-label={tx("Account")} className="hidden hover:text-brand-600 sm:block">
+        <nav className="-me-2.5 ms-auto flex items-center gap-1 lg:ms-0 lg:gap-2">
+          <LangSwitch className="hidden px-2 text-sm hover:text-brand-600 sm:block" />
+          <Link href="/account/" aria-label={tx("Account")} className="hidden grid h-11 w-11 place-items-center hover:text-brand-600 sm:grid">
             <UserIcon />
           </Link>
-          <Link href="/wishlist/" aria-label={tx("Wishlist")} className="relative hover:text-brand-600">
+          <Link href="/wishlist/" aria-label={tx("Wishlist")} className="relative grid h-11 w-11 place-items-center hover:text-brand-600">
             <HeartIcon />
             {wishlist.length > 0 && <Badge n={wishlist.length} />}
           </Link>
-          <button onClick={() => setDrawerOpen(true)} aria-label={tx("Cart")} className="relative hover:text-brand-600">
+          <button onClick={() => setDrawerOpen(true)} aria-label={tx("Cart")} className="relative grid h-11 w-11 place-items-center hover:text-brand-600">
             <BagIcon data-bag />
             {count > 0 && <Badge n={count} />}
           </button>
         </nav>
       </div>
+      {/* Phones: on the home page, search sits in plain view under the logo. */}
+      {path === "/" && <div className="container-x pb-3 lg:hidden"><SearchBox /></div>}
 
       {/* Desktop category nav with mega menu */}
       {settings.menu.length > 0 ? (
@@ -200,7 +206,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
 
 function Badge({ n }: { n: number }) {
   return (
-    <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
+    <span className="absolute right-0.5 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
       {n}
     </span>
   );

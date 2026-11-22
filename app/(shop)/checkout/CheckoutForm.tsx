@@ -192,7 +192,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
           <button disabled={busy || (settings.checkout.minOrder > 0 && subtotal < settings.checkout.minOrder)} className="mt-5 w-full rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600 disabled:opacity-60">
             {busy ? tx("Placing order…") : method === "card" ? `Pay ${money(total)}` : tx("Place order")}
           </button>
-          <p className="mt-3 text-center text-xs text-muted">{tx("🔒 Card details are entered on the bank's secure page — never on this site.")}</p>
+          {method === "card" && <p className="mt-3 text-center text-xs text-muted">{tx("🔒 Card details are entered on the bank's secure page — never on this site.")}</p>}
         </aside>
       </form>
     </div>

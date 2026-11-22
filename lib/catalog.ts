@@ -49,6 +49,26 @@ const CLINIC = /^skin\s*society\s+the\s+clinic$/i;
 /** Text from a supplier ("…our clients at Skin Society The Clinic…") speaks as SuperYou. */
 export const asSuperYou = (t: string) => (t && SUPPLIER.test(t) ? t.replace(/skin[\s_-]*society([\s_-]+the[\s_-]+clinic)?([\s_-]+para)?|neo[\s_-]*vitale/gi, "SuperYou") : t);
 
+/** Squashed brand key: "La Roche Posay", "La Roche-Posay" and "la roche-posay" are one brand. */
+export const brandKey = (b: string) => b.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "");
+/** Official spellings where the supplier feeds disagree with the brand's own. */
+const OFFICIAL: Record<string, string> = {
+  isdin: "ISDIN", aderma: "A-Derma", larocheposay: "La Roche-Posay", guylaroche: "Guy Laroche", powerofnature: "Power of Nature",
+  nuxe: "NUXE", svr: "SVR", cerave: "CeraVe", nyxprofessionalmakeup: "NYX Professional Makeup", loreal: "L'Oréal", lorealparis: "L'Oréal Paris",
+};
+/** One spelling per brand across the catalog: the official one, else the most used. */
+function canonBrands(list: ProductLite[]) {
+  const counts = new Map<string, Map<string, number>>();
+  for (const p of list) {
+    const k = brandKey(p.brand), m = counts.get(k) ?? new Map<string, number>();
+    m.set(p.brand, (m.get(p.brand) ?? 0) + 1);
+    counts.set(k, m);
+  }
+  const pick = new Map<string, string>();
+  for (const [k, m] of counts) pick.set(k, OFFICIAL[k] ?? [...m].sort((a, b) => b[1] - a[1])[0][0]);
+  for (const p of list) p.brand = pick.get(brandKey(p.brand)) ?? p.brand;
+}
+
 function buildIndex(ver: string, raw: string[]): Index {
   const parsed = raw.map((r) => JSON.parse(r) as ProductLite);
   // Products a supplier sold under its own shop name get their real brand from the product name
@@ -62,6 +82,7 @@ function buildIndex(ver: string, raw: string[]): Index {
     }
   }
   for (const p of parsed) if (SUPPLIER.test(p.name)) p.name = asSuperYou(p.name);
+  canonBrands(parsed);
   const all = parsed.sort((a, b) => a.name.localeCompare(b.name) || (a.price - b.price));
   const byId = new Map(all.map((p) => [p.id, p]));
   const bySlug = new Map<string, ProductLite[]>();

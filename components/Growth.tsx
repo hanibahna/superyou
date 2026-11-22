@@ -57,7 +57,7 @@ export function PharmacistButton({ product, className = "" }: { product?: string
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#25D366] text-white"><ChatIcon width={18} height={18} /></span>
       <span>
         <b className="block">{g.pharmacist.label || t("Ask a pharmacist")}</b>
-        <span className="text-xs text-muted">{t("Free pharmacist advice on WhatsApp")} · {g.pharmacist.hours}</span>
+        <span className="text-xs text-muted">{t("Free pharmacist advice on WhatsApp")} · {store.openingHours || g.pharmacist.hours}</span>
       </span>
     </a>
   );
@@ -210,7 +210,7 @@ export function SignupPopup() {
   return (
     <>
       {g.tab && !open && !res && (
-        <button onClick={() => setOpen("popup")} className="fixed top-[45%] start-0 z-30 hidden md:block rounded-e-lg bg-ink px-2.5 py-2 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg md:top-auto md:bottom-1/3 md:px-3 md:text-xs">
+        <button onClick={() => setOpen("popup")} className="fixed bottom-5 start-5 z-30 hidden rounded-full bg-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg md:block">
           {g.tabLabel || t("Get 10% off")}
         </button>
       )}

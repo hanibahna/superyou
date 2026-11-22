@@ -80,7 +80,13 @@ export function CampaignHero(p: { eyebrow: string; title: string; text: string; 
       {p.badge && (
         <div className="overflow-hidden border-y border-white/15 bg-black py-2">
           <div className="marquee flex w-max gap-10 whitespace-nowrap text-sm font-bold uppercase tracking-[0.25em]">
-            {Array.from({ length: 12 }).map((_, i) => <span key={i}>{p.badge} <span className="text-sale">✦</span></span>)}
+            {/* The hero already sells the offer, so the ticker carries the trust promises. */}
+            {Array.from({ length: 4 }).flatMap((_, i) => [
+              tx("100% original products"),
+              tx("Pay cash on delivery"),
+              settings.delivery.freeThreshold > 0 ? `${tx("Free delivery over")} $${settings.delivery.freeThreshold}` : tx("Fast delivery all over Lebanon"),
+              tx("Free pharmacist advice"),
+            ].map((line, j) => <span key={`${i}-${j}`}>{line} <span className="text-sale">✦</span></span>))}
           </div>
         </div>
       )}

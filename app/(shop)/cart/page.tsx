@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
 
 import Link from "next/link";
 import { Qty } from "@/components/CartDrawer";
 import { CouponBox, GiftPicker, Totals } from "@/components/CartPromos";
 import { FreeDeliveryBar, RecentlyViewed } from "@/components/Growth";
+import { ProductCarousel } from "@/components/ProductCarousel";
 import { ProductImage } from "@/components/ProductImage";
+import type { CardItem } from "@/lib/listing";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
 
@@ -39,6 +41,7 @@ export default function CartPage() {
         <h1 className="text-3xl font-semibold">Your cart is empty</h1>
         <Link href="/shop/" className="mt-6 inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white">{tx("Start shopping")}</Link>
         <div className="mt-10 text-start"><RecentlyViewed /></div>
+        <EmptyBagPicks />
       </div>
     );
 
@@ -74,4 +77,14 @@ export default function CartPage() {
       </aside>
     </div>
   );
+}
+
+/** The empty bag is not a dead end: show what sells best right now. */
+function EmptyBagPicks() {
+  const tx = useT();
+  const [items, setItems] = useState<CardItem[]>([]);
+  useEffect(() => {
+    fetch("/api/products/picks/").then((r) => r.json()).then((d: { items: CardItem[] }) => setItems(d.items ?? [])).catch(() => {});
+  }, []);
+  return <div className="text-start"><ProductCarousel eyebrow={tx("Popular now")} title={tx("Best-sellers")} products={items} href="/shop/" /></div>;
 }

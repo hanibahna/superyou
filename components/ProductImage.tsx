@@ -21,7 +21,7 @@ export function ProductImage({
       // multiply blending makes white photo backgrounds melt into it (Admin → Growth → Product photos).
       <span className={`pframe block overflow-hidden ${className}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imgUrl(src, width)} alt={`${product.brand} ${product.name ?? ""}`.trim()} loading="lazy" className="h-full w-full object-contain mix-blend-multiply" />
+        <img src={imgUrl(src, width)} alt={(product.name ?? "").toLowerCase().startsWith(product.brand.toLowerCase()) ? product.name : `${product.brand} ${product.name ?? ""}`.trim()} loading="lazy" className="h-full w-full object-contain mix-blend-multiply" />
       </span>
     );
   const c = product.color;

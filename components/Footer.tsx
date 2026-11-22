@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { Category } from "@/lib/data/catalog";
-import { useGrowth, useSettings, useT } from "@/lib/site-context";
+import { useSettings, useT } from "@/lib/site-context";
 import { NewsletterForm } from "./NewsletterForm";
 import { ChatIcon, GiftIcon, ShieldIcon, TruckIcon } from "./Icons";
 
@@ -96,23 +97,19 @@ function FooterCol({ title, links }: { title: string; links: { label: string; hr
 
 export function FloatingWidgets() {
   const { store } = useSettings();
-  const growth = useGrowth();
+  const path = usePathname() ?? "";
+  // On product, bag and checkout pages the phone already shows a sticky buy bar and an
+  // "Ask a pharmacist" button, so the floating chat button would only cover the page.
+  const busy = /^\/(products|cart|checkout|pay)\//.test(path);
   return (
-    <>
-      <a
-        href={`https://wa.me/${store.whatsapp}`}
-        target="_blank"
-        rel="noreferrer"
-        aria-label="Chat on WhatsApp"
-        className="fixed bottom-32 end-4 z-40 grid h-12 w-12 md:bottom-5 md:end-5 md:h-14 md:w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-105"
-      >
-        <ChatIcon width={26} height={26} />
-      </a>
-      {growth.club.enabled && (
-        <Link href="/club/" aria-label={growth.club.name} className="fixed bottom-5 start-5 z-40 hidden items-center gap-2 rounded-full bg-ink px-4 py-3 text-sm font-semibold text-white shadow-lg md:flex">
-          <GiftIcon width={18} height={18} /> {growth.club.name}
-        </Link>
-      )}
-    </>
+    <a
+      href={`https://wa.me/${store.whatsapp}`}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Chat on WhatsApp"
+      className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] end-3 z-40 h-12 w-12 place-items-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-105 md:bottom-5 md:end-5 md:grid md:h-14 md:w-14 ${busy ? "hidden" : "grid"}`}
+    >
+      <ChatIcon width={26} height={26} />
+    </a>
   );
 }

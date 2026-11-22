@@ -53,7 +53,8 @@ export function buildPalette(t: ThemeInput): Palette {
     ink: t.ink,
     muted: mix(t.ink, t.background, 0.45),
     line: mix(t.ink, t.background, 0.9),
-    sale: t.sale,
+    // Prices and badges sit on white and pale grey: darken the sale colour just enough to read (WCAG 4.5:1).
+    sale: readable(t.sale, mix(t.background, "#000000", 0.04)),
     bg: t.background,
   };
 }
@@ -76,4 +77,14 @@ function lum(hex: string) {
 export function contrast(a: string, b: string) {
   const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
   return (x + 0.05) / (y + 0.05);
+}
+
+/** The colour, darkened in small steps until it has at least `min` contrast against `bg`. */
+export function readable(color: string, bg: string, min = 4.5) {
+  if (!isHex(color) || !isHex(bg)) return color;
+  for (let t = 0; t <= 0.6; t += 0.03) {
+    const c = t ? mix(color, "#000000", t) : color;
+    if (contrast(c, bg) >= min) return c;
+  }
+  return mix(color, "#000000", 0.6);
 }

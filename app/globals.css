@@ -142,7 +142,9 @@ h1, h2, h3, .font-heading { font-family: var(--font-heading); }
 /* ── Accessibility: visible keyboard focus, comfortable tap targets on phones ── */
 :where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--color-brand-500, #111); outline-offset: 2px; }
 @media (max-width: 767px) {
-  .tap { min-height: 44px; }
+  .tap, .pcard .buy, .pcard .buy-alt { min-height: 44px; }
+  footer li > a { display: inline-block; padding-block: 8px; }
+  label:has(> input[type="checkbox"]) { min-height: 40px; display: flex; align-items: center; }
   body:has(.tabbar) { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 }
 
