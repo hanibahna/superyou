@@ -4,7 +4,7 @@ import { FinderView } from "./FinderView";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const f = finderById((await params).id);
-  return f ? { title: `${f.title} – SuperYou`, description: f.intro } : {};
+  return f ? { title: f.title, description: f.intro } : {};
 }
 
 export default async function FinderPage({ params }: { params: Promise<{ id: string }> }) {
