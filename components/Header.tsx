@@ -180,7 +180,6 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
                   onNavigate={() => setMenuOpen(false)}
                   footer={
                     <div className="mt-4 space-y-1 border-t border-line pt-3 text-[15px]">
-                      <button onClick={() => setBrandsOpen(true)} className="flex min-h-[48px] w-full items-center justify-between text-start">{tx("Brands A–Z")} <span className="rtl-flip text-xl leading-none text-muted">›</span></button>
                       {[["Services & Events", "/services/"], ["SuperYou Club", "/club/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
                         <Link key={h} href={h} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center">{tx(l)}{h === "/wishlist/" && wishlist.length > 0 ? ` (${wishlist.length})` : ""}</Link>
                       ))}
