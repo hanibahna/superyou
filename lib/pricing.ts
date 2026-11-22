@@ -8,6 +8,7 @@ import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
 import { getPromotions, getRoutine, getSettings, getSourcing, getVisibility } from "@/lib/site-store";
 import { shipInfo } from "@/lib/sourcing";
+import { collectionsFor } from "@/lib/import/collection-map";
 import { bucketKey, nameTokens, sameNames, stepOf, type Growth } from "@/lib/growth";
 import { getGrowth, getVoucher, ratingMap, voucherRule } from "@/lib/growth-store";
 import type { ProductSnap, ServerQuote } from "@/lib/store";
@@ -65,7 +66,9 @@ export async function liveProducts() {
   let list = idx.all.filter((p) => p.status === "active" && shown(p)).map((p) => {
     const r = ratings.get(p.slug);
     const ship = shipInfo(p.source, sourcing);
-    const q: ProductLite = { ...p, ...(r ? { rating: r.avg, reviewCount: r.count } : {}), origin: ship.origin, shipFrom: ship.country, daysMin: ship.daysMin, daysMax: ship.daysMax };
+    // Imported catalogs join the same menu collections as local stock (Make Up › Eyes › Mascara…).
+    const cols = ship.origin === "international" && !p.collections?.length ? collectionsFor(p.name) : undefined;
+    const q: ProductLite = { ...p, ...(r ? { rating: r.avg, reviewCount: r.count } : {}), ...(cols?.length ? { collections: cols } : {}), origin: ship.origin, shipFrom: ship.country, daysMin: ship.daysMin, daysMax: ship.daysMax };
     if (!auto.length) return q;
     const s = salePrice(q, auto);
     return s.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
