@@ -47,7 +47,7 @@ Every push to `main` that touches `mobile/` also builds a test Android APK on Gi
 - Category: Shopping (secondary: Health & Fitness)
 - Privacy policy and support pages on shopsuperyou.com
 - Screenshots: 6.7" and 5.5" iPhone, Android phone (take them from the app on a phone or simulator)
-- Apple asks apps that let people create an account to also let them delete it in the app: the Club page
-  should offer "Delete my account" before submission.
+- Apple asks apps that let people create an account to also let them delete it in the app: done
+  (Account → Delete my account).
 - Apple can reject apps that are "just a website". Ours adds push notifications, the share sheet and an
   offline screen; mention these in the review notes.
