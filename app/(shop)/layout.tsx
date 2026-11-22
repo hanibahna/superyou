@@ -1,7 +1,7 @@
 import { Advisor } from "@/components/Advisor";
 import { CartDrawer } from "@/components/CartDrawer";
 import { anthropicKey, getExtras } from "@/lib/extras";
-import { shopImgDeep } from "@/lib/img";
+import { shopImgDeep } from "@/lib/img-server";
 import { FloatingWidgets, Footer, TrustStrip } from "@/components/Footer";
 import { MobileTabBar, Motion, RefCapture, SignupPopup } from "@/components/Growth";
 import { AnnouncementBar, Header } from "@/components/Header";

@@ -1,5 +1,5 @@
 import { getLang } from "@/lib/i18n-server";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { translateDeep, translateMany } from "@/lib/translate";
 import { notFound } from "next/navigation";
 import { queryShop } from "@/lib/listing";

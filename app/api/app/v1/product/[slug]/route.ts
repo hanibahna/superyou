@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getGroupBySlug, getProductDetail } from "@/lib/catalog";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { liveProducts } from "@/lib/pricing";
 import { siteUrl } from "@/lib/site-url";
 

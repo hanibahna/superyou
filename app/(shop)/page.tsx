@@ -1,5 +1,5 @@
 import { BrandStrip, Banners, CategoryTiles, Countdown, HeroSlider, NewsletterSection, ShopByConcern, TextBlock, TikTokProfile, VideoSection } from "@/components/Home";
-import { shopImgDeep } from "@/lib/img";
+import { shopImgDeep } from "@/lib/img-server";
 import { autoCategories, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
 import { CampaignHero, Circles, OffersGrid, PromoTiles } from "@/components/Campaign";
 import { ProductCarousel } from "@/components/ProductCarousel";

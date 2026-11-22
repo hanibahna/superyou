@@ -395,3 +395,5 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="ritual"] .ftitle { color: var(--color-brand-700); text-transform: none; letter-spacing: 0; font-size: 14px; }
 [data-preset="ritual"] .summary-box { background: #fff; border: 0; border-radius: 22px; }
 [data-preset="ritual"] .trust-strip { background: #fff; border-color: transparent; }
+/* Filled bag button: keep it off the screen edge on phones and tablets */
+@media (max-width: 1023px) { :is([data-preset="pop"], [data-preset="ritual"]) .site-header .hdr-bag { margin-inline-end: 10px; } }

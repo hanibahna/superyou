@@ -2,7 +2,7 @@ import "server-only";
 
 // Live shop prices (automatic sales applied) and the authoritative cart quote.
 
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";

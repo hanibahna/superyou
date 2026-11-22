@@ -1,5 +1,5 @@
 import { getProductsDetailed } from "@/lib/catalog";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { liveProducts } from "@/lib/pricing";
 import { siteUrl } from "@/lib/seo";
 import { getSettings } from "@/lib/site-store";

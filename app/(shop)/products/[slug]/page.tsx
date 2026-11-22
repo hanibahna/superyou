@@ -1,5 +1,5 @@
 import { getT } from "@/lib/i18n-server";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { RecentlyViewed } from "@/components/Growth";

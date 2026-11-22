@@ -5,7 +5,7 @@ import "server-only";
 import { forShopper, genderOf } from "@/lib/gender";
 import { brandKey, getTaxonomy } from "@/lib/catalog";
 import { discountPct, type ProductLite, type Tag, type Taxonomy } from "@/lib/data/catalog";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
 import type { ProductSource, SearchSettings } from "@/lib/site";

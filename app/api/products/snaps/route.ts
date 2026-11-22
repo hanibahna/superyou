@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { liveProducts } from "@/lib/pricing";
 
 // Current snapshots for a list of product ids ("buy again", skin scan routines). Only live, in-stock items.

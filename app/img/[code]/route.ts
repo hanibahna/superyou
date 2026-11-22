@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { imgSource } from "@/lib/img";
+import { imgSource } from "@/lib/img-server";
 
 // Product photos served from SuperYou's own address. Cached by the CDN for a year.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {

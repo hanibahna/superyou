@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { shopImg } from "@/lib/img";
+import { shopImg } from "@/lib/img-server";
 import { cartByToken } from "@/lib/carts";
 import { liveProducts } from "@/lib/pricing";
 
