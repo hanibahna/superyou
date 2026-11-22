@@ -26,7 +26,7 @@ export function areaOf(path: string): Area | "any" {
     growth: "marketing", promotions: "marketing", reviews: "marketing", club: "marketing", whatsapp: "marketing", videos: "marketing",
     routine: "marketing", services: "marketing", subscribers: "marketing", marketing: "marketing", sms: "marketing", app: "marketing",
     sourcing: "catalog", "tracking-keys": "settings",
-    homepage: "store", landing: "store", navigation: "store", layout: "store", appearance: "store", theme: "store",
+    homepage: "store", sections: "store", extras: "store", landing: "store", navigation: "store", layout: "store", appearance: "store", theme: "store",
     search: "store", "search-settings": "store", translations: "store",
     sales: "sales", activity: "sales",
     settings: "settings", operations: "settings",

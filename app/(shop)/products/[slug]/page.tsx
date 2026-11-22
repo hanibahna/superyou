@@ -10,6 +10,7 @@ import { getGrowth, productReviews } from "@/lib/growth-store";
 import { toCards } from "@/lib/listing";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { VideoPlayer, VideoStrip, isVertical } from "@/components/Video";
+import { ProductYouTube } from "@/components/ProductYouTube";
 import { getGroupBySlug, getProductDetail, getTaxonomy } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { liveCards } from "@/lib/listing";
@@ -138,6 +139,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{toCards(pairs).map((p) => <ProductCard key={p.id} product={p} />)}</div>
         </section>
       )}
+      <ProductYouTube slug={slug} />
       {videos.length > 0 && <div className="container-x"><VideoStrip videos={videos} title={tx("Watch & learn")} eyebrow={tx("Videos")} /></div>}
       {growth.reviews.enabled && <Reviews slug={slug} product={`${initial.brand} ${initial.name}`} reviews={reviews.map(({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }) => ({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }))} />}
       <ProductCarousel eyebrow="You may also like" title="Related products" products={related} />

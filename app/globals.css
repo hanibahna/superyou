@@ -346,3 +346,4 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="ritual"] :is(.promo-tile, .banner-tile) { border-radius: 24px; }
 [data-preset="ritual"] .offer-tile { border-radius: 22px; border-color: transparent; }
 [data-preset="ritual"] main :is(input[type="text"], input[type="email"], input[type="tel"], input[type="search"], select, textarea) { border-radius: 12px; }
+[data-preset="atelier"] .bf-ticker .marquee { text-transform: none; letter-spacing: 0; font-weight: 400; }

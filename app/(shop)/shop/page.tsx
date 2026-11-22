@@ -8,6 +8,7 @@ import { queryShop } from "@/lib/listing";
 import { redirectFor } from "@/lib/search";
 import { getSearchSettings } from "@/lib/site-store";
 import { parseQuery, videosFor, type SP } from "@/lib/shop-query";
+import { getExtras } from "@/lib/extras";
 import { ShopView } from "./ShopView";
 
 // Category, brand and concern listings get their own title, description and canonical address;
@@ -40,5 +41,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const [raw, videos, tax] = await Promise.all([queryShop(query), videosFor(query), getTaxonomy().then((t) => translateDeep(t, lang, ["name", "description"]))]);
   const result = { ...raw, facets: await translateDeep(raw.facets, lang, ["name"]), taxonomy: tax };
   const category = tax.categories.find((c) => c.slug === query.category);
-  return <ShopView result={result} query={query} videos={videos} category={category} />;
+  const sc = query.category ? (await getExtras()).sections[query.category] : undefined;
+  const section = sc?.enabled ? { banner: sc.banner, tips: sc.tips, app: sc.app } : null;
+  return <ShopView result={result} query={query} videos={videos} category={category} section={section} />;
 }

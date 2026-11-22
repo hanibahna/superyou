@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionBanner, type SectionBannerData } from "@/components/SectionBanner";
 import { useT } from "@/lib/site-context";
 
 import Link from "next/link";
@@ -19,7 +20,7 @@ const sorts = {
   new: "New arrivals",
 } as const;
 
-export function ShopView({ result, query, videos = [], category, base = "/shop/", heading, intro, banner }: { result: ShopResult; query: ShopQuery; videos?: VideoItem[]; category?: Category; base?: string; heading?: string; intro?: string; banner?: string }) {
+export function ShopView({ result, query, videos = [], category, base = "/shop/", heading, intro, banner, section }: { section?: SectionBannerData | null; result: ShopResult; query: ShopQuery; videos?: VideoItem[]; category?: Category; base?: string; heading?: string; intro?: string; banner?: string }) {
   const tx = useT();
   const sp = useSearchParams();
   const router = useRouter();
@@ -130,6 +131,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
       <nav className="mb-2 text-xs text-muted">
         <Link href="/" className="hover:underline">Home</Link> / <span>{title}</span>
       </nav>
+      {section && !query.q && <SectionBanner s={section} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold">{title}</h1>
