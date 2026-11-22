@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/site-context";
+import { QuickHelp } from "./QuickHelp";
 
 export type SectionBannerData = { banner: { title: string; text: string; cta: string; href: string; image: string; bg: string }; tips: string[]; app: { label: string; href: string } };
 
@@ -17,7 +18,9 @@ export function SectionBanner({ s }: { s: SectionBannerData }) {
   }, [s.tips.length]);
   const b = s.banner;
   return (
-    <div className="mb-6 grid gap-3 lg:grid-cols-[1fr_340px]">
+    <div className="mb-6">
+    <QuickHelp className="mb-3" />
+    <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
       <Link href={b.href || "/shop/"} className="banner-tile group relative flex min-h-[180px] items-center overflow-hidden rounded-3xl p-6 md:p-8" style={{ background: b.bg || "#fcf1f4" }}>
         <div className="relative z-10 max-w-[62%]">
           <p className="text-2xl font-bold leading-tight md:text-3xl">{tx(b.title)}</p>
@@ -41,9 +44,9 @@ export function SectionBanner({ s }: { s: SectionBannerData }) {
         )}
         <div className="flex flex-wrap gap-2">
           {s.app.href && <Link href={s.app.href} className="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 text-sm font-semibold hover:bg-ink hover:text-white">{tx(s.app.label)} →</Link>}
-          <button onClick={() => window.dispatchEvent(new Event("open-advisor"))} className="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 text-sm font-semibold hover:bg-ink hover:text-white">{tx("Ask AI")}</button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -20,6 +20,12 @@ export function ServicesView(p: Props) {
   const [tab, setTab] = useState(p.tab);
   const [cat, setCat] = useState(tx("All"));
   const [booking, setBooking] = useState<Service | null>(null);
+  // Deep link from the quick buttons: /services/?book=video-consult opens that booking straight away.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("book");
+    const s = id ? p.services.find((x) => x.id === id && x.enabled) : undefined;
+    if (s) setBooking(s);
+  }, [p.services]);
   const [rsvp, setRsvp] = useState<EventItem | null>(null);
   const cats = ["All", ...Array.from(new Set(p.services.map((s) => s.category).filter(Boolean)))];
   const shown = p.services.filter((s) => cat === "All" || s.category === cat);

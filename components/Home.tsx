@@ -173,10 +173,14 @@ export function BrandStrip({ brands, title = "Shop by brand", logos = {} }: { br
   return (
     <section className="hsec container-x py-10">
       {title && <h2 className="mb-5 text-2xl font-semibold md:text-3xl">{title}</h2>}
-      <div className="no-scrollbar flex gap-3 overflow-x-auto">
-        {brands.map((b) => (
+      {/* Scrolls by itself (pauses on hover or touch); the list is doubled so the loop is seamless. */}
+      <div className="brand-marquee overflow-hidden" dir="ltr">
+        <div className="marquee flex w-max gap-3 py-1" style={{ animationDuration: `${Math.max(30, brands.length * 3)}s` }}>
+        {[...brands, ...brands].map((b, i) => (
           <Link
-            key={b}
+            key={`${b}-${i}`}
+            aria-hidden={i >= brands.length ? true : undefined}
+            tabIndex={i >= brands.length ? -1 : undefined}
             href={`/shop/?brand=${encodeURIComponent(b)}`}
             className="grid h-20 min-w-40 place-items-center rounded-xl border border-line bg-white px-6 text-center font-serif text-lg font-semibold tracking-[0.15em] text-ink transition hover:border-ink hover:shadow-sm"
           >
@@ -186,6 +190,7 @@ export function BrandStrip({ brands, title = "Shop by brand", logos = {} }: { br
             ) : b.toUpperCase()}
           </Link>
         ))}
+        </div>
       </div>
     </section>
   );

@@ -34,6 +34,8 @@ export const defaultExtras: Extras = {
   },
   youtube: { enabled: true, key: "", pins: {} },
   sections: {
+    _all: sec("Not sure what to choose?", "Ask our pharmacist on a free video call, or let our AI advisor suggest products for you.", "Book a free video call", "/services/?book=video-consult", "/brand/home/png/hero-pharmacist.png", "#ffd6e3",
+      ["Every product we sell is original, from official distributors.", "Pay cash on delivery anywhere in Lebanon.", "Patch-test new skincare for 24 hours before full use.", "Not sure about an ingredient? Ask our pharmacist on WhatsApp."], ["Routine finder", "/routine/"]),
     skincare: sec("Your routine, in 60 seconds", "Answer a few questions and get a morning and night routine from products in stock.", "Find my routine", "/routine/", art("skincare"), "#ffd6e3",
       ["Cleanse, treat, moisturise, protect: four steps cover most skin.", "Introduce one new active at a time and give it 4 weeks.", "Patch-test new products behind the ear for 24 hours.", "Retinol at night, vitamin C in the morning, sunscreen always."], ["Skin scan", "/skin-scan/"]),
     suncare: sec("Sun protection, sorted", "Pick your skin and your day and we'll match the right SPF.", "Find my sunscreen", "/finder/sun/", art("sun"), "#fff3b8",
@@ -88,6 +90,14 @@ export async function getExtras(): Promise<Extras> {
 /** The Claude key: Vercel setting first, else the one pasted in Admin → Sections & AI. */
 export async function anthropicKey(): Promise<string> {
   return process.env.ANTHROPIC_API_KEY || (await getExtras()).anthropicKey || "";
+}
+
+/** The section content for a listing: its category, else the concern's area, else the general one. */
+export async function sectionFor(category?: string, group?: string) {
+  const all = (await getExtras()).sections;
+  const byGroup: Record<string, string> = { skin: "skincare", hair: "hair", wellness: "supplements", body: "body", sun: "suncare", makeup: "makeup" };
+  const s = (category && all[category]) || (group && all[byGroup[group] ?? group]) || all._all;
+  return s?.enabled ? { banner: s.banner, tips: s.tips, app: s.app } : null;
 }
 
 export async function saveExtras(e: Extras) {

@@ -11,6 +11,9 @@ import { toCards } from "@/lib/listing";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { VideoPlayer, VideoStrip, isVertical } from "@/components/Video";
 import { ProductYouTube } from "@/components/ProductYouTube";
+import { QuickHelp } from "@/components/QuickHelp";
+import { TipLine } from "@/components/TipLine";
+import { sectionFor } from "@/lib/extras";
 import { getGroupBySlug, getProductDetail, getTaxonomy } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { liveCards } from "@/lib/listing";
@@ -74,6 +77,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   // Description etc. are shared by all sizes/shades of an item.
   const gallery = Array.from(new Set([...detail.images.map((x) => shopImg(x)!), ...variants.map((v) => v.image).filter((x): x is string => !!x)]));
   const subOk = !growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id));
+  const sec = await sectionFor(initial.category);
   const how = detail.video;
   const videos = lib.show.product
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)
@@ -112,6 +116,8 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           {category && <><Link href={`/shop/?category=${category.slug}`} className="hover:underline">{L(category.name)}</Link> / </>}
           <span>{initial.name}</span>
         </nav>
+        <QuickHelp className="mb-3" />
+        {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
 
         <BuyBox subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <div className="mt-8 divide-y divide-line border-y border-line">

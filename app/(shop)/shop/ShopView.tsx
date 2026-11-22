@@ -137,7 +137,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
       <nav className="mb-2 text-xs text-muted">
         <Link href="/" className="hover:underline">Home</Link> / <span>{fullTitle}</span>
       </nav>
-      {section && !query.q && <SectionBanner s={section} />}
+      {section && <SectionBanner s={section} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold">{fullTitle}</h1>
