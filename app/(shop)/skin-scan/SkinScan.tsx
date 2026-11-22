@@ -3,7 +3,7 @@
 import { useT } from "@/lib/site-context";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PharmacistButton } from "@/components/Growth";
 import { ProductCard } from "@/components/ProductCard";
 import type { CardItem } from "@/lib/listing";
@@ -39,6 +39,82 @@ async function shrink(file: File) {
   return c.toDataURL("image/jpeg", 0.85);
 }
 
+/** Average brightness 0–255 of a picture, to warn about photos that are too dark or too bright. */
+function brightness(data: string): Promise<number> {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = 48; c.height = 64;
+      const g = c.getContext("2d")!;
+      g.drawImage(img, 0, 0, 48, 64);
+      const d = g.getImageData(8, 8, 32, 40).data; // middle of the frame, where the face is
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      res(sum / (d.length / 4));
+    };
+    img.onerror = () => res(128);
+    img.src = data;
+  });
+}
+
+/** Live selfie camera: front camera, mirrored preview, oval face guide and a 3-second countdown. */
+function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onClose: () => void }) {
+  const tx = useT();
+  const video = useRef<HTMLVideoElement>(null);
+  const [err, setErr] = useState("");
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false })
+      .then((s) => { stream = s; if (video.current) { video.current.srcObject = s; video.current.play().catch(() => {}); } })
+      .catch(() => setErr(tx("We couldn't open your camera. Allow camera access in your browser settings, or upload a photo instead.")));
+    return () => stream?.getTracks().forEach((t) => t.stop());
+  }, [tx]);
+  const snap = () => {
+    const v = video.current;
+    if (!v || !v.videoWidth) return;
+    // Portrait 3:4 crop from the middle, un-mirrored (the analysis needs the real face, not the mirror image).
+    const h = v.videoHeight, w = Math.min(v.videoWidth, Math.round((h * 3) / 4));
+    const k = Math.min(1, 1024 / h);
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext("2d")!.drawImage(v, (v.videoWidth - w) / 2, 0, w, h, 0, 0, c.width, c.height);
+    onShot(c.toDataURL("image/jpeg", 0.88));
+  };
+  const start = () => {
+    setCount(3);
+    let n = 3;
+    const t = setInterval(() => { n -= 1; setCount(n); if (n <= 0) { clearInterval(t); snap(); } }, 1000);
+  };
+  return (
+    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black p-4" role="dialog" aria-modal="true" aria-label={tx("Take a selfie")}>
+      <button onClick={onClose} aria-label={tx("Close")} className="absolute end-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+      {err ? <p className="max-w-sm text-center text-white">{err}</p> : (
+        <>
+          <div className="relative aspect-[3/4] w-full max-w-sm overflow-hidden rounded-3xl bg-black">
+            <video ref={video} playsInline muted className="h-full w-full -scale-x-100 object-cover" />
+            {/* Face guide */}
+            <svg viewBox="0 0 300 400" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+              <defs><mask id="hole"><rect width="300" height="400" fill="white" /><ellipse cx="150" cy="185" rx="95" ry="128" fill="black" /></mask></defs>
+              <rect width="300" height="400" fill="rgba(0,0,0,.45)" mask="url(#hole)" />
+              <ellipse cx="150" cy="185" rx="95" ry="128" fill="none" stroke="white" strokeWidth="2.5" strokeDasharray="6 6" />
+            </svg>
+            {count > 0 && <span className="absolute inset-0 grid place-items-center text-7xl font-bold text-white drop-shadow">{count}</span>}
+          </div>
+          <p className="mt-4 max-w-sm text-center text-sm text-white/85">{tx("Fit your face in the oval. Face a window, no make-up, hair back, no filters.")}</p>
+          <button onClick={start} disabled={count > 0} aria-label={tx("Take the photo")} className="mt-5 grid h-20 w-20 place-items-center rounded-full border-4 border-white disabled:opacity-50">
+            <span className="h-14 w-14 rounded-full bg-white" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const tx = useT();
   const input = useRef<HTMLInputElement>(null);
@@ -48,14 +124,28 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const [res, setRes] = useState<{ analysis: Analysis; steps: Step[] } | null>(null);
   const [consent, setConsent] = useState(false);
   const { addMany, setDrawerOpen } = useShop();
+  const [camera, setCamera] = useState(false);
+  const [warn, setWarn] = useState("");
+  const live = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 
   async function pick(f?: File) {
     if (!f) return;
-    setErr("");
-    setRes(null);
     const data = await shrink(f).catch(() => "");
     if (!data) return setErr(tx("We couldn't open that photo. Try a JPG or PNG."));
+    await analyse(data);
+  }
+
+  async function analyse(data: string, force = false) {
+    setErr("");
+    setRes(null);
     setPreview(data);
+    // Light check first: a dark or washed-out photo gives a poor reading.
+    const b = await brightness(data);
+    if (!force && (b < 60 || b > 225)) {
+      setWarn(b < 60 ? tx("This photo looks too dark for a good reading. Face a window or turn on a light, then try again.") : tx("This photo looks too bright. Move out of direct sun or away from the flash, then try again."));
+      return;
+    }
+    setWarn("");
     setBusy(true);
     const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
@@ -85,8 +175,21 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
             )}
           </div>
           <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that my photo is sent once to an AI service to read my skin. It isn't stored.")}</label>
-          <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-          <button disabled={!consent || busy || !ready} onClick={() => input.current?.click()} className="tap mt-3 w-full rounded-full bg-ink font-semibold text-white disabled:opacity-40">{busy ? tx("Reading your skin…") : preview ? tx("Try another photo") : tx("Take or upload a selfie")}</button>
+          <input ref={input} type="file" accept="image/*" capture={live ? undefined : "user"} className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+          <input id="skin-upload" type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+          <button disabled={!consent || busy || !ready} onClick={() => (live ? setCamera(true) : input.current?.click())} className="tap mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-ink font-semibold text-white disabled:opacity-40">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            {busy ? tx("Reading your skin…") : preview ? tx("Take another selfie") : tx("Take a selfie")}
+          </button>
+          <label htmlFor="skin-upload" aria-disabled={!consent || busy || !ready} className={`tap mt-2 flex w-full cursor-pointer items-center justify-center rounded-full border border-line font-semibold ${!consent || busy || !ready ? "pointer-events-none opacity-40" : ""}`}>{tx("Upload a photo")}</label>
+          {!consent && <p className="mt-2 text-center text-xs text-muted">{tx("Tick the box above to start.")}</p>}
+          {warn && (
+            <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
+              <p>{warn}</p>
+              <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), live ? setCamera(true) : input.current?.click())} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true)} className="text-muted underline">{tx("Use it anyway")}</button></div>
+            </div>
+          )}
+          {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d); }} />}
           {err && <p className="mt-3 text-sm text-sale">{err}</p>}
           <p className="mt-4 text-[11px] text-muted">{tx("Cosmetic guidance only — not a medical diagnosis.")}</p>
         </div>
