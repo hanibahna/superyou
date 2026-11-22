@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["mobile/**", ".github/workflows/mobile-apps.yml"]
+    paths: ["mobile/**", "ios-native/**", ".github/workflows/mobile-apps.yml"]
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -34,3 +34,11 @@ jobs:
       - run: npx cap sync ios
       - run: cd ios/App && pod install
       - run: cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build | tail -20
+  ios-native:
+    runs-on: macos-15
+    defaults: { run: { working-directory: ios-native } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -project SuperYou.xcodeproj -scheme SuperYou -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -configuration Debug CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" | head -60; test ${PIPESTATUS[0]} -eq 0

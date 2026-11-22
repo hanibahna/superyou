@@ -10,3 +10,5 @@ out
 !mobile/www/index.html
 mobile/node_modules
 mobile/www/manifest.json
+ios-native/*.xcodeproj
+ios-native/build

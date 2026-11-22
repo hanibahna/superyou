@@ -1,0 +1,70 @@
+import Foundation
+
+// What the shop's app API returns (https://www.shopsuperyou.com/api/app/v1/…). No supplier data.
+
+struct Card: Codable, Identifiable, Hashable {
+    let id: String
+    let slug: String
+    let name: String
+    let brand: String
+    let price: Double
+    let compareAt: Double?
+    let image: String?
+    let inStock: Bool
+    let variantCount: Int?
+    let priceMax: Double?
+    let origin: String?
+    let shipFrom: String?
+    let daysMin: Int?
+    let daysMax: Int?
+}
+
+struct Banner: Codable, Hashable { let eyebrow: String; let title: String; let text: String; let cta: String; let href: String; let image: String }
+struct Category: Codable, Hashable { let title: String; let href: String; let image: String; let bg: String }
+struct Row: Codable, Hashable { let title: String; let query: String; let items: [Card] }
+struct Home: Codable { let banners: [Banner]; let categories: [Category]; let rows: [Row] }
+struct ProductPage: Codable { let items: [Card]; let total: Int; let page: Int; let pages: Int }
+
+struct Variant: Codable, Identifiable, Hashable {
+    let id: String; let name: String; let price: Double; let compareAt: Double?; let inStock: Bool; let image: String
+    let origin: String; let shipFrom: String; let daysMin: Int; let daysMax: Int
+}
+struct Product: Codable {
+    let slug: String; let name: String; let brand: String; let images: [String]
+    let description: String; let howToUse: String; let ingredients: String
+    let rating: Double?; let reviewCount: Int; let variants: [Variant]
+}
+
+struct Zone: Codable, Hashable { let name: String; let fee: Double? }
+struct Payment: Codable, Hashable { let id: String; let label: String; let description: String? }
+struct Config: Codable {
+    struct Store: Codable { let name: String; let tagline: String; let whatsapp: String; let phone: String; let email: String }
+    struct Delivery: Codable { let fee: Double; let freeThreshold: Double; let estimate: String; let zones: [Zone] }
+    let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double
+}
+
+struct Quote: Codable {
+    struct Line: Codable { let productId: String; let price: Double; let compareAt: Double?; let available: Bool }
+    struct Discount: Codable { let name: String; let amount: Double }
+    let lines: [Line]; let subtotal: Double; let discounts: [Discount]; let discountTotal: Double; let delivery: Double; let total: Double
+    let couponError: String?
+}
+
+struct CheckoutReply: Codable {
+    struct Next: Codable { let redirect: String }
+    let orderId: String?; let next: Next?; let confirmUrl: String?; let error: String?
+}
+
+struct OrderLine: Codable, Hashable { let name: String; let qty: Int; let lineTotal: Double }
+struct Order: Codable, Identifiable, Hashable {
+    let id: String; let createdAt: String; let status: String; let total: Double; let lines: [OrderLine]
+}
+struct Member: Codable { let name: String; let points: Int; let tier: String }
+struct Account: Codable { let member: Member?; let orders: [Order] }
+
+/** One line in the bag (kept on the phone). */
+struct BagLine: Codable, Identifiable, Hashable {
+    var id: String { productId }
+    let productId: String; let slug: String; let name: String; let brand: String; let variant: String
+    var price: Double; let image: String; var qty: Int; let origin: String
+}
