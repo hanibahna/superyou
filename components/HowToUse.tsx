@@ -30,9 +30,10 @@ export function HowToUse({ slug, name, brand, how, tips }: { slug: string; name:
   const yt = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${brand} ${name} how to use`)}`;
   return (
     <>
-      <button onClick={() => setOpen(true)} className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-ink px-4 text-sm font-semibold hover:bg-ink hover:text-white">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+      <button onClick={() => setOpen(true)} className="howto-glow mt-4 inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-ink ps-2 pe-5 text-sm font-semibold text-white hover:bg-black">
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-ink"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg></span>
         {t("How to use")}
+        <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{t("Videos & tips")}</span>
       </button>
       {open && (
         <div role="dialog" aria-modal="true" aria-label={t("How to use")} className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 md:items-center" onClick={() => setOpen(false)}>

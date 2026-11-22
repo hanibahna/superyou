@@ -397,3 +397,8 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="ritual"] .trust-strip { background: #fff; border-color: transparent; }
 /* Filled bag button: keep it off the screen edge on phones and tablets */
 @media (max-width: 1023px) { :is([data-preset="pop"], [data-preset="ritual"]) .site-header .hdr-bag { margin-inline-end: 10px; } }
+
+/* "How to use": a soft glow that pulses a few times to draw the eye, then rests */
+@keyframes howto-pulse { 0% { box-shadow: 0 0 0 0 rgb(192 88 122 / .55); } 70% { box-shadow: 0 0 0 12px rgb(192 88 122 / 0); } 100% { box-shadow: 0 0 0 0 rgb(192 88 122 / 0); } }
+.howto-glow { animation: howto-pulse 1.8s ease-out 0.6s 4; }
+@media (prefers-reduced-motion: reduce) { .howto-glow { animation: none; } }
