@@ -36,6 +36,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/club/", label: "Club members & codes" },
       { href: "/admin/whatsapp/", label: "WhatsApp" },
       { href: "/admin/sms/", label: "SMS" },
+      { href: "/admin/app/", label: "Mobile app & push" },
       { href: "/admin/videos/", label: "Video library" },
       { href: "/admin/routine/", label: "Routine finder" },
       { href: "/admin/services/", label: "Services & events" },

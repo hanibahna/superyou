@@ -1,0 +1,29 @@
+{
+  "name": "superyou-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SuperYou iOS and Android apps (Capacitor shell around shopsuperyou.com with native push, share and splash)",
+  "scripts": {
+    "assets": "capacitor-assets generate --iconBackgroundColor '#141214' --splashBackgroundColor '#141214' --iconBackgroundColorDark '#141214' --splashBackgroundColorDark '#141214'",
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor-firebase/messaging": "^7.5.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0",
+    "firebase": "^11.10.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

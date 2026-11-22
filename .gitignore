@@ -5,3 +5,8 @@ out
 .env*.local
 .vercel
 *.tsbuildinfo
+
+# iOS / Android app (Capacitor)
+!mobile/www/index.html
+mobile/node_modules
+mobile/www/manifest.json

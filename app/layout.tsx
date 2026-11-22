@@ -12,6 +12,7 @@ import { SiteProvider } from "@/lib/site-context";
 import { getLayout, getMarketing, getRoutine, getSearchSettings, getSettings } from "@/lib/site-store";
 import { publicTracking } from "@/lib/marketing";
 import { Tracking } from "@/components/Tracking";
+import { AppBridge } from "@/components/AppBridge";
 import { buildPalette, paletteCss } from "@/lib/theme";
 import { getTheme } from "@/lib/theme-store";
 
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </SiteProvider>
         <Tracking t={publicTracking(marketing)} />
+        <AppBridge />
       </body>
     </html>
   );
