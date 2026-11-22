@@ -10,7 +10,7 @@ import type { CardItem } from "@/lib/listing";
 import { useShop } from "@/lib/store";
 
 type Step = { id: string; name: string; time: string; tip: string; picks: CardItem[] };
-type Analysis = { skinType?: string; concerns: string[]; sensitive: boolean; observations: string[]; advice: string };
+type Analysis = { skinType?: string; concerns: string[]; sensitive: boolean; observations: string[]; advice: string; zones?: { zone: string; note: string }[]; confidence?: "high" | "medium" | "low"; photoTips?: string; redFlags?: string[] };
 
 /** Opens any photo the phone gives us (iPhone HEIC included), upright, as an image we can draw. */
 async function decode(file: File): Promise<{ src: CanvasImageSource; w: number; h: number }> {
@@ -191,7 +191,16 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
           )}
           {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d); }} />}
           {err && <p className="mt-3 text-sm text-sale">{err}</p>}
-          <p className="mt-4 text-[11px] text-muted">{tx("Cosmetic guidance only — not a medical diagnosis.")}</p>
+          <details className="mt-4 rounded-xl border border-line p-3 text-[12px] text-muted">
+            <summary className="cursor-pointer font-semibold text-ink">{tx("Important: what this scan is and isn't")}</summary>
+            <ul className="mt-2 list-disc space-y-1 ps-4">
+              <li>{tx("This is an AI cosmetic skin assessment to help you choose skincare. It is not a medical examination or diagnosis and does not replace a doctor, dermatologist or pharmacist.")}</li>
+              <li>{tx("Results depend on your photo: light, camera, make-up and filters can change the reading.")}</li>
+              <li>{tx("It cannot detect skin diseases, check moles or spots for cancer, or judge allergies. See a doctor for any spot that changes, bleeds or itches, or for painful, spreading or persistent skin problems.")}</li>
+              <li>{tx("Patch-test new products and stop if irritation occurs. If you're pregnant, breastfeeding or on prescription skin treatment, ask our pharmacist before starting new actives.")}</li>
+              <li>{tx("Your photo is sent once to an AI service (Anthropic) to read your skin. It is not stored by SuperYou or used to identify you.")}</li>
+            </ul>
+          </details>
         </div>
         <div>
           {res ? (
@@ -201,8 +210,26 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
                 <p className="mt-1 text-2xl font-bold">{res.analysis.skinType} skin{res.analysis.sensitive ? ", easily irritated" : ""}</p>
                 {res.analysis.concerns.length > 0 && <p className="mt-1 text-sm">Focus: {res.analysis.concerns.join(" · ")}</p>}
                 <ul className="mt-3 list-disc space-y-1 ps-5 text-sm text-muted">{res.analysis.observations.map((o) => <li key={o}>{o}</li>)}</ul>
-                {res.analysis.advice && <p className="mt-3 text-xs text-muted">{res.analysis.advice}</p>}
+                {!!res.analysis.zones?.length && (
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {res.analysis.zones.map((z) => <p key={z.zone} className="rounded-xl bg-[#f6f1f3] px-3 py-2 text-sm"><b className="capitalize">{z.zone}</b>: {z.note}</p>)}
+                  </div>
+                )}
+                {res.analysis.confidence && (
+                  <p className="mt-3 text-xs text-muted">
+                    {tx("Reading confidence")}: <b className={res.analysis.confidence === "high" ? "text-green-700" : res.analysis.confidence === "low" ? "text-sale" : ""}>{tx(res.analysis.confidence)}</b>
+                    {res.analysis.photoTips ? ` · ${res.analysis.photoTips}` : ""}
+                  </p>
+                )}
+                {res.analysis.advice && <p className="mt-2 text-xs text-muted">{res.analysis.advice}</p>}
               </div>
+              {!!res.analysis.redFlags?.length && (
+                <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm">
+                  <p className="font-semibold text-sale">{tx("Please see a doctor or pharmacist first")}</p>
+                  <ul className="mt-1 list-disc ps-5">{res.analysis.redFlags.map((f) => <li key={f}>{f}</li>)}</ul>
+                  <Link href="/services/?book=video-consult" className="mt-2 inline-block font-semibold underline">{tx("Book a free video call with our pharmacist")}</Link>
+                </div>
+              )}
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold">Your routine</h2>
                 {firstPicks.length > 0 && <button onClick={() => (addMany(firstPicks), setDrawerOpen(true))} className="tap rounded-full bg-ink px-5 text-sm font-semibold text-white">Add the whole routine ({firstPicks.length})</button>}
@@ -219,11 +246,21 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <PharmacistButton product="my skin scan results" className="mt-6" />
             </>
           ) : (
+            <>
             <ol className="space-y-4 text-sm">
               {["Take a selfie in daylight, facing the window.", tx("The AI reads visible skin type, shine, redness, dryness and spots."), "We build a morning and evening routine from products in stock — add it to your bag in one tap."].map((x, i) => (
                 <li key={x} className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-xs font-bold text-white">{i + 1}</span><span className="pt-1">{x}</span></li>
               ))}
             </ol>
+            <div className="mt-6 rounded-2xl bg-[#f6f1f3] p-5">
+              <p className="font-semibold">{tx("For the most accurate reading")}</p>
+              <ul className="mt-2 grid gap-1.5 text-sm sm:grid-cols-2">
+                {["Clean, bare skin: no make-up, no tinted sunscreen", "Daylight from a window in front of you, not behind", "No flash, no beauty filters or portrait mode", "Hair back, glasses off, face straight to the camera", "Hold the phone at eye level, about an arm's length away", "Wait 30 minutes after washing so redness settles"].map((x) => (
+                  <li key={x} className="flex gap-2"><span aria-hidden className="text-brand-700">✓</span><span>{tx(x)}</span></li>
+                ))}
+              </ul>
+            </div>
+            </>
           )}
         </div>
       </div>

@@ -28,16 +28,34 @@ export async function POST(req: NextRequest) {
 
   const types = cfg.skinTypes.map((s) => s.id);
   const concerns = cfg.concernOptions.map((c) => c.label);
-  const prompt = `You are a cosmetic skincare assistant for a pharmacy e-shop. Look at this face photo and describe only what is visible about the skin, for choosing over-the-counter skincare. Do not diagnose medical conditions, do not guess age, ethnicity or identity.
-If the photo is not a clear face photo, return {"ok":false,"reason":"..."}.
-Otherwise return only JSON: {"ok":true,"skinType": one of ${JSON.stringify(types)}, "concerns": up to 3 of ${JSON.stringify(concerns)}, "sensitive": true|false (visible redness/irritation), "observations": ["3 to 5 short plain-English observations about visible skin, e.g. 'some shine on the forehead and nose'"], "advice": "one sentence, suggest seeing a pharmacist or dermatologist for anything that looks painful, spreading or unusual"}`;
+  const prompt = `You are a cosmetic skin assessor working alongside pharmacists in a beauty and parapharmacy shop. Assess this selfie the way a cosmetic dermatologist does a visual skin exam, but stay strictly cosmetic: no diagnoses, no medical treatment, never guess age, ethnicity, gender or identity.
+
+Method (think through it, but output only the JSON):
+1. Photo quality first: is a face clearly visible, in focus, evenly lit, without heavy make-up or beauty filters? If not usable, return {"ok":false,"reason":"short tip to retake"}.
+2. Look zone by zone: forehead, nose, cheeks, chin/jaw, under-eyes.
+3. For each zone note only what is visible: shine/oil, dry or flaky patches, redness or flushing, visible pores, blackheads/whiteheads, inflamed spots, post-blemish marks, uneven tone or dark spots, fine lines, dullness.
+4. Classify the overall skin type from the pattern (e.g. shine only on the T-zone = combination).
+5. Rate how confident you are, given the photo (lighting, angle, resolution, make-up).
+6. Red flags: anything that should be seen by a doctor rather than treated with cosmetics (a mole or spot that looks irregular, bleeding, very inflamed or widespread deep spots, open sores, swelling, signs of infection, a rash with blisters). If present, list them plainly and gently.
+
+Return only JSON:
+{"ok":true,
+ "skinType": one of ${JSON.stringify(types)},
+ "concerns": up to 3 of ${JSON.stringify(concerns)}, most important first,
+ "sensitive": true|false (visible redness or irritation),
+ "zones": [{"zone":"forehead|nose|cheeks|chin|under-eyes","note":"short visible finding"}] (only zones with something worth saying, max 5),
+ "observations": ["3 to 5 short plain-English observations, e.g. 'some shine on the forehead and nose'"],
+ "confidence": "high"|"medium"|"low",
+ "photoTips": "one short tip to get a better reading next time, or empty",
+ "redFlags": ["plain-language reasons to see a doctor or pharmacist, empty if none"],
+ "advice": "one friendly sentence; if redFlags is not empty, recommend seeing a doctor or pharmacist before starting new products"}`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
-      max_tokens: 700,
+      max_tokens: 1200,
       messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data } }, { type: "text", text: prompt }] }],
     }),
     signal: AbortSignal.timeout(55_000),
@@ -50,7 +68,7 @@ Otherwise return only JSON: {"ok":true,"skinType": one of ${JSON.stringify(types
   }
   const out = (await res.json()) as { content?: { type: string; text?: string }[] };
   const text = out.content?.find((c) => c.type === "text")?.text ?? "";
-  let a: { ok: boolean; reason?: string; skinType?: string; concerns?: string[]; sensitive?: boolean; observations?: string[]; advice?: string };
+  let a: { ok: boolean; reason?: string; skinType?: string; concerns?: string[]; sensitive?: boolean; observations?: string[]; advice?: string; zones?: { zone: string; note: string }[]; confidence?: string; photoTips?: string; redFlags?: string[] };
   try {
     a = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
   } catch {
@@ -65,5 +83,5 @@ Otherwise return only JSON: {"ok":true,"skinType": one of ${JSON.stringify(types
   };
   const live = await liveProducts();
   const steps = buildRoutine(cfg, answers, toCards(live.list)).map(({ step, picks }) => ({ id: step.id, name: step.name, time: step.time, tip: step.tip, picks }));
-  return NextResponse.json({ analysis: { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), advice: a.advice ?? "" }, steps });
+  return NextResponse.json({ analysis: { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), advice: a.advice ?? "", zones: (a.zones ?? []).slice(0, 5), confidence: ["high", "medium", "low"].includes(a.confidence ?? "") ? a.confidence : "medium", photoTips: a.photoTips ?? "", redFlags: (a.redFlags ?? []).slice(0, 4) }, steps });
 }
