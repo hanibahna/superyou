@@ -44,4 +44,4 @@ jobs:
       - name: Build for the simulator
         run: |
           set -o pipefail
-          xcodebuild -project SuperYou.xcodeproj -scheme SuperYou -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -configuration Debug CODE_SIGNING_ALLOWED=NO build | grep -E "error|BUILD (SUCCEEDED|FAILED)" | head -80
+          xcodebuild -project SuperYou.xcodeproj -scheme SuperYou -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -configuration Debug CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || { grep -E "\.swift:[0-9]+:[0-9]+: error|error: " build.log | grep -v "^ *-" | cut -c1-300 | head -60; exit 1; }
