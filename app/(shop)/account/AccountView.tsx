@@ -207,11 +207,11 @@ function MyScans({ phone, order }: { phone: string; order: string }) {
   return (
     <section className="mt-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">{t("My skin scans")}</h2>
-        <Link href={list?.[0] ? `/skin-scan/?from=${list[0].id}&t=${new URL(list[0].link, "https://x").searchParams.get("t")}` : "/skin-scan/"} className="scan-glow inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-semibold text-white">{list?.length ? t("Rescan and compare") : t("Take the 3D face scan")}</Link>
+        <h2 className="text-xl font-semibold">{t("My SuperScans")}</h2>
+        <Link href={list?.[0] ? `/skin-scan/?from=${list[0].id}&t=${new URL(list[0].link, "https://x").searchParams.get("t")}` : "/skin-scan/"} className="scan-glow inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-semibold text-white">{list?.length ? t("Rescan and compare") : t("Do your SuperScan")}</Link>
       </div>
       {list === null ? <p className="mt-3 text-sm text-muted">{t("Loading…")}</p> : !list.length ? (
-        <p className="mt-3 text-sm text-muted">{t("No scans yet. Take the 3D face scan to get your skin type and a routine from products in stock.")}</p>
+        <p className="mt-3 text-sm text-muted">{t("No scans yet. Do your SuperScan, the 3D AI skin scan, to get your skin type and a routine from products in stock.")}</p>
       ) : (
         <ul className="mt-3 divide-y divide-line rounded-2xl border border-line">
           {list.map((s) => (

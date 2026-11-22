@@ -144,7 +144,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black p-4" role="dialog" aria-modal="true" aria-label={t("3D face scan")}>
+    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black p-4" role="dialog" aria-modal="true" aria-label={t("SuperScan")}>
       <button onClick={onClose} aria-label={t("Close")} className="absolute end-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
@@ -158,7 +158,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         <>
           <div className="relative aspect-[3/4] w-full max-w-sm overflow-hidden rounded-3xl bg-black">
             <canvas ref={canvas} className="h-full w-full" />
-            {stage === "loading" && <p className="absolute inset-0 grid place-items-center text-sm text-white/80">{t("Starting the 3D scan…")}</p>}
+            {stage === "loading" && <p className="absolute inset-0 grid place-items-center text-sm text-white/80">{t("Starting SuperScan…")}</p>}
             {stage === "done" && <span className="absolute inset-0 grid place-items-center"><span className="grid h-20 w-20 place-items-center rounded-full bg-green-500 text-4xl text-white">✓</span></span>}
           </div>
           <p className="mt-4 min-h-[1.5em] text-center text-lg font-semibold text-white" aria-live="polite">{msg}</p>

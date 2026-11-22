@@ -159,7 +159,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
     if (!r) return setErr(tx("No connection, or the scan took too long. Please try again."));
-    if (!r.ok) return setErr(d.error === "not_configured" ? tx("The AI skin scan isn't switched on yet. Use the quiz instead — it takes a minute.") : tx(d.error ?? "Please try again"));
+    if (!r.ok) return setErr(d.error === "not_configured" ? tx("SuperScan isn't switched on yet. Use the quiz instead — it takes a minute.") : tx(d.error ?? "Please try again"));
     setRes(d);
   }
 
@@ -167,7 +167,8 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   return (
     <div className="container-x max-w-5xl py-10">
       <p className="text-xs font-bold uppercase tracking-[0.3em] text-sale">{tx("New")}</p>
-      <h1 className="mt-1 text-4xl font-black">{tx("3D AI Skin Scan")}</h1>
+      <h1 className="mt-1 text-4xl font-black">SuperScan</h1>
+      <p className="mt-1 text-lg font-semibold text-brand-700">{tx("3D AI skin scan")}</p>
       <p className="mt-3 max-w-2xl text-muted">{intro}</p>
       {!ready && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{tx("The AI scan isn't connected yet.")} <Link href="/routine/" className="font-semibold underline">Take the 1-minute routine quiz</Link> instead.</p>}
 
@@ -178,7 +179,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="Your photo" className="h-full w-full object-cover" />
             ) : (
-              <p className="p-6 text-center text-sm text-muted">{tx("Your 3D face scan will appear here. Face the light, no make-up, hair back.")}</p>
+              <p className="p-6 text-center text-sm text-muted">{tx("Your SuperScan will appear here. Face the light, no make-up, hair back.")}</p>
             )}
           </div>
           {sides.length > 0 && (
@@ -188,12 +189,12 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <p className="self-center text-xs text-muted">{tx("3D scan: front and both sides")}</p>
             </div>
           )}
-          <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that the 3 photos from my face scan are sent once to an AI service to read my skin. They aren't stored.")}</label>
+          <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that the 3 photos from my SuperScan are sent once to an AI service to read my skin. They aren't stored.")}</label>
           <button disabled={!consent || busy || !ready || !live} onClick={start} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-            {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : tx("Start 3D face scan")}
+            {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : tx("Start SuperScan")}
           </button>
-          {!live && <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs">{tx("The 3D face scan needs a camera. Open this page on your phone, or allow camera access in your browser.")}</p>}
+          {!live && <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs">{tx("SuperScan needs a camera. Open this page on your phone, or allow camera access in your browser.")}</p>}
           {live && !consent && <p className="mt-2 text-center text-xs text-muted">{tx("Tick the box above to start.")}</p>}
           {warn && (
             <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
@@ -259,12 +260,12 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               </div>
               <SendRoutine analysis={res.analysis} steps={res.steps} />
               <ShareScan analysis={res.analysis} steps={res.steps} />
-              <PharmacistButton product="my skin scan results" className="mt-6" />
+              <PharmacistButton product="my SuperScan results" className="mt-6" />
             </>
           ) : (
             <>
             <ol className="space-y-4 text-sm">
-              {[tx("Start the 3D face scan facing a window, then slowly turn your head in a circle."), tx("The AI reads visible skin type, shine, redness, dryness and spots."), tx("We build a morning and evening routine from products in stock — add it to your bag in one tap.")].map((x, i) => (
+              {[tx("Start SuperScan facing a window, then slowly turn your head in a circle."), tx("The AI reads visible skin type, shine, redness, dryness and spots."), tx("We build a morning and evening routine from products in stock — add it to your bag in one tap.")].map((x, i) => (
                 <li key={x} className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-xs font-bold text-white">{i + 1}</span><span className="pt-1">{x}</span></li>
               ))}
             </ol>

@@ -52,7 +52,7 @@ export function SendRoutine({ analysis, steps }: { analysis: Analysis; steps: St
 export function ShareScan({ analysis, steps }: { analysis: Analysis; steps: Step[] }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
-  const url = "https://www.shopsuperyou.com/skin-scan/?utm_source=scan_share";
+  const url = "https://www.shopsuperyou.com/superscan/?utm_source=scan_share";
   const draw = async (): Promise<Blob> => {
     await document.fonts?.ready;
     const W = 1080, H = 1920, c = document.createElement("canvas");
@@ -65,7 +65,7 @@ export function ShareScan({ analysis, steps }: { analysis: Analysis; steps: Step
     const text = (s: string, x: number, y: number, size: number, weight = 600, color = "#fff", align: CanvasTextAlign = "left") => { g.font = `${weight} ${size}px ${font}`; g.fillStyle = color; g.textAlign = align; g.fillText(s, x, y); };
     const wrap = (s: string, x: number, y: number, size: number, maxW: number, weight = 500, color = "#fff") => { g.font = `${weight} ${size}px ${font}`; let line = "", yy = y; for (const w of s.split(" ")) { const tst = line ? `${line} ${w}` : w; if (g.measureText(tst).width > maxW) { text(line, x, yy, size, weight, color); line = w; yy += size * 1.3; } else line = tst; } if (line) text(line, x, yy, size, weight, color); return yy + size * 1.3; };
     text("SUPERYOU", 90, 170, 64, 800);
-    text("AI SKIN SCAN", 90, 230, 30, 700, "rgba(255,255,255,.8)");
+    text("SUPERSCAN · 3D AI SKIN SCAN", 90, 230, 30, 700, "rgba(255,255,255,.8)");
     // card
     g.fillStyle = "rgba(255,255,255,.96)"; g.beginPath(); g.roundRect(70, 320, W - 140, 1180, 48); g.fill();
     text(t("My skin today"), 130, 420, 34, 600, "#6b5a62");
@@ -79,19 +79,19 @@ export function ShareScan({ analysis, steps }: { analysis: Analysis; steps: Step
       y += 18;
       if (y > 1420) break;
     }
-    text(t("Made with the SuperYou AI skin scan"), W / 2, 1640, 40, 700, "#fff", "center");
+    text(t("Made with SuperScan, the 3D AI skin scan"), W / 2, 1640, 40, 700, "#fff", "center");
     text(t("Try yours free at"), W / 2, 1710, 36, 500, "rgba(255,255,255,.85)", "center");
-    text("shopsuperyou.com/skin-scan", W / 2, 1780, 52, 800, "#fff", "center");
+    text("shopsuperyou.com/superscan", W / 2, 1780, 52, 800, "#fff", "center");
     return await new Promise((res) => c.toBlob((b) => res(b!), "image/png"));
   };
   const share = async () => {
     setBusy(true);
     try {
       const blob = await draw();
-      const file = new File([blob], "my-superyou-skin-scan.png", { type: "image/png" });
-      const msg = `${t("I just did the free AI skin scan on SuperYou. Try yours:")} ${url}`;
+      const file = new File([blob], "my-superscan.png", { type: "image/png" });
+      const msg = `${t("I just did my SuperScan, the free 3D AI skin scan by SuperYou. Try yours:")} ${url}`;
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "My SuperYou skin scan", text: msg }).catch(() => {});
+        await navigator.share({ files: [file], title: "My SuperScan", text: msg }).catch(() => {});
       } else {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
@@ -107,7 +107,7 @@ export function ShareScan({ analysis, steps }: { analysis: Analysis; steps: Step
       <div className="mt-3 flex flex-wrap gap-2">
         <button onClick={share} disabled={busy} className="scan-glow inline-flex min-h-[44px] items-center rounded-full px-5 text-sm font-semibold text-white">{busy ? t("Making your picture…") : t("Share to Instagram / Facebook")}</button>
         <a href={fb} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center rounded-full border border-line bg-white px-5 text-sm font-semibold">Facebook</a>
-        <a href={`https://wa.me/?text=${encodeURIComponent(`${t("Try the free AI skin scan on SuperYou:")} ${url}`)}`} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center rounded-full border border-line bg-white px-5 text-sm font-semibold">WhatsApp</a>
+        <a href={`https://wa.me/?text=${encodeURIComponent(`${t("Try SuperScan, the free 3D AI skin scan by SuperYou:")} ${url}`)}`} target="_blank" rel="noreferrer" className="inline-flex min-h-[44px] items-center rounded-full border border-line bg-white px-5 text-sm font-semibold">WhatsApp</a>
       </div>
       <p className="mt-2 text-[11px] text-muted">{t("On a computer the picture downloads: post it from your phone or Instagram.")}</p>
     </div>

@@ -41,7 +41,7 @@ const ar: Record<string, string> = {
   "Join": "انضم", "Points": "نقاط", "Tier": "المستوى", "Buy again": "اشترِ مجدداً", "Your orders": "طلباتك", "Find my account": "اعرض حسابي",
   "Phone number": "رقم الهاتف", "Order number": "رقم الطلب", "Join the club": "انضم إلى النادي",
   // pages
-  "Skin scan": "تحليل البشرة", "Shade finder": "اختيار درجة الكريم الأساس", "Advent calendar": "روزنامة العروض",
+  "SuperScan": "تحليل البشرة", "Shade finder": "اختيار درجة الكريم الأساس", "Advent calendar": "روزنامة العروض",
   "Take a photo": "التقط صورة", "Analyse my skin": "حلّل بشرتي", "Your routine": "روتينك", "Add the whole routine": "أضف الروتين كاملاً",
   "Black Friday 2026": "الجمعة السوداء 2026",
   // footer

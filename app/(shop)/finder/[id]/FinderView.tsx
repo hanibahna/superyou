@@ -77,7 +77,7 @@ export function FinderView({ finder: f, others }: { finder: Finder; others: { id
       <div className="mt-12 border-t border-line pt-8">
         <p className="mb-3 font-semibold">{tx("More SuperYou apps")}</p>
         <div className="flex flex-wrap gap-2">
-          {[{ id: "", title: "Routine finder", href: "/routine/" }, { id: "", title: "Shade finder", href: "/shade-finder/" }, { id: "", title: "Skin scan", href: "/skin-scan/" }, ...others.map((o) => ({ ...o, href: `/finder/${o.id}/` }))].map((o) => (
+          {[{ id: "", title: "Routine finder", href: "/routine/" }, { id: "", title: "Shade finder", href: "/shade-finder/" }, { id: "", title: "SuperScan", href: "/skin-scan/" }, ...others.map((o) => ({ ...o, href: `/finder/${o.id}/` }))].map((o) => (
             <Link key={o.href} href={o.href} className="rounded-full border border-line px-4 py-2.5 text-sm font-semibold hover:border-ink">{tx(o.title)}</Link>
           ))}
         </div>

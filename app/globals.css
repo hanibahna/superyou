@@ -410,3 +410,7 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 
 /* Phones: keep the bag button and its count off the screen edge */
 @media (max-width: 1023px) { .site-header .hdr-bag { margin-inline-end: 14px !important; } }
+
+/* SHOP and .COM in the brand colour next to the logo, whatever the look */
+.site-header .sy-accent { color: var(--color-brand-600) !important; }
+[data-header="dark"] .site-header .sy-accent { color: var(--color-brand-100) !important; }

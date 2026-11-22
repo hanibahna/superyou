@@ -74,7 +74,7 @@ export function PharmacistBand({ t, whatsapp, scan }: { t: (s: string) => string
               </a>
             )}
             <Link href={scan ? "/skin-scan/" : "/routine/"} className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-white/40 px-6 font-semibold hover:bg-white/10">
-              {scan ? t("Try the AI skin scan") : t("Find my routine")}
+              {scan ? t("Try SuperScan") : t("Find my routine")}
             </Link>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function ScanBanner({ t }: { t: (s: string) => string }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider">{t("New · free")}</span>
-          <span className="mt-1 block text-xl font-bold leading-tight md:text-2xl">{t("AI 3D skin scan: turn your head, get your routine")}</span>
+          <span className="mt-1 block text-xl font-bold leading-tight md:text-2xl">{t("SuperScan: the 3D AI skin scan. Turn your head, get your routine")}</span>
           <span className="mt-1 block text-sm text-white/85">{t("Reads your skin type, shine, redness and spots in seconds, then picks products in stock. Photos aren't stored.")}</span>
         </span>
         <span className="inline-flex min-h-[48px] shrink-0 items-center rounded-full bg-white px-6 font-semibold text-ink transition group-hover:scale-105">{t("Scan my skin")} →</span>

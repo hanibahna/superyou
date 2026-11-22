@@ -69,18 +69,23 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
         <Link href="/" aria-label={`${store.name} home`} className="hdr-logo flex shrink-0 items-center gap-2 md:gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/superyou-mark.svg" alt="" aria-hidden className="h-7 w-7 rounded-md ring-1 ring-white/25 md:h-9 md:w-9" />
-          <span className="flex flex-col items-start gap-0.5 xl:block">
+          <span className="grid justify-items-stretch gap-[3px] xl:block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/superyou-logo.svg" alt={store.name} className="logo-on-light h-5 w-auto md:h-7" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
             {/* Phones & tablets: our address right under the name */}
-            <span dir="ltr" className="site-id-sm block text-[10px] font-extrabold leading-none tracking-[0.14em] md:text-[11px] xl:hidden"><span className="text-brand-600">SHOP</span>SUPERYOU<span className="text-brand-600">.COM</span></span>
+            {/* Letters spread to exactly the width of the wordmark, on every screen size */}
+            <span dir="ltr" aria-label="shopsuperyou.com" className="site-id-sm flex w-full justify-between text-[9px] font-extrabold leading-none md:text-[11px] xl:hidden">
+              {"SHOPSUPERYOU.COM".split("").map((ch, i) => <span key={i} aria-hidden className={i < 4 || i > 11 ? "sy-accent" : undefined}>{ch}</span>)}
+            </span>
+            {/* Tablets: the promise sits under the address, lined up with the logo (doesn't widen it) */}
+            {store.tagline && <span className="site-id-sm hidden w-0 min-w-full whitespace-nowrap text-[11px] leading-none text-muted md:block lg:hidden">{store.tagline}</span>}
           </span>
         </Link>
         {/* Our web address (so people remember it) and our promise, next to the logo. */}
         <div className="site-id -ms-1 hidden min-w-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex">
-          <span dir="ltr" className="text-[13px] font-extrabold tracking-[0.08em]"><span className="text-brand-600">SHOP</span>SUPERYOU<span className="text-brand-600">.COM</span></span>
+          <span dir="ltr" className="text-[13px] font-extrabold tracking-[0.08em]"><span className="sy-accent">SHOP</span>SUPERYOU<span className="sy-accent">.COM</span></span>
           {store.tagline && <span className="max-w-[260px] truncate text-[11px] text-muted">{store.tagline}</span>}
         </div>
 
@@ -102,13 +107,13 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
         </nav>
       </div>
       {/* Phones & tablets: our promise as a slim line under the logo row */}
-      {store.tagline && <p className="site-id-sm container-x -mt-1.5 pb-1.5 text-center text-[10.5px] leading-snug text-muted md:text-xs xl:hidden">{store.tagline}</p>}
+      {store.tagline && <p className="site-id-sm container-x -mt-1.5 pb-1.5 text-center text-[10.5px] leading-snug text-muted md:hidden lg:block lg:text-start lg:text-xs xl:hidden">{store.tagline}</p>}
       {/* Phones: on the home page, search sits in plain view under the logo. */}
       {path === "/" && <div className="container-x pb-3 lg:hidden"><SearchBox /></div>}
 
       {/* Desktop category nav with mega menu */}
       {settings.menu.length > 0 ? (
-        <MegaMenu items={settings.menu} extra={<>{scanOn && <li className="ml-auto h-full"><Link href="/skin-scan/" className="flex h-full items-center"><span className="scan-glow inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold text-white"><ScanIcon size={16} />{t("AI skin scan")}</span></Link></li>}{routineEnabled ? <li className={`${scanOn ? "ms-4" : "ml-auto"} h-full`}><Link href="/routine/" className="glow-link flex h-full items-center gap-1.5 font-semibold text-brand-600">✨ {t("Routine finder")}<span className="new-pill">NEW</span></Link></li> : null}</>} />
+        <MegaMenu items={settings.menu} extra={<>{scanOn && <li className="ml-auto h-full"><Link href="/skin-scan/" className="flex h-full items-center"><span className="scan-glow inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold text-white"><ScanIcon size={16} />{t("SuperScan")}</span></Link></li>}{routineEnabled ? <li className={`${scanOn ? "ms-4" : "ml-auto"} h-full`}><Link href="/routine/" className="glow-link flex h-full items-center gap-1.5 font-semibold text-brand-600">✨ {t("Routine finder")}<span className="new-pill">NEW</span></Link></li> : null}</>} />
       ) : (
       <nav className="hidden border-t border-line lg:block">
           <ul className="container-x no-scrollbar flex h-11 items-center gap-5 whitespace-nowrap text-sm font-medium xl:gap-7">
@@ -178,7 +183,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
                 {growth.skinScan.enabled && (
                   <Link href="/skin-scan/" onClick={() => setMenuOpen(false)} className="relative rounded-2xl bg-brand-50 p-3">
                     <span className="new-pill absolute end-2 top-2">AI</span>
-                    <span className="block text-lg">📸</span><span className="text-sm font-semibold">{tx("Skin scan")}</span>
+                    <span className="block text-lg">📸</span><span className="text-sm font-semibold">{tx("SuperScan")}</span>
                   </Link>
                 )}
                 <Link href="/shop/?sale=1" onClick={() => setMenuOpen(false)} className="rounded-2xl bg-[#fbeef2] p-3"><span className="block text-lg">%</span><span className="text-sm font-semibold text-sale">{tx("Offers")}</span></Link>

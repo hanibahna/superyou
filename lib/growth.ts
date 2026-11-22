@@ -121,7 +121,7 @@ export const defaultGrowth: Growth = {
     doors: Array.from({ length: 24 }, (_, i) => ({ day: i + 1, title: `Day ${i + 1}`, text: "", code: "", href: "/shop/?sale=1", image: "" })),
   },
   subscribe: { enabled: true, monthly: 10, quarterly: 15, collection: "", note: "Skip, change or cancel any time. Pay on delivery, nothing charged in advance." },
-  skinScan: { enabled: true, intro: "A free 3D face scan, like setting up Face ID: look at the screen, slowly turn your head in a circle, and the AI reads your skin from the front and both sides. You get your skin type, a zone-by-zone reading and a routine from products in stock. Photos are analysed once and never stored." },
+  skinScan: { enabled: true, intro: "SuperScan is our free 3D AI skin scan, like setting up Face ID: look at the screen, slowly turn your head in a circle, and the AI reads your skin from the front and both sides. You get your skin type, a zone-by-zone reading and a routine from products in stock. Photos are analysed once and never stored." },
   shadeFinder: { enabled: true },
   images: { frame: "grey", padding: 8 },
   motion: true,

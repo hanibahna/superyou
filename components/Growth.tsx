@@ -118,9 +118,9 @@ export function MobileTabBar() {
         <Link href="/" className={`${item} ${on("/")}`}><HomeIcon width={22} height={22} />{t("Home")}</Link>
         <Link href="/shop/" className={`${item} ${on("/shop")}`}><GridIcon width={22} height={22} />{t("Shop")}</Link>
         {scanOn && (
-          <Link href="/skin-scan/" className={`${item} relative -mt-5 text-ink`} aria-label={t("AI skin scan")}>
+          <Link href="/skin-scan/" className={`${item} relative -mt-5 text-ink`} aria-label={t("SuperScan")}>
             <span className="scan-glow grid h-14 w-14 place-items-center rounded-full text-white shadow-lg ring-4 ring-white"><ScanIcon size={26} /></span>
-            <span className="font-semibold">{t("Skin scan")}</span>
+            <span className="font-semibold">{t("SuperScan")}</span>
           </Link>
         )}
         <button onClick={() => setSearch(true)} className={`${item} text-muted`}><SearchIcon width={22} height={22} />{t("Search")}</button>
