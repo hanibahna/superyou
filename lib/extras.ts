@@ -13,6 +13,7 @@ export type SectionContent = {
   app: { label: string; href: string };
 };
 export type Extras = {
+  anthropicKey: string; // Claude API key (used when the ANTHROPIC_API_KEY setting is not in Vercel)
   advisor: { enabled: boolean; name: string; greeting: string; suggestions: string[]; perHour: number };
   youtube: { enabled: boolean; key: string; pins: Record<string, string> }; // pins: product slug → video id, or "none" to hide
   sections: Record<string, SectionContent>;
@@ -23,6 +24,7 @@ const sec = (title: string, text: string, cta: string, href: string, image: stri
   ({ enabled: true, banner: { title, text, cta, href, image, bg }, tips, app: { label: app[0], href: app[1] } });
 
 export const defaultExtras: Extras = {
+  anthropicKey: "",
   advisor: {
     enabled: true,
     name: "SuperYou AI",
@@ -62,6 +64,7 @@ const sectionSchema = z.object({
   app: z.object({ label: z.string().max(40), href: z.string().max(300) }),
 });
 export const extrasSchema = z.object({
+  anthropicKey: z.string().max(300).default(""),
   advisor: z.object({ enabled: z.boolean(), name: z.string().max(40), greeting: z.string().max(300), suggestions: z.array(z.string().max(80)).max(6), perHour: z.coerce.number().int().min(1).max(500) }),
   youtube: z.object({ enabled: z.boolean(), key: z.string().max(200), pins: z.record(z.string().max(200), z.string().max(20)) }),
   sections: z.record(z.string().max(60), sectionSchema),
@@ -73,6 +76,7 @@ export async function getExtras(): Promise<Extras> {
     const raw = await db.cmd<string | null>(["GET", KEY]);
     const v = raw ? (JSON.parse(raw) as Partial<Extras>) : {};
     return {
+      anthropicKey: v.anthropicKey ?? "",
       advisor: { ...defaultExtras.advisor, ...v.advisor },
       youtube: { ...defaultExtras.youtube, ...v.youtube },
       sections: { ...defaultExtras.sections, ...v.sections },
@@ -81,6 +85,11 @@ export async function getExtras(): Promise<Extras> {
     return defaultExtras;
   }
 }
+/** The Claude key: Vercel setting first, else the one pasted in Admin → Sections & AI. */
+export async function anthropicKey(): Promise<string> {
+  return process.env.ANTHROPIC_API_KEY || (await getExtras()).anthropicKey || "";
+}
+
 export async function saveExtras(e: Extras) {
   await db.cmd(["SET", KEY, JSON.stringify(e)]);
 }

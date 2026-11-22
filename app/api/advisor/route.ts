@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getTaxonomy } from "@/lib/catalog";
 import { db } from "@/lib/db";
-import { getExtras } from "@/lib/extras";
+import { anthropicKey, getExtras } from "@/lib/extras";
 import { toCards, type CardItem } from "@/lib/listing";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
@@ -22,7 +22,7 @@ type Msg = { role: "user" | "assistant"; content: string | Block[] | { type: "to
 export async function POST(req: NextRequest) {
   const cfg = (await getExtras()).advisor;
   if (!cfg.enabled) return NextResponse.json({ error: "off" }, { status: 404 });
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = await anthropicKey();
   if (!key) return NextResponse.json({ error: "not_configured" }, { status: 503 });
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success || parsed.data.messages.at(-1)?.role !== "user") return NextResponse.json({ error: "Bad request" }, { status: 400 });

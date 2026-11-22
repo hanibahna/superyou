@@ -14,6 +14,6 @@ export async function POST(req: NextRequest) {
   // Pins changed → drop those products' cached searches so the page shows the change at once.
   const changed = Object.keys({ ...old.youtube.pins, ...p.data.youtube.pins }).filter((s) => old.youtube.pins[s] !== p.data.youtube.pins[s]);
   await Promise.all(changed.map((s) => db.cmd(["DEL", `yt:v1:${s}`]).catch(() => {})));
-  await saveExtras({ ...p.data, youtube: { ...p.data.youtube, key } });
+  await saveExtras({ ...p.data, anthropicKey: p.data.anthropicKey === MASK ? old.anthropicKey : p.data.anthropicKey.trim(), youtube: { ...p.data.youtube, key } });
   return NextResponse.json({ ok: true });
 }

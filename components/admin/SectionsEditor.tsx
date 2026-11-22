@@ -5,7 +5,7 @@ import { finders } from "@/lib/finders";
 import { Area, Card, Header, ListInput, MediaField, Num, Select, Text, Toggle, useSaver } from "./fields";
 
 type Section = { enabled: boolean; banner: { title: string; text: string; cta: string; href: string; image: string; bg: string }; tips: string[]; app: { label: string; href: string } };
-type Extras = { advisor: { enabled: boolean; name: string; greeting: string; suggestions: string[]; perHour: number }; youtube: { enabled: boolean; key: string; pins: Record<string, string> }; sections: Record<string, Section> };
+type Extras = { anthropicKey: string; advisor: { enabled: boolean; name: string; greeting: string; suggestions: string[]; perHour: number }; youtube: { enabled: boolean; key: string; pins: Record<string, string> }; sections: Record<string, Section> };
 
 const apps: [string, string][] = [["", "None"], ["/routine/", "Routine finder"], ["/shade-finder/", "Shade finder"], ["/skin-scan/", "Skin scan"], ...finders.map((f) => [`/finder/${f.id}/`, f.title] as [string, string])];
 const blank = (name: string): Section => ({ enabled: true, banner: { title: name, text: "", cta: "Shop now", href: "", image: "", bg: "#fcf1f4" }, tips: [], app: { label: "", href: "" } });
@@ -24,8 +24,9 @@ export function SectionsEditor({ initial, categories, aiReady }: { initial: Extr
     <div>
       <Header title="Sections & AI" sub="The AI shopping advisor, YouTube videos on product pages, and the banner, tips and app at the top of every shop section." saver={saver} onSave={() => saver.save(e)} />
       <div className="space-y-5">
-        <Card title="AI shopping advisor" sub={aiReady ? "Uses Claude (the same key as the skin scan). It only recommends products in stock and sends medical questions to the pharmacist." : "Needs the ANTHROPIC_API_KEY setting in Vercel to switch on."}>
+        <Card title="AI shopping advisor" sub={aiReady ? "Uses Claude (the same key as the skin scan). It only recommends products in stock and sends medical questions to the pharmacist." : "Paste a Claude API key below to switch it on (it also powers the AI skin scan)."}>
           <div className="grid gap-3 md:grid-cols-2">
+            <Text label="Claude API key" type="password" hint={<a className="underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com → API keys</a>} value={e.anthropicKey} onChange={(anthropicKey) => up({ anthropicKey })} className="md:col-span-2" />
             <Toggle label="Show the advisor on the shop" checked={e.advisor.enabled} onChange={(enabled) => up({ advisor: { ...e.advisor, enabled } })} />
             <Text label="Name" value={e.advisor.name} onChange={(name) => up({ advisor: { ...e.advisor, name } })} />
             <Area label="Greeting" value={e.advisor.greeting} onChange={(greeting) => up({ advisor: { ...e.advisor, greeting } })} className="md:col-span-2" />

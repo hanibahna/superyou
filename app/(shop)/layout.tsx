@@ -1,6 +1,6 @@
 import { Advisor } from "@/components/Advisor";
 import { CartDrawer } from "@/components/CartDrawer";
-import { getExtras } from "@/lib/extras";
+import { anthropicKey, getExtras } from "@/lib/extras";
 import { shopImgDeep } from "@/lib/img";
 import { FloatingWidgets, Footer, TrustStrip } from "@/components/Footer";
 import { MobileTabBar, Motion, RefCapture, SignupPopup } from "@/components/Growth";
@@ -24,7 +24,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const menus = await translateDeep(shopNav(await getSettings(), nav, tax), lang, ["label", "title", "text"]);
   const taxonomy = shopImgDeep(await translateDeep({ ...tax, categories: tax.categories.filter((c) => nav.categories.has(c.slug)), concerns: tax.concerns.filter((c) => nav.concerns.has(c.slug)) }, lang, ["name"]));
   const ai = (await getExtras()).advisor;
-  const aiCfg = ai.enabled && process.env.ANTHROPIC_API_KEY ? await translateDeep({ name: ai.name, greeting: ai.greeting, suggestions: ai.suggestions }, lang, ["greeting", "suggestions"]) : null;
+  const aiCfg = ai.enabled && (await anthropicKey()) ? await translateDeep({ name: ai.name, greeting: ai.greeting, suggestions: ai.suggestions }, lang, ["greeting", "suggestions"]) : null;
   return (
     <ShopNavProvider nav={menus}>
     <ShopProvider>

@@ -5,6 +5,7 @@ import { toCards } from "@/lib/listing";
 import { liveProducts } from "@/lib/pricing";
 import { buildRoutine } from "@/lib/routine";
 import { getRoutine } from "@/lib/site-store";
+import { anthropicKey } from "@/lib/extras";
 
 // AI skin scan: a selfie is read once by an AI vision model (photo never stored), the result
 // is mapped to the routine finder's answers, and a routine is built from products in stock.
@@ -16,7 +17,7 @@ const bodySchema = z.object({ image: z.string().regex(/^data:image\/(jpeg|png|we
 export async function POST(req: NextRequest) {
   const [g, cfg] = await Promise.all([getGrowth(), getRoutine()]);
   if (!g.skinScan.enabled) return NextResponse.json({ error: "Skin scan is switched off" }, { status: 404 });
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = await anthropicKey();
   if (!key) return NextResponse.json({ error: "not_configured" }, { status: 503 });
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Please upload a JPG or PNG photo under 4 MB" }, { status: 400 });
