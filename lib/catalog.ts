@@ -10,6 +10,7 @@ import "server-only";
 // when p:ver changes (checked at most every few seconds), so pages stay fast.
 
 import { randomUUID } from "node:crypto";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { db, dbConfigured } from "@/lib/db";
 import {
   defaultCategories,
@@ -25,7 +26,7 @@ import {
 const LITE = "p:lite";
 const DETAIL = "p:detail";
 const VER = "p:ver";
-const CHECK_EVERY_MS = 5000;
+const CHECK_EVERY_MS = 15000;
 
 type Detail = Pick<Product, "description" | "howToUse" | "ingredients" | "images" | "video">;
 
@@ -38,6 +39,38 @@ export type Index = {
 };
 
 const g = globalThis as unknown as { __idx?: Index; __idxChecked?: number; __idxLoading?: Promise<Index>; __idxLoadingVer?: unknown; __seeded?: boolean };
+
+const SNAP = "p:snap";
+/** Snapshot = gzip of the lite index, split in parts under the 10 MB request limit, tagged with its version. */
+async function readSnapshot(ver: string): Promise<string[] | null> {
+  if (!dbConfigured) return null;
+  try {
+    const head = await db.cmd<string | null>(["GET", `${SNAP}:ver`]);
+    if (head !== ver) return null;
+    const n = Number(await db.cmd<string | null>(["GET", `${SNAP}:n`])) || 0;
+    if (!n) return null;
+    const parts = await db.pipeline(Array.from({ length: n }, (_, i) => ["GET", `${SNAP}:${i}`]));
+    if (parts.some((x) => typeof x !== "string")) return null;
+    const buf = gunzipSync(Buffer.from((parts as string[]).join(""), "base64"));
+    return JSON.parse(buf.toString("utf8")) as string[];
+  } catch (e) {
+    console.error("[catalog snapshot read]", e);
+    return null;
+  }
+}
+async function writeSnapshot(ver: string, raw: string[]) {
+  if (!dbConfigured) return;
+  try {
+    const b64 = gzipSync(Buffer.from(JSON.stringify(raw), "utf8"), { level: 6 }).toString("base64");
+    const size = 4_000_000;
+    const parts = Array.from({ length: Math.ceil(b64.length / size) }, (_, i) => b64.slice(i * size, (i + 1) * size));
+    for (let i = 0; i < parts.length; i++) await db.cmd(["SET", `${SNAP}:${i}`, parts[i], "EX", "604800"]);
+    await db.cmd(["SET", `${SNAP}:n`, String(parts.length), "EX", "604800"]);
+    await db.cmd(["SET", `${SNAP}:ver`, ver, "EX", "604800"]);
+  } catch (e) {
+    console.error("[catalog snapshot write]", e);
+  }
+}
 
 async function currentVersion(): Promise<string> {
   return String((await db.cmd<string | number | null>(["GET", VER])) ?? "0");
@@ -175,14 +208,20 @@ export async function getIndex(): Promise<Index> {
   if (g.__idxLoading && g.__idxLoadingVer !== ver) g.__idxLoading = undefined;
   g.__idxLoadingVer = ver;
   g.__idxLoading ??= (async () => {
-    // Read the index in chunks: one request must stay under Upstash's 10 MB limit.
-    const raw: string[] = [];
-    let cursor = "0";
-    do {
-      const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", LITE, cursor, "COUNT", 3000])) ?? ["0", []];
-      for (let i = 1; i < flat.length; i += 2) raw.push(flat[i]);
-      cursor = String(next);
-    } while (cursor !== "0");
+    // Fast path: a compressed snapshot of this exact version (one small read instead of the whole
+    // catalogue), shared by every server instance. Saves most of the database bandwidth.
+    let raw = await readSnapshot(ver);
+    if (!raw) {
+      // Read the index in chunks: one request must stay under Upstash's 10 MB limit.
+      raw = [];
+      let cursor = "0";
+      do {
+        const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", LITE, cursor, "COUNT", 3000])) ?? ["0", []];
+        for (let i = 1; i < flat.length; i += 2) raw.push(flat[i]);
+        cursor = String(next);
+      } while (cursor !== "0");
+      await writeSnapshot(ver, raw);
+    }
     const idx = buildIndex(ver, raw);
     if (!g.__idx || Number(idx.ver) >= Number(g.__idx.ver)) g.__idx = idx;
     return idx;
