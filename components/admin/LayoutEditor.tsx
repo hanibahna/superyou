@@ -9,6 +9,8 @@ const fontCss: Record<string, string> = {
   serif: "Georgia, 'Times New Roman', serif",
   rounded: "ui-rounded, 'SF Pro Rounded', system-ui, sans-serif",
   mono: "ui-monospace, Menlo, monospace",
+  instrument: "'Instrument Serif', serif",
+  fraunces: "Fraunces, serif",
   grotesk: "'Space Grotesk', sans-serif",
   inter: "Inter, sans-serif",
   condensed: "'Avenir Next Condensed', 'Arial Narrow', sans-serif",
@@ -18,10 +20,11 @@ const radiusPx = { none: 0, small: 4, medium: 10, large: 18 };
 export function LayoutEditor({ initial }: { initial: LayoutOptions }) {
   const [o, setO] = useState<LayoutOptions>(initial);
   const saver = useSaver("/api/admin/layout/");
-  const up = (patch: Partial<LayoutOptions>) => (saver.touch(), setO({ ...o, ...patch, preset: "preset" in patch ? patch.preset! : "custom" }));
+  const up = (patch: Partial<LayoutOptions>) => (saver.touch(), setO({ ...o, ...patch, preset: "preset" in patch ? patch.preset! : ["atelier", "pop", "ritual"].includes(o.preset) ? o.preset : "custom" }));
 
   return (
     <div>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap" />
       <Header title="Theme layout" sub="The shape and feel of the shop: fonts, corners, buttons, cards, header and product photos. Colours are below." saver={saver} onSave={() => saver.save(o)} extra={<a href="/" target="_blank" className="text-sm text-brand-600 hover:underline">Preview ↗</a>} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {layoutPresets.map((p) => (
@@ -38,7 +41,7 @@ export function LayoutEditor({ initial }: { initial: LayoutOptions }) {
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
         <Card title="Fine-tune" sub={o.preset === "custom" ? "Custom layout" : `Based on ${layoutPresets.find((p) => p.id === o.preset)?.name}`}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Heading font" value={o.headingFont} onChange={(headingFont) => up({ headingFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"], ["grotesk", "Bold grotesk"], ["condensed", "Condensed"], ["mono", "Typewriter"]]} />
+            <Select label="Heading font" value={o.headingFont} onChange={(headingFont) => up({ headingFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"], ["grotesk", "Bold grotesk"], ["instrument", "Display serif"], ["fraunces", "Soft serif"], ["condensed", "Condensed"], ["mono", "Typewriter"]]} />
             <Select label="Body font" value={o.bodyFont} onChange={(bodyFont) => up({ bodyFont })} options={[["sans", "Modern sans"], ["serif", "Elegant serif"], ["rounded", "Soft rounded"], ["inter", "Inter"]]} />
             <Select label="Corners" value={o.radius} onChange={(radius) => up({ radius })} options={[["none", "Square"], ["small", "Slightly rounded"], ["medium", "Rounded"], ["large", "Very rounded"]]} />
             <Select label="Buttons" value={o.buttons} onChange={(buttons) => up({ buttons })} options={[["pill", "Pill"], ["rounded", "Rounded"], ["square", "Square"]]} />

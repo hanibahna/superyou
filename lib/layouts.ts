@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export type LayoutOptions = {
   preset: string;
-  headingFont: "sans" | "serif" | "rounded" | "mono" | "condensed" | "grotesk";
+  headingFont: "sans" | "serif" | "rounded" | "mono" | "condensed" | "grotesk" | "instrument" | "fraunces";
   bodyFont: "sans" | "serif" | "rounded" | "inter";
   radius: "none" | "small" | "medium" | "large";
   buttons: "pill" | "rounded" | "square";
@@ -24,6 +24,8 @@ export const defaultLayout: LayoutOptions = {
 };
 
 export const layoutPresets: { id: string; name: string; note: string; options: LayoutOptions }[] = [
+  { id: "atelier", name: "Atelier (editorial luxury)", note: "Large serif headlines with italic accents, warm ivory page, quiet lines, black pills", options: { ...defaultLayout, preset: "atelier", headingFont: "instrument", bodyFont: "inter", radius: "large", buttons: "pill", cards: "plain", header: "centered", imageRatio: "portrait", density: "spacious", uppercaseHeadings: false, gridColumns: 4, buyButton: "outline" } },
+  { id: "ritual", name: "Ritual (pharmacist-led)", note: "Calm clinical feel: warm grey page, white rounded cards, soft serif headings, routine first", options: { ...defaultLayout, preset: "ritual", headingFont: "fraunces", bodyFont: "inter", radius: "large", buttons: "rounded", cards: "plain", header: "classic", imageRatio: "square", density: "comfortable", uppercaseHeadings: false, gridColumns: 4, buyButton: "solid" } },
   { id: "pop", name: "Pop (bold & playful)", note: "Big grotesk headlines, pastel colour blocks, soft rounded cards, black pill buttons", options: { ...defaultLayout, preset: "pop", headingFont: "grotesk", bodyFont: "inter", radius: "large", buttons: "pill", cards: "tinted", header: "classic", imageRatio: "square", density: "comfortable", uppercaseHeadings: false, gridColumns: 4, buyButton: "solid" } },
   { id: "noir", name: "Noir (Sephora-style)", note: "Black & white editorial: bold sans, outlined buttons, clean cards", options: { ...defaultLayout, preset: "noir", headingFont: "sans", bodyFont: "sans", radius: "small", buttons: "pill", cards: "plain", header: "classic", imageRatio: "square", density: "comfortable", uppercaseHeadings: false, gridColumns: 5, buyButton: "hover" } },
   { id: "classic", name: "Classic", note: "Friendly, rounded, like the big parapharmacies", options: defaultLayout },
@@ -37,7 +39,7 @@ export const layoutPresets: { id: string; name: string; note: string; options: L
 
 export const layoutSchema = z.object({
   preset: z.string().max(30),
-  headingFont: z.enum(["sans", "serif", "rounded", "mono", "condensed", "grotesk"]),
+  headingFont: z.enum(["sans", "serif", "rounded", "mono", "condensed", "grotesk", "instrument", "fraunces"]),
   bodyFont: z.enum(["sans", "serif", "rounded", "inter"]),
   radius: z.enum(["none", "small", "medium", "large"]),
   buttons: z.enum(["pill", "rounded", "square"]),
@@ -55,6 +57,8 @@ const fonts = {
   serif: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif',
   rounded: 'ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", system-ui, sans-serif',
   mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+  instrument: '"Instrument Serif", Georgia, "Times New Roman", serif',
+  fraunces: '"Fraunces", Georgia, "Times New Roman", serif',
   grotesk: '"Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif',
   inter: '"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   condensed: '"Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", "Helvetica Neue", sans-serif',
@@ -78,7 +82,9 @@ export function layoutCss(o: LayoutOptions): string {
 export function layoutFontsHref(o: LayoutOptions): string | null {
   const fam: string[] = [];
   if (o.headingFont === "grotesk") fam.push("family=Space+Grotesk:wght@500;600;700");
-  if (o.bodyFont === "inter" || o.headingFont === "grotesk") fam.push("family=Inter:wght@400;500;600;700");
+  if (o.headingFont === "instrument") fam.push("family=Instrument+Serif:ital@0;1");
+  if (o.headingFont === "fraunces") fam.push("family=Fraunces:opsz,wght@9..144,400;9..144,600");
+  if (o.bodyFont === "inter" || ["grotesk", "instrument", "fraunces"].includes(o.headingFont)) fam.push("family=Inter:wght@400;500;600;700");
   return fam.length ? `https://fonts.googleapis.com/css2?${fam.join("&")}&display=swap` : null;
 }
 
