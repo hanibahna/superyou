@@ -12,6 +12,8 @@ export type Service = {
   priceNote: string; // e.g. "Redeemable on products"
   image: string;
   enabled: boolean;
+  /** Video calls: "no" = in store only, "yes" = customer chooses, "only" = video call only. */
+  video?: "no" | "yes" | "only";
 };
 
 export type EventItem = {
@@ -53,6 +55,7 @@ export const defaultServices: ServicesConfig = {
   leadHours: 3,
   daysAhead: 30,
   services: [
+    { id: "video-consult", title: "Video call with a pharmacist", category: "Skin care", description: "A private video call from home: show your skin or your products and get advice and a routine. Opens right here on the site, nothing to install.", duration: 20, price: 0, priceNote: "Complimentary", image: "/brand/home/png/hero-pharmacist.png", enabled: true, video: "only" },
     { id: "skin-diagnosis", title: "Free skin diagnosis", category: "Skin care", description: "A pharmacist analyses your skin type and concerns and recommends a routine that fits your budget.", duration: 30, price: 0, priceNote: "Complimentary", image: img("1291/3633/files/Untitleddesign-2025-03-11T114540.671.png"), enabled: true },
     { id: "routine-consult", title: "Personal skincare routine", category: "Skin care", description: "Build a complete morning and evening routine, with samples to try at home.", duration: 45, price: 0, priceNote: "Complimentary", image: img("1291/3633/files/CeraVePackshots_1.png"), enabled: true },
     { id: "makeup-application", title: "Full makeup application", category: "Make up", description: "A full look for an evening or a special occasion, using the products of your choice.", duration: 60, price: 35, priceNote: "Redeemable on a same-day purchase", image: img("0295/0545/4173/files/lancome-hypnose-5-color-eyeshadow-palette-for-natural-to-dramatic-looks-5-highly-pigmented-and-longwear-eyeshadows-skin-society-shop-address-country-1.jpg"), enabled: true },
@@ -81,6 +84,7 @@ export const servicesSchema = z.object({
   services: z.array(z.object({
     id: z.string().regex(/^[a-z0-9-]+$/).max(60), title: z.string().min(1).max(100), category: z.string().max(40), description: z.string().max(1000),
     duration: z.number().int().min(5).max(480), price: z.number().min(0).max(10000), priceNote: z.string().max(100), image: z.string().max(500), enabled: z.boolean(),
+    video: z.enum(["no", "yes", "only"]).optional(),
   })).max(100),
   events: z.array(z.object({
     id: z.string().regex(/^[a-z0-9-]+$/).max(60), title: z.string().min(1).max(120), description: z.string().max(2000),
@@ -120,12 +124,17 @@ export type Booking = {
   notes: string;
   status: "pending" | "confirmed" | "cancelled" | "done" | "no-show";
   createdAt: string;
+  /** "video" = a video call inside the site (lib/video.ts); in store otherwise. */
+  mode?: "store" | "video";
+  access?: string; // secret for the customer's call link
+  video?: { provider: string; roomUrl: string; hostUrl: string; createdAt: string };
 };
 
 /** Message variables for booking messages. */
 export function bookingVars(b: Booking): Record<string, string> {
   return {
     first_name: b.name.split(" ")[0], name: b.name, service: b.title, time: b.time,
+    call_link: b.mode === "video" && b.access ? `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.shopsuperyou.com"}/call/${b.id}/?t=${b.access}` : "",
     date: new Date(`${b.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
   };
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { EventItem, Service, ServicesConfig } from "@/lib/services";
-import { Area, Card, CatalogPick, Header, MediaField, Num, Text, Toggle, move, useSaver } from "./fields";
+import { Area, Card, CatalogPick, Header, MediaField, Num, Text, Toggle, move, useSaver, Select } from "./fields";
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) || `item-${Date.now().toString(36)}`;
@@ -68,6 +68,7 @@ export function ServicesEditor({ initial }: { initial: ServicesConfig }) {
                     <Num label="Duration (min)" value={s.duration} onChange={(duration) => upS(i, { duration })} />
                     <Num label="Price ($, 0 = free)" step={0.5} value={s.price} onChange={(price) => upS(i, { price })} />
                     <Text label="Price note" value={s.priceNote} onChange={(priceNote) => upS(i, { priceNote })} />
+                    <Select label="Where" value={s.video ?? "no"} onChange={(video) => upS(i, { video })} options={[["no", "In store"], ["yes", "In store or video call (customer chooses)"], ["only", "Video call only"]]} />
                     <div className="grid gap-2"><CatalogPick onPick={(image) => upS(i, { image })} /><MediaField label="Picture" value={s.image} onChange={(image) => upS(i, { image })} /></div>
                   </div>
                 )}

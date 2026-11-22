@@ -181,6 +181,8 @@ function BookingDialog({ service, daysAhead, openDays, whatsapp, onClose }: { se
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState("");
+  const [mode, setMode] = useState<"store" | "video">(service.video === "only" ? "video" : "store");
+  const [callLink, setCallLink] = useState("");
 
   useEffect(() => {
     if (!date) return;
@@ -193,18 +195,42 @@ function BookingDialog({ service, daysAhead, openDays, whatsapp, onClose }: { se
     if (!time) return setError("Please choose a time");
     setBusy(true);
     setError("");
-    const r = await fetch("/api/bookings/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "service", refId: service.id, date, time, ...c }) });
+    const r = await fetch("/api/bookings/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "service", refId: service.id, date, time, mode, ...c }) });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
-    if (r.ok) setDone(`${service.title} · ${fmtDate(date)} at ${time}`);
+    if (r.ok) {
+      setDone(`${service.title} · ${fmtDate(date)} at ${time}${mode === "video" ? " · video call" : ""}`);
+      if (d.booking?.mode === "video" && d.booking.link) setCallLink(d.booking.link);
+    }
     else setError(d.error ?? tx("Could not book. Please try again."));
   }
 
   return (
     <Modal title={done ? tx("You're booked!") : `Book: ${service.title}`} onClose={onClose}>
-      {done ? <Done text={done} whatsapp={whatsapp} onClose={onClose} /> : (
+      {done ? (
         <>
-          <p className="text-sm text-muted">{service.duration} min · {service.price ? money(service.price) : tx("Free")}</p>
+          <Done text={done} whatsapp={whatsapp} onClose={onClose} />
+          {callLink && (
+            <div className="mt-4 rounded-xl bg-[#faf7f8] p-4 text-sm">
+              <p className="font-semibold">Your video call link</p>
+              <p className="mt-1 text-muted">It opens here on our site at your time, nothing to install. We also sent it on WhatsApp.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href={callLink} className="rounded-full bg-ink px-4 py-2.5 font-semibold text-white">Open my call page</a>
+                <a href={`/api/bookings/ics/?id=${encodeURIComponent(callLink.split("/")[2])}&t=${encodeURIComponent(new URL(callLink, "https://x").searchParams.get("t") ?? "")}`} className="rounded-full border border-line px-4 py-2.5 font-semibold">Add to calendar</a>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted">{service.duration} min · {service.price ? money(service.price) : tx("Free")}{service.video === "only" ? " · video call from home" : ""}</p>
+          {service.video === "yes" && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {([["store", "In store"], ["video", "Video call"]] as const).map(([k, l]) => (
+                <button key={k} onClick={() => setMode(k)} className={`rounded-xl border py-3 text-sm font-semibold ${mode === k ? "border-black bg-black text-white" : "border-line"}`}>{k === "video" ? "🎥 " : "📍 "}{tx(l)}</button>
+              ))}
+            </div>
+          )}
           <p className="mt-4 text-sm font-semibold">Choose a day</p>
           <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">
             {days.map((d) => (

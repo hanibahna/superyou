@@ -15,6 +15,7 @@ const schema = z.object({
   guests: z.number().int().min(1).max(10).optional(),
   waOffers: z.boolean().optional(),
   notes: z.string().max(500).optional(),
+  mode: z.enum(["store", "video"]).optional(),
 });
 
 // Book a service slot or sign up for an event.
@@ -30,7 +31,10 @@ export async function POST(req: NextRequest) {
     const s = cfg.services.find((x) => x.id === d.refId && x.enabled);
     if (!s || !d.date || !d.time) return NextResponse.json({ error: "Choose a service, date and time" }, { status: 400 });
     if (!(await freeSlots(s.id, d.date)).includes(d.time)) return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
-    b = { ...base, kind: "service", refId: s.id, title: s.title, date: d.date, time: d.time, duration: s.duration, guests: 1 };
+    const mode = s.video === "only" ? "video" : s.video === "yes" && d.mode === "video" ? "video" : "store";
+    b = { ...base, kind: "service", refId: s.id, title: s.title, date: d.date, time: d.time, duration: s.duration, guests: 1, mode, access: (await import("@/lib/video")).newAccess() };
+    // Video call: create the room now (if a provider is set up); otherwise it's created when the team confirms.
+    if (mode === "video") b.video = (await (await import("@/lib/video")).createRoom(b).catch((e) => (console.error("[video]", e), null))) ?? undefined;
   } else {
     const e = cfg.events.find((x) => x.id === d.refId && x.enabled);
     if (!e) return NextResponse.json({ error: "Unknown event" }, { status: 404 });
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
   }
   await saveBooking(b);
   await onBooking(b, d.waOffers === true).catch((e) => console.error("[whatsapp] booking", e));
-  return NextResponse.json({ ok: true, booking: { id: b.id, title: b.title, date: b.date, time: b.time } });
+  return NextResponse.json({ ok: true, booking: { id: b.id, title: b.title, date: b.date, time: b.time, mode: b.mode ?? "store", link: b.access ? `/call/${b.id}/?t=${b.access}` : "" } });
 }
 
 async function onBooking(b: Booking, offers: boolean) {
