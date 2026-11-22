@@ -213,9 +213,9 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="pop"] main h1 { letter-spacing: -0.035em; }
 
 /* Buttons: brand-coloured calls to action become black pills */
-[data-preset="pop"] :is(a, button)[class*="bg-brand-5"] { background-color: var(--color-ink) !important; color: #fff !important; border-radius: 9999px !important; }
-[data-preset="pop"] :is(a, button)[class*="bg-brand-5"]:hover { background-color: #000 !important; }
-[data-preset="pop"] :is(a, button)[class*="border-brand-5"] { border-color: var(--color-ink) !important; color: var(--color-ink) !important; border-radius: 9999px !important; border-width: 1.5px; }
+[data-preset="pop"] :is(a, button):is([class~="bg-brand-500"], [class~="bg-brand-600"]) { background-color: var(--color-ink) !important; color: #fff !important; border-radius: 9999px !important; }
+[data-preset="pop"] :is(a, button):is([class~="bg-brand-500"], [class~="bg-brand-600"]):hover { background-color: #000 !important; }
+[data-preset="pop"] :is(a, button)[class~="border-brand-500"] { border-color: var(--color-ink) !important; color: var(--color-ink) !important; border-radius: 9999px !important; border-width: 1.5px; }
 
 /* Header: grey search pill, black bag button */
 [data-preset="pop"] .site-header .hdr-search label { background: var(--pop-card); border-color: transparent; min-height: 48px; }
@@ -229,7 +229,7 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="pop"] .pcard .pname { font-weight: 700; font-size: 15px; }
 [data-preset="pop"] .pcard .buy { background: var(--color-ink) !important; border-radius: 9999px !important; }
 [data-preset="pop"] .pcard .buy:hover { background: #000 !important; }
-[data-preset="pop"] .pcard .buy-alt { border-radius: 9999px !important; border-color: var(--color-ink) !important; color: var(--color-ink) !important; background: #fff; }
+[data-preset="pop"] .pcard .buy-alt { border-radius: 9999px !important; border-color: var(--color-ink) !important; color: var(--color-ink) !important; background: #fff !important; }
 @media (hover: hover) { [data-preset="pop"] .pcard:hover { box-shadow: 0 14px 30px -16px rgb(46 34 41 / .35); } }
 
 /* Home: the campaign hero becomes a big pastel block with huge type */
