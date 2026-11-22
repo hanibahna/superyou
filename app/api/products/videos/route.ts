@@ -8,5 +8,5 @@ export async function GET(req: NextRequest) {
   const p = (await liveProducts()).list.find((x) => x.slug === slug);
   if (!p) return NextResponse.json({ videos: [] });
   const videos = await videosForProduct({ slug, brand: p.brand, name: p.name });
-  return NextResponse.json({ videos }, { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" } });
+  return NextResponse.json({ videos }, { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } });
 }
