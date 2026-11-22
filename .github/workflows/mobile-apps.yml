@@ -41,4 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
       - run: xcodegen generate
-      - run: xcodebuild -project SuperYou.xcodeproj -scheme SuperYou -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -configuration Debug CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" | head -60; test ${PIPESTATUS[0]} -eq 0
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project SuperYou.xcodeproj -scheme SuperYou -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -configuration Debug CODE_SIGNING_ALLOWED=NO build | grep -E "error|BUILD (SUCCEEDED|FAILED)" | head -80
