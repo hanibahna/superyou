@@ -162,7 +162,8 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     }
     for (const every of [1, 3] as const) {
       const pct = every === 1 ? sub.monthly : sub.quarterly;
-      const spend = ok.filter((l) => input.items.find((i) => i.productId === l.productId)?.every === every && (!allowed || allowed.has(l.productId))).reduce((a, l) => a + l.price * l.qty, 0);
+      const { isSubscribable } = await import("@/lib/subscribable");
+      const spend = ok.filter((l) => input.items.find((i) => i.productId === l.productId)?.every === every && (!allowed || allowed.has(l.productId)) && isSubscribable({ name: l.name, category: l.category })).reduce((a, l) => a + l.price * l.qty, 0);
       const amount = +Math.min(q.subtotal - q.discountTotal, (spend * pct) / 100).toFixed(2);
       if (pct > 0 && amount > 0) {
         q.discounts.push({ name: `Subscribe & save, ${every === 1 ? "monthly" : "every 3 months"} (−${pct}%)`, amount });

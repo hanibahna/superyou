@@ -190,7 +190,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
                   <ProductImage product={product} className="h-14 w-14 rounded-lg" />
                   <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-ink text-[10px] text-white">{qty}</span>
                 </span>
-                <span className="flex-1 leading-snug">{product.name}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><LinePlan productId={product.id} every={every} readOnly /></span>
+                <span className="flex-1 leading-snug">{product.name}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><LinePlan name={product.name} productId={product.id} every={every} readOnly /></span>
                 <span className="font-medium">{money(lineTotal)}</span>
               </li>
             ))}

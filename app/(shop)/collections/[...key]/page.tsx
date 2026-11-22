@@ -6,6 +6,7 @@ import { queryShop } from "@/lib/listing";
 import { canonical } from "@/lib/seo";
 import { getCollections } from "@/lib/site-store";
 import { sectionFor } from "@/lib/extras";
+import { listingTips } from "@/lib/tips";
 import { ShopView } from "../../shop/ShopView";
 import { parseQuery, videosFor, type SP } from "@/lib/shop-query";
 
@@ -35,5 +36,5 @@ export default async function CollectionPage({ params, searchParams }: { params:
   const lang = await getLang();
   const loc = await translateMany([title, c?.description ?? ""], lang);
   const facets = await translateDeep(result.facets, lang, ["name"]);
-  return <ShopView result={{ ...result, facets }} query={query} videos={videos} base={`/collections/${key}/`} heading={loc.get(title) ?? title} intro={c?.description ? loc.get(c.description) ?? c.description : undefined} banner={shopImg(c?.image) || undefined} section={await sectionFor(query.category)} />;
+  return <ShopView result={{ ...result, facets }} query={query} videos={videos} base={`/collections/${key}/`} heading={loc.get(title) ?? title} intro={c?.description ? loc.get(c.description) ?? c.description : undefined} banner={shopImg(c?.image) || undefined} section={await sectionFor(query.category).then((sec) => { const tips = listingTips(result.items, [title, query.category]); return sec ? { ...sec, tips: tips.length ? tips : sec.tips } : null; })} />;
 }

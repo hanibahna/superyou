@@ -112,7 +112,8 @@ export const orderValue = (o: Order) => +(o.total + (o.giftCard?.amount ?? 0)).t
 /** Recompute every price, discount, gift and delivery fee on the server — never trust client totals. */
 export async function priceOrder(input: CheckoutInput) {
   const q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone });
-  const everyOf = (id: string) => input.items.find((i) => i.productId === id)?.every;
+  const { isSubscribable } = await import("@/lib/subscribable");
+  const everyOf = (id: string) => { const l = q._lines.find((x) => x.productId === id); return l && isSubscribable({ name: l.name, category: l.category }) ? input.items.find((i) => i.productId === id)?.every : undefined; };
   for (const i of input.items) {
     const l = q.lines.find((x) => x.productId === i.productId);
     if (!l) throw new Error("A product in your cart is no longer available. Please review your cart.");

@@ -3,6 +3,7 @@
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 import { useShop } from "@/lib/store";
+import { isSubscribable } from "@/lib/subscribable";
 
 /** Subscribe & save choice on the product page: one-time, monthly or every 3 months. */
 export function SubscribeChoice({ price, value, onChange }: { price: number; value: 0 | 1 | 3; onChange: (v: 0 | 1 | 3) => void }) {
@@ -31,11 +32,11 @@ export function SubscribeChoice({ price, value, onChange }: { price: number; val
 }
 
 /** Small plan switch on a bag line. */
-export function LinePlan({ productId, every, readOnly = false }: { productId: string; every?: 1 | 3; readOnly?: boolean }) {
+export function LinePlan({ productId, every, readOnly = false, name }: { productId: string; every?: 1 | 3; readOnly?: boolean; name?: string }) {
   const t = useT();
   const sub = useGrowth().subscribe;
   const { setEvery } = useShop();
-  if (!sub?.enabled) return null;
+  if (!sub?.enabled || (name && !isSubscribable({ name }))) return null;
   const label = (e?: 1 | 3) => (e === 1 ? `${t("Every month")} · −${sub.monthly}%` : e === 3 ? `${t("Every 3 months")} · −${sub.quarterly}%` : t("One-time"));
   if (readOnly) return every ? <p className="mt-0.5 text-xs font-semibold text-brand-700">↻ {label(every)}</p> : null;
   return (

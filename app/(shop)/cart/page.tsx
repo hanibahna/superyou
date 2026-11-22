@@ -61,7 +61,7 @@ export default function CartPage() {
                 <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{product.name}</Link>
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
                 <ShipBadge p={product} className="mt-1 self-start" />
-                <LinePlan productId={product.id} every={every} />
+                <LinePlan name={product.name} productId={product.id} every={every} />
                 <div className="mt-auto flex items-center gap-4">
                   <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                   <button onClick={() => remove(product.id)} className="text-sm text-muted hover:underline">{tx("Remove")}</button>

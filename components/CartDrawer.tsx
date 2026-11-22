@@ -56,7 +56,7 @@ export function CartDrawer() {
                     <p className="text-sm font-medium leading-snug">{product.name}</p>
                     {product.variant && <p className="text-xs text-muted">{product.variant}</p>}
                     <ShipBadge p={product} className="mt-1 self-start" />
-                    <LinePlan productId={product.id} every={every} />
+                    <LinePlan name={product.name} productId={product.id} every={every} />
                     <div className="mt-auto flex items-center justify-between">
                       <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                       <span className="text-right text-sm font-semibold">
