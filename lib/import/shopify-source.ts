@@ -9,6 +9,7 @@ import "server-only";
 
 import type { ProductInput } from "@/lib/product-input";
 import { landed, type LandedPricing } from "@/lib/sourcing";
+import { collectionsFor } from "@/lib/import/collection-map";
 
 export type SourceProduct = {
   id: number;
@@ -195,6 +196,8 @@ const SIZE_OPTIONS = /^(size|sze|sizd|volume|capacity|quantity|weight)\s*$/i;
 export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (ProductInput & { group: string })[] {
   const tagList = (Array.isArray(p.tags) ? p.tags : String(p.tags || "").split(",")).map((t) => t.trim()).filter(Boolean);
   const tags = new Set(tagList.map((t) => t.toLowerCase()));
+  // Wholesale-only bundles (shop display sets, cases of 12…) aren't sold to shoppers.
+  if (opts.landed && (/wholesale/i.test(p.product_type) || /display set|wholesale|\b\d{2,} ?pcs\b|retail display/i.test(p.title))) return [];
   // A store's own house items (mystery boxes, bundles under its own name) would reveal the supplier: skip them.
   const own = opts.sourceName.toLowerCase().replace(/^www\./, "").split(".")[0].replace(/[^a-z0-9]/g, "");
   if (own.length > 3 && p.vendor.toLowerCase().replace(/[^a-z0-9]/g, "").includes(own)) return [];
@@ -205,6 +208,8 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
   const images = p.images.map((i) => i.src);
   const optName = p.options?.[0]?.name ?? "";
   const group = `${opts.skuPrefix.toLowerCase()}-${p.id}`;
+  // Imported catalogs join the same menu collections as local stock (local catalogs already carry theirs).
+  const collections = opts.landed ? collectionsFor(p.title, p.product_type, tagList) : [];
 
   return p.variants
     .filter((v) => Number(v.price) > 0)
@@ -240,6 +245,7 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
         group,
         source: opts.sourceName,
         cost: srcPrice,
+        ...(collections.length ? { collections } : {}),
         inStock: v.available, // the source publishes availability, not quantities
       } as ProductInput & { group: string };
     });
