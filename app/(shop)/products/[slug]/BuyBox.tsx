@@ -83,6 +83,8 @@ export function BuyBox({
             ))}
           </div>
         )}
+        {/* Under the photos: Ask a pharmacist, then How to use and Videos. */}
+        <PharmacistButton product={`${v.brand} ${v.name}${v.variant ? ` (${v.variant})` : ""}`} className="mt-3 rounded-2xl border-2 bg-white p-3" />
         {underImage}
       </div>
 
@@ -159,7 +161,6 @@ export function BuyBox({
           <li>✓ {t("Pay cash on delivery, by card or with Whish")}</li>
         </ul>
         {growth.trust.returnsSummary && <p className="mt-2 text-xs text-muted">{growth.trust.returnsSummary}</p>}
-        <PharmacistButton product={`${v.brand} ${v.name}${v.variant ? ` (${v.variant})` : ""}`} className="mt-4" />
         {/* Sticky buy bar on phones */}
         {v.inStock && (
           <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 md:hidden">
