@@ -10,5 +10,6 @@ out
 !mobile/www/index.html
 mobile/node_modules
 mobile/www/manifest.json
-ios-native/*.xcodeproj
+ios-native/*.xcodeproj/xcuserdata
+ios-native/*.xcodeproj/project.xcworkspace/xcuserdata
 ios-native/build
