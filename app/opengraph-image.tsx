@@ -13,11 +13,11 @@ export default async function Image() {
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#1d171a", color: "#faf6f8", padding: 72, position: "relative" }}>
-        <div style={{ position: "absolute", right: -160, top: -160, width: 620, height: 620, borderRadius: 620, background: "radial-gradient(circle at 35% 40%, #d97a9b 0%, #c0587a 40%, #8e3a5a 75%, #1d171a 100%)" }} />
+        <div style={{ position: "absolute", right: -230, top: -250, width: 560, height: 560, borderRadius: 560, background: "radial-gradient(circle at 35% 40%, #d97a9b 0%, #c0587a 40%, #8e3a5a 75%, #1d171a 100%)" }} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt="" width={420} height={46} />
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 76, fontWeight: 700, lineHeight: 1.05, maxWidth: 820 }}>Reveal the super in you.</div>
+          <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.05, maxWidth: 900 }}>Reveal the super in you.</div>
           <div style={{ fontSize: 32, marginTop: 24, color: "#e9c3d1" }}>Originals only · Advice included · Paid on delivery</div>
         </div>
         <div style={{ fontSize: 26, color: "#a9a2a6" }}>shopsuperyou.com · Lebanon</div>

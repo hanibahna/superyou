@@ -9,7 +9,7 @@ import { track } from "@/lib/track";
 import { Qty } from "@/components/CartDrawer";
 import { HeartIcon } from "@/components/Icons";
 import { ProductImage } from "@/components/ProductImage";
-import { cleanName, fullName, discountPct, type ProductLite } from "@/lib/data/catalog";
+import { cleanName, shortName, fullName, discountPct, type ProductLite } from "@/lib/data/catalog";
 import { money } from "@/lib/format";
 import { imgUrl } from "@/lib/img";
 import { PharmacistButton, TrackView } from "@/components/Growth";
@@ -91,7 +91,7 @@ export function BuyBox({
       <div className="contents md:col-start-2 md:row-span-2 md:row-start-1 md:block">
         <div className="order-2">
         <Link href={`/shop/?brand=${encodeURIComponent(v.brand)}`} className="pdp-brand text-sm font-bold uppercase tracking-wider text-brand-600 hover:underline">{v.brand}</Link>
-        <h1 className="pdp-title mt-1 text-2xl font-semibold leading-tight md:text-3xl">{cleanName(v.name)}</h1>
+        <h1 className="pdp-title mt-1 text-2xl font-semibold leading-tight md:text-3xl">{shortName(v.brand, v.name)}</h1>
         {growth.reviews.enabled && reviewCount >= 3 && (
           <a href="#reviews" className="mt-1 inline-flex items-center gap-2 text-sm hover:underline">
             {rating ? <><Stars value={rating} size={15} /> <span>{rating.toFixed(1)} · {reviewCount} {t("Reviews")}</span></> : <span className="text-muted">{t("Write a review")}</span>}

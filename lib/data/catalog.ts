@@ -207,3 +207,11 @@ export function fullName(brand: string | undefined, name: string): string {
   // Name already starts with the brand: keep the brand's own spelling, then the rest.
   return n.toLowerCase().startsWith(b.toLowerCase()) ? b + n.slice(b.length) : `${b} ${n}`;
 }
+
+/** Name shown under a separate brand line: drops a leading brand ("RIMMEL LONDON Kate Kit" → "Kate Kit"). */
+export function shortName(brand: string | undefined, name: string): string {
+  const n = cleanName(name);
+  const b = (brand ?? "").trim();
+  if (b && n.length > b.length + 2 && n.toLowerCase().startsWith(b.toLowerCase() + " ")) return n.slice(b.length + 1);
+  return n;
+}

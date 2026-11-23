@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ShipBadge } from "./ShipBadge";
-import { cleanName, discountPct, type AnyProduct } from "@/lib/data/catalog";
+import { shortName, cleanName, discountPct, type AnyProduct } from "@/lib/data/catalog";
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 import { useShop, type ProductSnap } from "@/lib/store";
@@ -38,7 +38,7 @@ export function ProductCard({ product }: { product: Card }) {
       <div className="mt-3 flex flex-1 flex-col">
         <p className="pbrand truncate text-xs font-semibold uppercase tracking-wide text-muted">{product.brand}</p>
         <Link href={href} className="pname mt-0.5 line-clamp-2 text-sm font-medium leading-snug hover:text-brand-600">
-          {cleanName(product.name)}
+          {shortName(product.brand, product.name)}
         </Link>
         {reviews.showOnCards && !!product.reviewCount && product.rating && <div className="mt-1"><Stars value={product.rating} count={product.reviewCount} size={12} /></div>}
         {multi && <p className="mt-0.5 text-xs text-muted">{product.variantCount} {t("options")}</p>}
