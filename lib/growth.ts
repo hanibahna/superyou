@@ -64,7 +64,7 @@ export type Game = {
   badges: { enabled: boolean; points: Record<BadgeId, number> };
   ladder: { enabled: boolean; doublePointsAt: number }; // spend at which an order earns double Club points (0 = off)
   streak: { enabled: boolean; every: number; points: number }; // every Nth on-time subscription delivery earns bonus points
-  checkin: { enabled: boolean; days: number; points: number }; // app daily tip: a full streak earns points
+  checkin: { enabled: boolean; days: number; points: number; tips: string[] }; // app daily tip: a full streak earns points
   quest: { enabled: boolean; reviews: number; points: number }; // review N products you bought
   race: { enabled: boolean; steps: { friends: number; points: number }[] }; // referral milestones
 };
@@ -79,13 +79,47 @@ export const BADGES: { id: BadgeId; name: string; text: string; icon: string }[]
   { id: "subscriber", name: "Never run out", text: "Started a Subscribe & save plan", icon: "repeat" },
   { id: "gold", name: "Gold member", text: "Reached Gold tier or above", icon: "crown" },
 ];
+// Pharmacist tips shown one a day on the app home (editable in Admin › Growth › Gamification).
+export const DEFAULT_TIPS = [
+  "Apply sunscreen as the last step of your morning routine, and reapply every 2 hours outdoors.",
+  "Use about two finger-lengths of sunscreen for the face and neck.",
+  "Introduce one new active (retinol, acids, vitamin C) at a time, two weeks apart.",
+  "Retinol goes on at night, on dry skin. Start 2–3 nights a week.",
+  "Vitamin C in the morning, under sunscreen, boosts protection against pollution.",
+  "Double cleanse at night if you wear sunscreen or make-up: oil or balm first, then a gentle cleanser.",
+  "Apply serums on slightly damp skin, then seal with a moisturiser.",
+  "Oily skin still needs moisturiser: choose a light gel labelled non-comedogenic.",
+  "Change your pillowcase twice a week if you're prone to breakouts.",
+  "Don't mix strong acids and retinol on the same night unless a pharmacist advises it.",
+  "Patch-test new products behind the ear or on the inner arm for 48 hours.",
+  "Lips need SPF too: use a lip balm with SPF 30 or more.",
+  "Niacinamide calms redness and helps oily skin; it pairs well with most products.",
+  "Hyaluronic acid draws water into the skin; follow it with a cream to keep it there.",
+  "Pregnant or breastfeeding? Ask a pharmacist before using retinoids or high-dose acids.",
+  "Wash make-up brushes weekly with mild shampoo to keep bacteria away.",
+  "Exfoliate 1–3 times a week, not every day.",
+  "Sunscreen expires: check the date and replace opened bottles after 12 months.",
+  "For dandruff, leave the medicated shampoo on the scalp for 3–5 minutes before rinsing.",
+  "Drink water, but skin hydration comes mostly from what you put on it: use a good moisturiser.",
+  "Under-eye skin is thin: tap eye cream on with your ring finger.",
+  "Supplements are not a substitute for a varied diet. Ask a pharmacist before combining several.",
+  "Keep vitamin C serums in a cool, dark place: they lose strength in heat and light.",
+  "Shave with the grain and use a clean blade to avoid ingrown hairs.",
+  "Kids' sunscreen: choose mineral filters (zinc oxide, titanium dioxide) for sensitive skin.",
+  "Dry hands in winter? Apply hand cream after every wash, and wear gloves outdoors.",
+  "Acne patches work best on spots that have come to a head.",
+  "Store perfume away from sunlight and heat to keep it smelling true.",
+  "Fragrance-free is gentler for sensitive and eczema-prone skin.",
+  "Not sure what your skin needs? Take a free SuperScan in the app.",
+];
+
 export const defaultGame: Game = {
   enabled: true,
   celebrate: true,
   badges: { enabled: true, points: { firstOrder: 50, scan: 25, routine: 50, review: 25, photoReview: 50, referral: 100, subscriber: 50, gold: 100 } },
   ladder: { enabled: true, doublePointsAt: 90 },
   streak: { enabled: true, every: 3, points: 100 },
-  checkin: { enabled: true, days: 7, points: 20 },
+  checkin: { enabled: true, days: 7, points: 20, tips: DEFAULT_TIPS },
   quest: { enabled: true, reviews: 3, points: 75 },
   race: { enabled: true, steps: [{ friends: 3, points: 150 }, { friends: 5, points: 300 }, { friends: 10, points: 750 }] },
 };
@@ -205,7 +239,7 @@ export const growthSchema = z.object({
     badges: z.object({ enabled: z.boolean(), points: z.record(z.string(), z.number().int().min(0).max(10000)) }),
     ladder: z.object({ enabled: z.boolean(), doublePointsAt: z.number().min(0).max(10000) }),
     streak: z.object({ enabled: z.boolean(), every: z.number().int().min(2).max(24), points: z.number().int().min(0).max(10000) }),
-    checkin: z.object({ enabled: z.boolean(), days: z.number().int().min(2).max(60), points: z.number().int().min(0).max(1000) }),
+    checkin: z.object({ enabled: z.boolean(), days: z.number().int().min(2).max(60), points: z.number().int().min(0).max(1000), tips: z.array(z.string().max(300)).max(400).transform((a) => a.map((x) => x.trim()).filter(Boolean)).optional().default(DEFAULT_TIPS) }),
     quest: z.object({ enabled: z.boolean(), reviews: z.number().int().min(1).max(20), points: z.number().int().min(0).max(10000) }),
     race: z.object({ enabled: z.boolean(), steps: z.array(z.object({ friends: z.number().int().min(1).max(1000), points: z.number().int().min(0).max(100000) })).max(6) }),
   }).transform((g) => g as Game).default(defaultGame),

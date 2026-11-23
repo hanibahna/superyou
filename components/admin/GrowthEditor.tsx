@@ -274,6 +274,7 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
               <Num label="Days in a row" value={g.game.checkin.days} onChange={(days) => up("game", { checkin: { ...g.game.checkin, days } })} />
               <Num label="Points for a full streak" value={g.game.checkin.points} onChange={(points) => up("game", { checkin: { ...g.game.checkin, points } })} />
             </div>
+            <Area label="Tips (one per line, shown in order, one a day)" hint={`${g.game.checkin.tips.filter((x) => x.trim()).length} tips · leave empty to use the built-in list`} rows={10} value={g.game.checkin.tips.join("\n")} onChange={(v) => up("game", { checkin: { ...g.game.checkin, tips: v.split("\n") } })} />
           </Card>
           <Card title="Referral race" sub="Bonus points when a member's link brings 3, 5, 10… friends (on top of the points per friend).">
             <Toggle label="Referral race on" checked={g.game.race.enabled} onChange={(enabled) => up("game", { race: { ...g.game.race, enabled } })} />
