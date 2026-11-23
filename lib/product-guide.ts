@@ -60,8 +60,34 @@ If you can't find reliable directions for this exact product and the details abo
   return "none" in g ? null : g;
 }
 
-/** Daily: write guides for in-stock products that don't have one yet, bestsellers first. */
-export async function prefillGuides(limit = 60) {
+/** Write guides for in-stock products that don't have one yet, bestsellers first, several at a time. */
+export async function prefillGuides(limit = 60, parallel = 1) {
+  if (parallel > 1) {
+    let made = 0;
+    const { liveProducts } = await import("@/lib/pricing");
+    const { getProductDetail } = await import("@/lib/catalog");
+    const list = (await liveProducts()).list
+      .filter((p) => p.inStock && p.status !== "draft")
+      .sort((a, b) => Number(b.tags.includes("favorite")) - Number(a.tags.includes("favorite")) || (b.reviewCount ?? 0) - (a.reviewCount ?? 0));
+    const todo: typeof list = [];
+    const seen = new Set<string>();
+    for (const p of list) {
+      if (todo.length >= limit) break;
+      if (seen.has(p.slug)) continue;
+      seen.add(p.slug);
+      if (!(await hasGuide(p.slug))) todo.push(p);
+    }
+    for (let i = 0; i < todo.length; i += parallel) {
+      await Promise.all(todo.slice(i, i + parallel).map(async (p) => {
+        const d = await getProductDetail(p.id);
+        if (d && (await makeGuide(p.slug, { brand: d.brand, name: d.name, category: d.category, description: d.description, howToUse: d.howToUse, ingredients: d.ingredients }))) made++;
+      }));
+    }
+    return { tried: todo.length, made };
+  }
+  return prefillGuidesOne(limit);
+}
+async function prefillGuidesOne(limit: number) {
   const { liveProducts } = await import("@/lib/pricing");
   const { getProductDetail } = await import("@/lib/catalog");
   const list = (await liveProducts()).list
