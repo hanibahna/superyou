@@ -20,7 +20,7 @@ struct BagView: View {
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        if let c = config, c.delivery.freeThreshold > 0 { Section { Goals(subtotal: bag.subtotal, threshold: c.delivery.freeThreshold, club: c.features?.club) } }
+                        if let c = config, c.delivery.freeThreshold > 0 { Section { Goals(subtotal: bag.subtotal, threshold: c.delivery.freeThreshold, club: c.features?.club, quote: bag.quote) } }
                         ForEach(bag.lines) { l in
                             HStack(spacing: 12) {
                                 RemoteImage(url: l.image).frame(width: 64, height: 64).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 10))
@@ -74,6 +74,7 @@ struct BagView: View {
             .onChange(of: bag.subtotal) { old, new in
                 // Celebrate the moment the bag crosses the free-delivery line.
                 if let t = config?.delivery.freeThreshold, t > 0, old < t, new >= t { party += 1 }
+                if let d = bag.quote?.doublePointsAt, d > 0, old < d, new >= d { party += 1 }
             }
             .navigationDestination(isPresented: $checkout) { CheckoutView(config: config, zone: $zone, code: code) }
             .task {
@@ -85,18 +86,39 @@ struct BagView: View {
     func refresh() { Task { await bag.refresh(zone: zone, code: code) } }
 }
 
-/// Free-delivery goal and the Club points this bag earns, like the website's bag.
+/// Reward ladder like the website's bag: free delivery, double Club points, routine set progress.
 struct Goals: View {
-    let subtotal: Double; let threshold: Double; let club: Config.Club?
+    struct Step: Hashable { let at: Double; let label: String; let icon: String }
+    let subtotal: Double; let threshold: Double; let club: Config.Club?; let quote: Quote?
     var body: some View {
-        let left = max(0, threshold - subtotal)
-        VStack(alignment: .leading, spacing: 8) {
-            if left > 0 { (Text("You're ") + Text(money(left)).bold() + Text(" away from free delivery")).font(.footnote) }
-            else { Text("You've unlocked free delivery 🎉").font(.footnote.bold()).foregroundStyle(Color.rose) }
-            ProgressView(value: min(subtotal, threshold), total: threshold).tint(left > 0 ? Color.brand : Color.rose)
-                .animation(.spring(duration: 0.6), value: subtotal)
+        let dbl = quote?.doublePointsAt ?? 0
+        let steps = ([Step(at: threshold, label: "Free delivery", icon: "shippingbox.fill")] + (dbl > 0 ? [Step(at: dbl, label: "Double points", icon: "sparkles")] : [])).filter { $0.at > 0 }.sorted { $0.at < $1.at }
+        let top = steps.map { $0.at }.max() ?? 1
+        let next = steps.first { subtotal < $0.at }
+        VStack(alignment: .leading, spacing: 10) {
+            if let n = next { (Text("Add ") + Text(money(n.at - subtotal)).bold() + Text(" for \(n.label)")).font(.footnote) }
+            else { Text("Every reward unlocked 🎉").font(.footnote.bold()).foregroundStyle(Color.rose) }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.ink.opacity(0.08)).frame(height: 8)
+                    Capsule().fill(LinearGradient(colors: [.brand, .rose], startPoint: .leading, endPoint: .trailing)).frame(width: g.size.width * min(1, subtotal / top), height: 8)
+                    ForEach(steps, id: \.label) { s in
+                        Image(systemName: s.icon).font(.system(size: 10, weight: .bold)).foregroundStyle(subtotal >= s.at ? .white : Color.ink.opacity(0.5))
+                            .frame(width: 22, height: 22).background(subtotal >= s.at ? Color.rose : Color.white, in: Circle()).overlay(Circle().stroke(Color.ink.opacity(0.12)))
+                            .position(x: min(g.size.width - 11, max(11, g.size.width * s.at / top)), y: 4)
+                    }
+                }
+            }.frame(height: 22).animation(.spring(duration: 0.6), value: subtotal)
+            HStack(spacing: 12) { ForEach(steps, id: \.label) { s in Text("\(subtotal >= s.at ? "✓" : money(s.at)) \(s.label)").font(.caption2).foregroundStyle(subtotal >= s.at ? Color.ink : .secondary) } }
             if let c = club, c.pointsPerDollar > 0 {
-                Text("✦ This order earns \(Int(subtotal * c.pointsPerDollar)) \(c.name) points").font(.caption).foregroundStyle(.secondary)
+                Text("✦ This order earns \(Int(subtotal * c.pointsPerDollar * (dbl > 0 && subtotal >= dbl ? 2 : 1))) \(c.name) points").font(.caption).foregroundStyle(.secondary)
+            }
+            if let r = quote?.routine, r.need > 1, r.have > 0 {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(r.have >= r.need ? "Routine set: \(Int(r.percent))% off applied 🎉" : "Your routine: \(r.have) of \(r.need) steps · add \(r.need - r.have) for \(Int(r.percent))% off").font(.caption.bold())
+                    HStack(spacing: 3) { ForEach(0..<r.need, id: \.self) { i in Capsule().fill(i < r.have ? Color.rose : Color.ink.opacity(0.1)).frame(height: 5) } }
+                    if r.have < r.need { Text("Missing: " + r.all.filter { !r.steps.contains($0) }.prefix(3).joined(separator: ", ")).font(.caption2).foregroundStyle(.secondary) }
+                }.padding(8).background(Color.paper, in: RoundedRectangle(cornerRadius: 10))
             }
         }.padding(.vertical, 4)
     }

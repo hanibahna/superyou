@@ -63,7 +63,10 @@ struct Config: Codable {
     struct Advisor: Codable { let name: String; let greeting: String; let suggestions: [String] }
     struct Subscribe: Codable { let monthly: Double; let quarterly: Double; let note: String; var unlockMonthly: Int? = nil; var unlockQuarterly: Int? = nil }
     struct Club: Codable { let name: String; let pointsPerDollar: Double; let rewardPoints: Int; let rewardValue: Double }
-    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil }
+    struct Wheel: Codable { let title: String; let text: String; let slices: [String] }
+    struct Checkin: Codable { let days: Int; let points: Int }
+    struct Game: Codable { let celebrate: Bool; let checkin: Checkin? }
+    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil; var wheel: Wheel? = nil; var game: Game? = nil }
     struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
     struct Theme: Codable { var primary: String?; var ink: String?; var sale: String?; var background: String?; var headingFont: String?; var buttons: String?; var cards: String?; var preset: String? }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double
@@ -76,6 +79,9 @@ struct Quote: Codable {
     struct Discount: Codable { let name: String; let amount: Double }
     let lines: [Line]; let subtotal: Double; let discounts: [Discount]; let discountTotal: Double; let delivery: Double; let total: Double
     let couponError: String?
+    struct Routine: Codable { let have: Int; let need: Int; let percent: Double; let steps: [String]; let all: [String] }
+    var routine: Routine? = nil
+    var doublePointsAt: Double? = nil
 }
 
 struct CheckoutReply: Codable {
@@ -88,7 +94,17 @@ struct Order: Codable, Identifiable, Hashable {
     let id: String; let createdAt: String; let status: String; let total: Double; let lines: [OrderLine]
 }
 struct Member: Codable { let name: String; let points: Int; let tier: String; let ref: String? }
-struct Account: Codable { let member: Member?; let orders: [Order] }
+struct Account: Codable { let member: Member?; let orders: [Order]; var game: GameState? = nil }
+/// Badges, review quest, referral race and progress (from the website's Club engine).
+struct GameState: Codable {
+    struct Badge: Codable, Identifiable { let id: String; let name: String; let text: String; let icon: String; let points: Int; let earned: Bool }
+    struct Quest: Codable { let done: Int; let target: Int; let points: Int; let complete: Bool }
+    struct RaceStep: Codable, Hashable { let friends: Int; let points: Int; let reached: Bool }
+    struct Race: Codable { let friends: Int; let steps: [RaceStep] }
+    struct Tier: Codable { let name: String; let next: String?; let toNext: Double; let spend: Double; let progress: Double }
+    struct Voucher: Codable { let points: Int; let target: Int; let value: Double }
+    let badges: [Badge]; let quest: Quest?; let race: Race?; let tier: Tier; let voucher: Voucher; let newlyEarned: [String]
+}
 
 /** One line in the bag (kept on the phone). */
 struct BagLine: Codable, Identifiable, Hashable {

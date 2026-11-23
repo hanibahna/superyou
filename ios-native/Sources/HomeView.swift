@@ -5,6 +5,9 @@ struct HomeView: View {
     @State private var home: Home?
     @State private var error: String?
     @State private var link: Link?
+    @State private var cfg: Config?
+    @State private var showWheel = false
+    @AppStorage("sy.wheelShown") private var wheelShown = false
 
     struct Link: Identifiable, Hashable { let id = UUID(); let title: String; let query: String }
 
@@ -12,6 +15,7 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    if home != nil, cfg?.features?.game?.checkin != nil { DailyTip(days: cfg?.features?.game?.checkin?.days ?? 7, points: cfg?.features?.game?.checkin?.points ?? 0) }
                     if let h = home, let secs = h.sections, !secs.isEmpty {
                         // Same blocks, same order as the website's home page.
                         ForEach(secs) { sec in HomeSectionView(sec: sec, open: open, see: { t, href in link = Link(title: t, query: query(fromHref: href)) }, actions: { quickActions }) }
@@ -33,7 +37,12 @@ struct HomeView: View {
             .navigationDestination(for: Card.self) { ProductView(slug: $0.slug) }
             .navigationDestination(item: $link) { ProductListView(title: $0.title, query: $0.query) }
             .navigationDestination(item: $openProduct) { ProductView(slug: $0.slug) }
-            .task { if home == nil { await load() } }
+            .task {
+                if home == nil { await load() }
+                cfg = await API.sharedConfig()
+                if cfg?.features?.wheel != nil, !wheelShown { try? await Task.sleep(nanoseconds: 2_500_000_000); showWheel = true }
+            }
+            .sheet(isPresented: $showWheel, onDismiss: { wheelShown = true }) { if let w = cfg?.features?.wheel { SpinWheel(wheel: w) } }
             .onChange(of: router.pendingLink) { _, l in if let l { router.pendingLink = nil; open(l, "SuperYou") } }
         }
     }
@@ -332,5 +341,113 @@ struct ContentUnavailable: View {
             Text(text).multilineTextAlignment(.center).foregroundStyle(.secondary)
             Button("Try again", action: retry).buttonStyle(.borderedProminent)
         }.frame(maxWidth: .infinity).padding(40)
+    }
+}
+
+
+/// Today's pharmacist tip; opening the app N days in a row earns Club points (members).
+struct DailyTip: View {
+    let days: Int; let points: Int
+    @AppStorage("sy.phone") private var phone = ""
+    @State private var tip = ""
+    @State private var streak = 0
+    @State private var party = 0
+    struct Reply: Codable { struct S: Codable { let streak: Int; let earned: Int }; let tip: String; let streak: S? }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Today's pharmacist tip", systemImage: "lightbulb.fill").font(.caption.weight(.bold)).foregroundStyle(Color.rose)
+                Spacer()
+                if !phone.isEmpty {
+                    HStack(spacing: 3) { ForEach(0..<days, id: \.self) { i in Circle().fill(i < streak ? Color.rose : Color.ink.opacity(0.12)).frame(width: 7, height: 7) } }
+                }
+            }
+            Text(tip.isEmpty ? " " : tip).font(.subheadline).foregroundStyle(Color.ink).redacted(reason: tip.isEmpty ? .placeholder : [])
+            if !phone.isEmpty && points > 0 { Text("Open the app \(days) days in a row: +\(points) Club points").font(.caption2).foregroundStyle(.secondary) }
+        }
+        .padding().frame(maxWidth: .infinity, alignment: .leading).background(Color.paper, in: RoundedRectangle(cornerRadius: 22)).padding(.horizontal)
+        .overlay { Confetti(fire: $party) }
+        .task {
+            guard tip.isEmpty, let res = try? await API.send("/api/app/v1/checkin", body: ["phone": phone]), let r = try? JSONDecoder().decode(Reply.self, from: res.1) else { return }
+            tip = r.tip; streak = r.streak?.streak ?? 0
+            if (r.streak?.earned ?? 0) > 0 { streak = days; party += 1 }
+        }
+    }
+}
+
+/// Spin-to-win on first launch: every spin wins a welcome discount (the website's sign-up wheel).
+struct SpinWheel: View {
+    let wheel: Config.Wheel
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("sy.phone") private var savedPhone = ""
+    @State private var phone = ""
+    @State private var angle = 0.0
+    @State private var result: (code: String, percent: Int)?
+    @State private var busy = false
+    @State private var error: String?
+    @State private var party = 0
+    struct Reply: Codable { let code: String?; let percent: Int?; let index: Int?; let error: String? }
+    var body: some View {
+        VStack(spacing: 18) {
+            Text(wheel.title).font(.display(26)).multilineTextAlignment(.center)
+            Text(wheel.text).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            ZStack(alignment: .top) {
+                WheelFace(slices: wheel.slices).rotationEffect(.degrees(angle)).frame(width: 260, height: 260)
+                Image(systemName: "arrowtriangle.down.fill").font(.title).foregroundStyle(Color.ink).offset(y: -14)
+            }
+            if let r = result {
+                VStack(spacing: 6) {
+                    Text("You won \(r.percent)% off 🎉").font(.display(22))
+                    Text(r.code).font(.system(.title3, design: .monospaced).bold()).padding(.horizontal, 16).padding(.vertical, 8).background(Color.paper, in: Capsule())
+                    Text("Use it at checkout. We've also sent it on WhatsApp.").font(.caption).foregroundStyle(.secondary)
+                    Button("Start shopping") { dismiss() }.buttonStyle(.borderedProminent).tint(Color.brand)
+                }
+            } else {
+                TextField("WhatsApp number", text: $phone).keyboardType(.phonePad).textFieldStyle(.roundedBorder).frame(maxWidth: 280)
+                Button { Task { await spin() } } label: { Text(busy ? "Spinning…" : "Spin the wheel").frame(maxWidth: 240).padding(.vertical, 6) }
+                    .buttonStyle(.borderedProminent).tint(Color.brand).disabled(busy || phone.filter(\.isNumber).count < 7)
+                if let e = error { Text(e).font(.footnote).foregroundStyle(Color.rose) }
+                Button("Not now") { dismiss() }.font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+        .padding(24)
+        .overlay { Confetti(fire: $party) }
+        .onAppear { if phone.isEmpty { phone = savedPhone } }
+        .presentationDetents([.large])
+    }
+    func spin() async {
+        busy = true; error = nil; defer { busy = false }
+        guard let res = try? await API.send("/api/signup/", body: ["phone": phone, "source": "popup"]), let r = try? JSONDecoder().decode(Reply.self, from: res.1) else { error = "We couldn't reach the shop."; return }
+        guard let code = r.code, let pct = r.percent else { error = r.error ?? "Please try again."; return }
+        let n = max(1, wheel.slices.count), i = max(0, r.index ?? 0)
+        let slice = 360.0 / Double(n)
+        // Land the middle of slice i under the pointer at the top, after a few full turns.
+        let target = 360.0 * 5 + (360.0 - (Double(i) * slice + slice / 2))
+        withAnimation(.timingCurve(0.15, 0.85, 0.25, 1, duration: 3.2)) { angle = target }
+        try? await Task.sleep(nanoseconds: 3_300_000_000)
+        if savedPhone.isEmpty { savedPhone = phone }
+        result = (code, pct); party += 1
+    }
+}
+
+struct WheelFace: View {
+    let slices: [String]
+    var body: some View {
+        GeometryReader { g in
+            let n = max(1, slices.count), r = min(g.size.width, g.size.height) / 2, c = CGPoint(x: g.size.width / 2, y: g.size.height / 2)
+            ZStack {
+                ForEach(0..<n, id: \.self) { i in
+                    let start = Angle.degrees(Double(i) * 360 / Double(n) - 90), end = Angle.degrees(Double(i + 1) * 360 / Double(n) - 90)
+                    Path { p in p.move(to: c); p.addArc(center: c, radius: r, startAngle: start, endAngle: end, clockwise: false); p.closeSubpath() }
+                        .fill(i % 2 == 0 ? Color.rose : Color(hex: "#ffc2d4"))
+                    let mid = (start.radians + end.radians) / 2
+                    Text(slices[i]).font(.caption.bold()).foregroundStyle(i % 2 == 0 ? Color.white : Color.ink)
+                        .rotationEffect(.radians(mid + .pi / 2))
+                        .position(x: c.x + cos(mid) * r * 0.62, y: c.y + sin(mid) * r * 0.62)
+                }
+                Circle().stroke(Color.ink, lineWidth: 3)
+                Circle().fill(Color.ink).frame(width: 26, height: 26)
+            }
+        }
     }
 }

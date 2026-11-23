@@ -20,6 +20,8 @@ export async function GET() {
     features: {
       superScan: g.skinScan.enabled,
       advisor: x.advisor.enabled ? { name: x.advisor.name, greeting: x.advisor.greeting, suggestions: x.advisor.suggestions } : null,
+      wheel: g.popup.enabled && g.popup.mode === "wheel" ? { title: g.popup.title, text: g.popup.text, slices: g.popup.wheel.map((w) => w.label) } : null,
+      game: g.game.enabled ? { celebrate: g.game.celebrate, checkin: g.game.checkin.enabled ? { days: g.game.checkin.days, points: g.game.checkin.points } : null } : null,
       club: g.club.enabled ? { name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue } : null,
       subscribe: g.subscribe.enabled ? { monthly: g.subscribe.monthly, quarterly: g.subscribe.quarterly, note: g.subscribe.note, unlockMonthly: g.subscribe.unlockMonthly, unlockQuarterly: g.subscribe.unlockQuarterly } : null,
     },
