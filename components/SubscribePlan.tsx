@@ -28,7 +28,7 @@ export function SubscribeChoice({ price, value, onChange }: { price: number; val
           </label>
         ))}
       </div>
-      {value !== 0 && <p className="mt-2 text-xs text-muted">{t("Your first deliveries are full price. Once they're delivered, the rebate comes off your next delivery automatically.")} {sub.note ? t(sub.note) : ""}</p>}
+      {value !== 0 && <p className="mt-2 text-xs text-muted">{t("Your first deliveries are full price. Once they're delivered, the rebate comes off your next delivery automatically.")} {sub.note ? t(sub.note) : ""} <a href="/pages/subscription-terms/" className="underline">{t("Terms")}</a></p>}
     </fieldset>
   );
 }

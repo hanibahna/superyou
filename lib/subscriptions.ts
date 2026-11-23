@@ -69,7 +69,6 @@ export const prettyDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDate
 /** After checkout: one subscription per plan (monthly / every 3 months) in the order. A product the
  * customer already gets on another active subscription isn't added twice. */
 export async function startSubscriptions(order: Order, input: CheckoutInput) {
-  const wa = await import("@/lib/whatsapp");
   const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
   const phone = input.customer.phone.replace(/\D/g, "");
   const mine = (await listSubscriptions()).filter((x) => x.status !== "cancelled" && x.customer.phone.replace(/\D/g, "") === phone);
@@ -98,9 +97,51 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
     };
     await saveSubscription(s);
     made.push(s.id);
-    await wa.trigger("subscriptionStarted", s.customer.phone, { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), every: every === 1 ? "every month" : "every 3 months", next_date: prettyDate(s.nextAt), link: manageLink(s) }).catch(() => false);
+    await notify("started", s, { percent: every === 1 ? g.monthly : g.quarterly, deliveries: needFor(s, g), rebate: 0 }).catch(() => {});
   }
   await linkOrder(order.id, made);
+}
+
+/** Tell the customer on WhatsApp (text message if WhatsApp didn't reach them) and by email. */
+async function notify(kind: "started" | "unlocked", s: Subscription, v: { percent: number; deliveries: number; rebate: number }) {
+  const wa = await import("@/lib/whatsapp");
+  const { smsForOrder } = await import("@/lib/sms");
+  const { sendEmail } = await import("@/lib/email");
+  const every = s.every === 1 ? "every month" : "every 3 months";
+  const vars = { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), every, next_date: prettyDate(s.nextAt), link: manageLink(s), percent: String(v.percent), deliveries: String(v.deliveries), rebate: `$${v.rebate.toFixed(2)}` };
+  const terms = `${siteUrl()}/pages/subscription-terms/`;
+  if (kind === "started") {
+    const sent = await wa.trigger("subscriptionStarted", s.customer.phone, vars).catch(() => false);
+    await smsForOrder("subscriptionStarted", s.customer.phone, vars, sent).catch(() => {});
+    if (s.customer.email) await sendEmail(s.customer.email, "Your SuperYou subscription is set", `Hi ${vars.first_name},
+
+Your Subscribe & save plan is set: ${vars.items}, delivered ${every}. Your next order will be placed on ${vars.next_date} (pay on delivery). We'll remind you on WhatsApp 3 days before.
+
+How your discount works
+• Your first ${v.deliveries} deliveries are at the normal price.
+• Once they're delivered, ${v.percent}% off unlocks on every subscription order.
+• You also get ${v.percent}% back on those first ${v.deliveries} orders, taken off your next deliveries (up to the limit per order in our terms). It isn't paid in cash.
+• Skipped months don't count, and returned or cancelled orders are taken out of the count.
+• If you cancel before using your rebate, it's lost.
+
+Track your progress, skip, change or cancel any time: ${vars.link}
+Full terms: ${terms}
+
+SuperYou`).catch(() => false);
+  } else {
+    const sent = await wa.trigger("subscriptionUnlocked", s.customer.phone, vars).catch(() => false);
+    await smsForOrder("subscriptionUnlocked", s.customer.phone, vars, sent).catch(() => {});
+    if (s.customer.email) await sendEmail(s.customer.email, `You've unlocked ${v.percent}% off your SuperYou subscription`, `Hi ${vars.first_name},
+
+Thank you! You've completed ${v.deliveries} subscription deliveries, so ${v.percent}% off is now unlocked on every subscription order.
+${v.rebate > 0 ? `
+Your rebate of ${vars.rebate} on the orders you've already received comes off your next delivery on ${vars.next_date} (up to the limit per order in our terms; any balance carries to the following deliveries).
+` : ""}
+See your subscription: ${vars.link}
+Terms: ${terms}
+
+SuperYou`).catch(() => false);
+  }
 }
 
 /** Remember which subscriptions an order belongs to (its first order, or one it placed itself). */
@@ -133,7 +174,7 @@ export async function onSubscriptionOrder(order: Order) {
         r.earned = +(r.earned + back).toFixed(2);
         r.pending = +(r.pending + back).toFixed(2);
         note(s, `Unlocked: ${pct}% off from now on${back ? `, $${back.toFixed(2)} rebate on past orders` : ""}`);
-        // No WhatsApp message yet: it needs its own approved template (the reminder one would read wrong).
+        await notify("unlocked", s, { percent: pct, deliveries: Object.keys(s.delivered).length, rebate: back }).catch(() => {});
       }
     }
     if ((order.status === "returned" || order.status === "cancelled" || order.status === "payment_failed")) {

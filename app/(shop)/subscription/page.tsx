@@ -82,7 +82,7 @@ function Manage() {
             <>
               <p className="font-semibold">{s.progress.done} of {s.progress.need} deliveries done</p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white"><div className="h-full bg-[#d13f74]" style={{ width: `${Math.min(100, (s.progress.done / Math.max(1, s.progress.need)) * 100)}%` }} /></div>
-              <p className="mt-2 text-sm text-muted">After {s.progress.need} delivered orders you unlock {s.progress.pct}% off every order{s.progress.noRebate ? "" : `, plus ${s.progress.pct}% back on the orders you've already received`}. Skipped months don't count; cancelling before then loses the rebate.</p>
+              <p className="mt-2 text-sm text-muted">After {s.progress.need} delivered orders you unlock {s.progress.pct}% off every order{s.progress.noRebate ? "" : `, plus ${s.progress.pct}% back on the orders you've already received`}. Skipped months don't count; cancelling before then loses the rebate. <a href="/pages/subscription-terms/" className="underline">Terms</a></p>
             </>
           )}
         </div>

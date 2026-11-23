@@ -27,6 +27,8 @@ export const SMS_EVENTS = {
   orderConfirmed: { label: "Order confirmed", text: "SuperYou: order {order_id} is confirmed and being prepared." },
   orderShipped: { label: "Order shipped", text: "SuperYou: order {order_id} is on its way with {courier}. Track: {tracking_link}" },
   orderDelivered: { label: "Order delivered", text: "SuperYou: order {order_id} was delivered. Enjoy! Questions? Reply on WhatsApp." },
+  subscriptionStarted: { label: "Subscription started", text: "SuperYou: your subscription is set ({every}), next order {next_date}. Your discount unlocks after {deliveries} deliveries, with {percent}% back on them. Manage: {link}" },
+  subscriptionUnlocked: { label: "Subscription discount unlocked", text: "SuperYou: {percent}% off is unlocked on your subscription! {rebate} rebate comes off your next delivery on {next_date}. {link}" },
 } as const;
 export type SmsEvent = keyof typeof SMS_EVENTS;
 

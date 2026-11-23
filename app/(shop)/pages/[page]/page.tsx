@@ -18,9 +18,10 @@ const niceTitle = (title: string, brand?: string) => {
 
 export async function generateMetadata({ params }: { params: Promise<{ page: string }> }) {
   const slug = (await params).page;
-  const p = (await getSettings()).pages[slug];
+  const sub = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
+  const p = (await getSettings()).pages[slug] ?? (slug === "subscription-terms" ? { title: "Subscribe & save terms", body: "" } : undefined);
   if (!p || foreignPage(slug)) return {};
-  const builtIn = policyText(slug, await getSettings());
+  const builtIn = policyText(slug, await getSettings(), sub);
   if (builtIn) return { title: builtIn.title, ...(await canonical(`/pages/${slug}/`)) };
   const prods = await pageProducts(slug, p.title);
   const title = niceTitle(p.title, prods?.brand);
@@ -30,11 +31,13 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
 export default async function InfoPage({ params }: { params: Promise<{ page: string }> }) {
   const slug = (await params).page;
   const s = await getSettings();
-  const stored = s.pages[slug];
+  const sub = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
+  const builtIn = policyText(slug, s, sub);
+  // The Subscribe & save terms always follow the current settings unless written in Admin.
+  const stored = s.pages[slug] ?? (slug === "subscription-terms" && builtIn ? { title: builtIn.title, body: "" } : undefined);
   if (!stored || foreignPage(slug)) notFound();
   // Policy pages copied from a supplier are replaced by SuperYou's own until you write yours.
-  const builtIn = policyText(slug, s);
-  const p0 = builtIn && foreignText.test(stored.body) ? builtIn : stored;
+  const p0 = builtIn && (foreignText.test(stored.body) || !stored.body) ? builtIn : stored;
   const lang = await getLang();
   const own = !!builtIn || ["delivery", "payment", "rewards", "about", "privacy", "contact"].includes(slug);
   const prods = own ? null : await pageProducts(slug, p0.title);

@@ -11,7 +11,7 @@ const money = (n: number) => `$${n % 1 ? n.toFixed(2) : n}`;
 /** Supplier names, their phone numbers, stores, and leftover website code. */
 export const foreignText = /skin\s*society|neo\s*vitale|950\s*333|5\s*950|hazmieh|dbayeh|@skinsociety|shopify|<div|fragile health situation/i;
 
-export function policyText(slug: string, s: Settings): { title: string; body: string } | null {
+export function policyText(slug: string, s: Settings, sub?: { monthly: number; quarterly: number; unlockMonthly: number; unlockQuarterly: number; maxRebate: number; cooldownDays: number }): { title: string; body: string } | null {
   const st = s.store;
   const d = s.delivery;
   const contact = [st.phone && `• Phone / WhatsApp: ${st.phone}`, st.email && `• Email: ${st.email}`].filter(Boolean).join("\n");
@@ -105,6 +105,9 @@ Your order is confirmed when we accept it. We may cancel an order if a product i
 Delivery and returns
 See our delivery terms and return policy.
 
+Subscribe & save
+Subscription discounts are earned after a number of delivered orders and come with a rebate on those orders. See our Subscribe & save terms for how it works, what counts and when a rebate can be lost.
+
 Offers, gift cards and SuperYou Club
 Discount codes, gift cards and Club rewards follow the conditions shown with them. Gift cards are used like money at checkout and can't be exchanged for cash. Points and rewards have no cash value.
 
@@ -114,6 +117,46 @@ Advice from our pharmacists and our beauty tools is general guidance and doesn't
 Contact
 ${contact}`,
       };
+    case "subscription-terms": {
+      const g = sub ?? { monthly: 10, quarterly: 15, unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90 };
+      return {
+        title: "Subscribe & save terms",
+        body: `Subscribe & save terms
+Subscribe & save delivers the products you choose every month or every 3 months, and rewards you for staying with us.
+
+How the plan works
+• Your orders are placed automatically on the due date and paid on delivery. We remind you on WhatsApp 3 days before each one.
+• You can skip a delivery, change products or quantities, change how often, pause or cancel at any time from your private subscription link. There is no minimum period.
+
+How you earn your discount
+• Your first deliveries are at the normal price: ${g.unlockMonthly} deliveries on a monthly plan, or ${g.unlockQuarterly} deliveries on an every-3-months plan.
+• Once those orders have been delivered, your discount unlocks: ${g.monthly}% off on a monthly plan or ${g.quarterly}% off on an every-3-months plan, on every subscription order from then on.
+• At the same time you earn a rebate of the same percentage on the subscribed products in the orders already delivered.
+
+How the rebate is used
+• The rebate is taken off your next subscription deliveries, up to ${money(g.maxRebate)} per order; any balance carries over to the following deliveries.
+• It can only be used on your subscription orders. It can't be exchanged for cash, transferred, or combined into a refund.
+
+What counts
+• Only orders that have been delivered (and paid on delivery) count. Skipped deliveries don't count.
+• If an order is returned or cancelled, it is removed from the count and the rebate earned on it is taken back. If that brings you below the required number of deliveries, the discount is paused until you reach it again.
+• If an order on which you used your rebate is cancelled or returned, that rebate is given back to you.
+
+Cancelling
+• If you cancel your subscription, any rebate you haven't used yet is lost.
+• If you start a new subscription within ${g.cooldownDays} days of cancelling one, the new subscription still unlocks the ongoing discount but doesn't earn a rebate on its first orders.
+
+Fair use
+• One active subscription per phone number for the same product.
+• We may cancel a rebate or a subscription in cases of misuse, such as several accounts for the same person or address, repeated returns or orders made only to obtain the discount.
+• Subscriptions started before November 2026 keep the discount they started with.
+
+We may change these terms or the discount; changes apply to deliveries placed after we tell you, and never to an order already placed.
+
+Contact
+${contact}`,
+      };
+    }
     default:
       return null;
   }

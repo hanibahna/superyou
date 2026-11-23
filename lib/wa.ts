@@ -37,7 +37,7 @@ export type Contact = {
 
 // ── Automations ─────────────────────────────────────────
 
-export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder" | "giftCardSent" | "subscriptionStarted" | "subscriptionReminder" | "skinScanResult" | "skinScanFollowUp";
+export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder" | "giftCardSent" | "subscriptionStarted" | "subscriptionReminder" | "subscriptionUnlocked" | "skinScanResult" | "skinScanFollowUp";
 
 export type Automation = {
   enabled: boolean;
@@ -63,6 +63,7 @@ export const automationInfo: Record<AutomationKey, { label: string; when: string
   giftCardSent: { label: "Gift card received", when: "When a gift card bought on the site is paid — sent to the person receiving it", tokens: ["first_name", "from", "amount", "code", "message", "link"], category: "UTILITY" },
   subscriptionStarted: { label: "Subscription started", when: "When a customer subscribes to monthly or quarterly delivery", tokens: ["first_name", "items", "every", "next_date", "link"], category: "UTILITY" },
   subscriptionReminder: { label: "Subscription delivery coming", when: "3 days before the next subscription order is placed", tokens: ["first_name", "items", "next_date", "total", "link"], category: "UTILITY" },
+  subscriptionUnlocked: { label: "Subscription discount unlocked", when: "When a subscriber completes the deliveries that unlock their discount", tokens: ["first_name", "deliveries", "percent", "rebate", "next_date", "link"], category: "UTILITY" },
   skinScanResult: { label: "SuperScan results", when: "When a customer asks to get their AI skin scan routine on WhatsApp", tokens: ["first_name", "skin_type", "routine", "link"], category: "UTILITY" },
   skinScanFollowUp: { label: "Rescan your skin (6 weeks)", when: "6 weeks after a skin scan, inviting the customer to rescan and compare", tokens: ["first_name", "link"], category: "MARKETING" },
   cartReminder: { label: "Forgot something? (abandoned cart)", when: "A few hours after someone leaves checkout without ordering (only if they ticked WhatsApp offers)", tokens: ["first_name", "items", "total", "link"], category: "MARKETING" },
@@ -99,6 +100,7 @@ export const defaultWaConfig: WaConfig = {
     skinScanFollowUp: auto("skin_scan_follow_up", ["{{first_name}}", "{{link}}"]),
     subscriptionStarted: auto("subscription_started", ["{{first_name}}", "{{every}}", "{{next_date}}", "{{link}}"]),
     subscriptionReminder: auto("subscription_reminder", ["{{first_name}}", "{{next_date}}", "{{total}}", "{{link}}"]),
+    subscriptionUnlocked: auto("subscription_unlocked", ["{{first_name}}", "{{deliveries}}", "{{percent}}", "{{rebate}}", "{{next_date}}", "{{link}}"]),
   },
 };
 
@@ -113,7 +115,8 @@ export const waConfigSchema = z.object({
 export const templatePresets: { name: string; category: "UTILITY" | "MARKETING"; body: string; example: string[]; header?: "IMAGE" }[] = [
   { name: "skin_scan_result", category: "UTILITY", body: "Hi {{1}}, here are your SuperScan results: {{2}} skin. Your morning and evening routine, with the products we picked for you: {{3}}", example: ["Rana", "combination", "https://shopsuperyou.com/skin-scan/r/SC-1/?t=x"] },
   { name: "skin_scan_follow_up", category: "MARKETING", body: "Hi {{1}}, it's been 6 weeks since your SuperScan. Do a new SuperScan to see how your skin has changed and update your routine: {{2}}", example: ["Rana", "https://shopsuperyou.com/skin-scan/?from=SC-1&t=x"] },
-  { name: "subscription_started", category: "UTILITY", body: "Hi {{1}}, your SuperYou subscription is set: delivered {{2}}, next order on {{3}}. Skip, change or cancel any time: {{4}}", example: ["Rana", "every month", "22 Dec", "https://shopsuperyou.com/subscription/?id=SUB-1&t=x"] },
+  { name: "subscription_started", category: "UTILITY", body: "Hi {{1}}, your SuperYou subscription is set: delivered {{2}}, next order on {{3}}. Your Subscribe & save discount unlocks once your first deliveries are completed, and you'll get it back on those orders too. Track your progress, skip, change or cancel any time: {{4}}", example: ["Rana", "every month", "22 Dec", "https://shopsuperyou.com/subscription/?id=SUB-1&t=x"] },
+  { name: "subscription_unlocked", category: "UTILITY", body: "Hi {{1}}, you've completed {{2}} subscription deliveries with SuperYou, so {{3}}% off is now unlocked on every subscription order. Your rebate of {{4}} on the orders you've already received comes off your next delivery on {{5}}. Details: {{6}}", example: ["Rana", "3", "10", "$11.40", "22 Feb", "https://shopsuperyou.com/subscription/?id=SUB-1&t=x"] },
   { name: "subscription_reminder", category: "UTILITY", body: "Hi {{1}}, your next SuperYou subscription order will be placed on {{2}} ({{3}}, pay on delivery). To skip or change it: {{4}}", example: ["Rana", "22 Dec", "$38.50", "https://shopsuperyou.com/subscription/?id=SUB-1&t=x"] },
   { name: "order_received", category: "UTILITY", body: "Hi {{1}}, thank you for your order {{2}} at SuperYou! Total: {{3}}. We'll let you know as soon as it's on its way.", example: ["Rana", "SUP-M3K2Q", "$45.90"] },
   { name: "order_confirmed", category: "UTILITY", body: "Hi {{1}}, your SuperYou order {{2}} is confirmed and being prepared.", example: ["Rana", "SUP-M3K2Q"] },

@@ -63,7 +63,7 @@ export function Footer({ categories }: { categories: Category[] }) {
         ) : (
           <>
             <FooterCol title={tx("Shop")} links={categories.filter((c) => c.menu !== false).map((c) => ({ label: c.name, href: `/shop/?category=${c.slug}` }))} />
-            <FooterCol title={tx("Help")} links={Object.entries(pages).map(([slug, p]) => ({ label: p.title, href: `/pages/${slug}/` }))} />
+            <FooterCol title={tx("Help")} links={[...Object.entries(pages).map(([slug, p]) => ({ label: p.title, href: `/pages/${slug}/` })), ...(pages["subscription-terms"] ? [] : [{ label: tx("Subscribe & save terms"), href: "/pages/subscription-terms/" }])]} />
           </>
         )}
         <div>
