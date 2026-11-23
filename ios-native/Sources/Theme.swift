@@ -26,15 +26,28 @@ enum SiteTheme {
     static func styleNavigationBars() {
         guard grotesk else { return }
         func grot(_ size: CGFloat) -> UIFont { UIFont(name: "SpaceGrotesk-Bold", size: size) ?? .systemFont(ofSize: size, weight: .bold) }
-        let large = grot(32), small = grot(17)
+        // Large titles stay in the system font: iOS 27 falls back to a typewriter face for custom large-title fonts.
+        let large = UIFont.systemFont(ofSize: 34, weight: .bold), small = grot(17)
+        let ink = UIColor(Color.ink)
+        let look = UINavigationBarAppearance()
+        look.configureWithDefaultBackground()
+        look.largeTitleTextAttributes = [.font: large, .foregroundColor: ink]
+        look.titleTextAttributes = [.font: small, .foregroundColor: ink]
+        let edge = UINavigationBarAppearance()
+        edge.configureWithTransparentBackground()
+        edge.largeTitleTextAttributes = look.largeTitleTextAttributes
+        edge.titleTextAttributes = look.titleTextAttributes
         let a = UINavigationBar.appearance()
-        a.largeTitleTextAttributes = [.font: large]
-        a.titleTextAttributes = [.font: small]
+        a.standardAppearance = look
+        a.compactAppearance = look
+        a.scrollEdgeAppearance = edge
+        a.largeTitleTextAttributes = look.largeTitleTextAttributes
+        a.titleTextAttributes = look.titleTextAttributes
     }
 
     /// Bundled Space Grotesk, registered once at launch.
     static func registerFonts() {
-        for name in ["SpaceGrotesk-Bold", "SpaceGrotesk-Medium"] {
+        for name in ["SpaceGrotesk-Bold", "SpaceGrotesk-Medium"] where UIFont(name: name, size: 12) == nil {
             if let url = Bundle.main.url(forResource: name, withExtension: "ttf") { CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) }
         }
     }
