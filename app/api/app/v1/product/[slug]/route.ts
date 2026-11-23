@@ -3,6 +3,9 @@ import { getGroupBySlug, getProductDetail } from "@/lib/catalog";
 import { shopImg } from "@/lib/img-server";
 import { liveProducts } from "@/lib/pricing";
 import { siteUrl } from "@/lib/site-url";
+import { productTips } from "@/lib/tips";
+import { isSubscribable } from "@/lib/subscribable";
+import { genderOf } from "@/lib/gender";
 
 // Native app: one product with its variants, pictures, description and delivery info. No supplier data.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -18,6 +21,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     slug, name: first.name, brand: first.brand, images,
     description: d?.description ?? "", howToUse: d?.howToUse ?? "", ingredients: d?.ingredients ?? "",
     rating: first.rating ?? null, reviewCount: first.reviewCount ?? 0,
+    category: first.category ?? "",
+    tips: productTips({ name: first.name, category: first.category ?? "", concerns: first.concerns ?? [], text: `${d?.description ?? ""} ${d?.howToUse ?? ""}` }).slice(0, 3),
+    subscribable: isSubscribable({ name: first.name, category: first.category ?? "" }),
+    url: `${siteUrl()}/products/${slug}/`,
     variants: variants.map((v) => ({ id: v.id, name: v.variant || v.size || v.name, price: v.price, compareAt: v.compareAt ?? null, inStock: v.inStock, image: abs(shopImg(v.image)), origin: v.origin ?? "local", shipFrom: v.shipFrom ?? "Lebanon", daysMin: v.daysMin ?? 1, daysMax: v.daysMax ?? 3 })),
   });
 }
