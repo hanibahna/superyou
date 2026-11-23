@@ -59,12 +59,13 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   }
   // Second check: Claude reads each candidate and keeps it only if it is about exactly this product.
   const ok = await confirmSameProduct(p, cands.slice(0, 5));
-  trace?.push(`words: ${nameWords.join(",")} | claude kept: ${[...ok].join(",") || "none"}`);
+  trace?.push(`words: ${nameWords.join(",")} | claude kept: ${[...ok].join(",") || "none"} | ${lastCheck}`);
   for (const v of cands) if (ok.has(v.id) && out.length < 3) out.push({ id: v.id, title: v.title, channel: v.channel });
   await db.cmd(["SET", ck, JSON.stringify(out), "EX", String(out.length ? 30 * 86400 : 7 * 86400)]).catch(() => {});
   return out;
 }
 
+export let lastCheck = "";
 /** Asks Claude whether each video is specifically about this exact product. No key = nothing passes. */
 async function confirmSameProduct(p: { brand: string; name: string }, vids: { id: string; title: string; channel: string; desc: string }[]): Promise<Set<string>> {
   if (!vids.length) return new Set();
@@ -76,12 +77,13 @@ async function confirmSameProduct(p: { brand: string; name: string }, vids: { id
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-5-5", max_tokens: 100, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-5-5", max_tokens: 800, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(20_000),
   }).catch(() => null);
-  if (!r?.ok) return new Set();
-  const j = (await r.json().catch(() => ({}))) as { content?: { type: string; text?: string }[] };
+  if (!r?.ok) { lastCheck = r ? `error ${r.status}` : "no response"; return new Set(); }
+  const j = (await r.json().catch(() => ({}))) as { content?: { type: string; text?: string }[]; stop_reason?: string };
   const text = (j.content ?? []).map((c) => c.text ?? "").join(" ");
+  lastCheck = `${j.stop_reason}: ${text.slice(0, 300)}`;
   return new Set(vids.map((v) => v.id).filter((id) => text.includes(id)));
 }
 
