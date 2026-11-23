@@ -36,7 +36,7 @@ export async function GET() {
     switch (s.type) {
       case "bfhero": {
         const products = s.slider?.enabled ? (await cardsFor(s.slider.source, s.slider.limit * 2, "featured")).filter((c) => c.image && c.inStock).slice(0, s.slider.limit).map(card) : [];
-        return { type: "campaign", id: s.id, eyebrow: s.eyebrow, title: s.title, text: s.text, badge: s.badge, cta: s.cta, href: s.href, cta2: s.cta2, href2: s.href2, endsAt: s.endsAt, cards: products };
+        return { type: "campaign", id: s.id, eyebrow: s.eyebrow, title: s.title.replace(/\*/g, ""), text: s.text, badge: s.badge, cta: s.cta, href: s.href, cta2: s.cta2, href2: s.href2, endsAt: s.endsAt, cards: products };
       }
       case "hero":
         return { type: "banners", id: s.id, title: "", items: s.slides.map((x) => ({ eyebrow: x.eyebrow, title: x.title, text: x.text, cta: x.cta, href: x.href, image: png(x.image), bg: x.from || "" })) };
