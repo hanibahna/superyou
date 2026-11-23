@@ -25,10 +25,7 @@ enum SiteTheme {
     /// Navigation titles in the heading font, like the website's page titles.
     static func styleNavigationBars() {
         guard grotesk else { return }
-        func grot(_ size: CGFloat) -> UIFont {
-            let d = UIFontDescriptor(fontAttributes: [.family: "Space Grotesk", .traits: [UIFontDescriptor.TraitKey.weight: UIFont.Weight.bold]])
-            return UIFont(descriptor: d, size: size)
-        }
+        func grot(_ size: CGFloat) -> UIFont { UIFont(name: "SpaceGrotesk-Bold", size: size) ?? .systemFont(ofSize: size, weight: .bold) }
         let large = grot(32), small = grot(17)
         let a = UINavigationBar.appearance()
         a.largeTitleTextAttributes = [.font: large]
@@ -37,15 +34,16 @@ enum SiteTheme {
 
     /// Bundled Space Grotesk, registered once at launch.
     static func registerFonts() {
-        guard let url = Bundle.main.url(forResource: "SpaceGrotesk", withExtension: "ttf") else { return }
-        CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        for name in ["SpaceGrotesk-Bold", "SpaceGrotesk-Medium"] {
+            if let url = Bundle.main.url(forResource: name, withExtension: "ttf") { CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) }
+        }
     }
 }
 
 extension Font {
     /// Headings in the website's heading font (Space Grotesk), falling back to the system font.
     static func display(_ size: CGFloat, _ weight: Font.Weight = .bold) -> Font {
-        SiteTheme.grotesk ? .custom("Space Grotesk", size: size).weight(weight) : .system(size: size, weight: weight)
+        SiteTheme.grotesk ? .custom([.regular, .medium, .light, .thin, .ultraLight].contains(weight) ? "SpaceGrotesk-Medium" : "SpaceGrotesk-Bold", size: size) : .system(size: size, weight: weight)
     }
 }
 

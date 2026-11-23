@@ -66,7 +66,7 @@ struct HomeView: View {
     /// SuperScan, AI and video-call shortcuts (the website's quick links under the banner).
     var quickActions: some View {
         HStack(spacing: 10) {
-            Button { router.tab = 2 } label: { Label("SuperScan", systemImage: "faceid").frame(maxWidth: .infinity).padding(.vertical, 12) }
+            Button { router.tab = 2 } label: { Label("SuperScan", systemImage: "faceid").lineLimit(1).minimumScaleFactor(0.8).frame(maxWidth: .infinity).padding(.vertical, 12) }
                 .buttonStyle(.borderedProminent).tint(Color.brand)
             NavigationLink { AdvisorView() } label: { Label("Ask AI", systemImage: "sparkles").frame(maxWidth: .infinity).padding(.vertical, 12) }
                 .buttonStyle(.bordered)
