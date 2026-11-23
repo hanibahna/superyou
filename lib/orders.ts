@@ -1,5 +1,6 @@
 import { siteUrl } from "@/lib/site-url";
 import { normPhone } from "@/lib/wa";
+import { everySchema, type Every } from "@/lib/every";
 // Orders: server-side pricing + storage.
 //
 // Storage: uses Upstash Redis (free tier, one-click from the Vercel Marketplace)
@@ -15,7 +16,7 @@ import { countCouponUse } from "@/lib/site-store";
 import { attributionSchema, type Attribution } from "@/lib/marketing";
 
 export const checkoutSchema = z.object({
-  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20), every: z.union([z.literal(1), z.literal(3)]).optional() })).min(1),
+  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20), every: everySchema.optional() })).min(1),
   subscriptionId: z.string().max(40).optional(), // set when the order is placed by a subscription (server only)
   customer: z.object({
     firstName: z.string().min(1).max(60),
@@ -78,7 +79,7 @@ export type Order = {
   paymentMethod: CheckoutInput["paymentMethod"];
   paymentProvider?: string;
   paymentRef?: string; // gateway charge/session id
-  lines: Array<{ productId: string; name: string; brand: string; unitPrice: number; qty: number; lineTotal: number; gift?: boolean; every?: 1 | 3 }>;
+  lines: Array<{ productId: string; name: string; brand: string; unitPrice: number; qty: number; lineTotal: number; gift?: boolean; every?: Every }>;
   subscriptionId?: string; // placed automatically by this subscription
   subtotal: number;
   discount?: number;
@@ -113,7 +114,17 @@ export const orderValue = (o: Order) => +(o.total + (o.giftCard?.amount ?? 0)).t
 export async function priceOrder(input: CheckoutInput) {
   const q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId });
   const { isSubscribable } = await import("@/lib/subscribable");
-  const everyOf = (id: string) => { const l = q._lines.find((x) => x.productId === id); return l && isSubscribable({ name: l.name, category: l.category }) ? input.items.find((i) => i.productId === id)?.every : undefined; };
+  // Only products that run out can be subscribed (AI lifespan database, else the name rules).
+  const { getIndex: idx0 } = await import("@/lib/catalog");
+  const index0 = await idx0();
+  const lives = await (await import("@/lib/lifespan")).getLives(input.items.filter((i) => i.every).map((i) => index0.byId.get(i.productId)?.slug ?? ""));
+  const everyOf = (id: string) => {
+    const l = q._lines.find((x) => x.productId === id);
+    if (!l) return undefined;
+    const life = lives.get(index0.byId.get(id)?.slug ?? "");
+    const ok = life ? life.every > 0 : isSubscribable({ name: l.name, category: l.category });
+    return ok ? input.items.find((i) => i.productId === id)?.every : undefined;
+  };
   for (const i of input.items) {
     const l = q.lines.find((x) => x.productId === i.productId);
     if (!l) throw new Error("A product in your cart is no longer available. Please review your cart.");

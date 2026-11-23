@@ -32,7 +32,7 @@ export function SubscriptionsAdmin({ subs, rules }: { subs: S[]; rules: Rules })
       <p className="mt-3 rounded-lg bg-[#f6f1f3] p-3 text-sm"><b>Earn-it rules:</b> the first orders are full price. Monthly unlocks {rules.monthly}% after {rules.unlockMonthly} delivered orders, every 3 months unlocks {rules.quarterly}% after {rules.unlockQuarterly}. On unlock the customer gets the same % back on the orders already delivered, used on the next subscription orders (max ${rules.maxRebate} per order), never as cash. Returns and cancellations reverse it; cancelling forfeits unused rebate; re-subscribing within {rules.cooldownDays} days earns no rebate. Older subscriptions keep their discount. Change these in Growth → Tools.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <Card title="Active"><p className="text-3xl font-bold">{active.length}</p></Card>
-        <Card title="Monthly / every 3 months"><p className="text-3xl font-bold">{active.filter((s) => s.every === 1).length} / {active.filter((s) => s.every === 3).length}</p></Card>
+        <Card title="Monthly / longer plans"><p className="text-3xl font-bold">{active.filter((s) => s.every === 1).length} / {active.filter((s) => s.every !== 1).length}</p></Card>
         <Card title="Rebates owed / flagged"><p className="text-3xl font-bold">${active.reduce((a, s) => a + s.progress.rebate.pending, 0).toFixed(0)} / {active.filter((s) => s.flags.length).length}</p></Card>
         <Card title="Due in the next 7 days"><p className="text-3xl font-bold">{active.filter((s) => s.nextAt <= new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)).length}</p></Card>
       </div>
@@ -47,7 +47,7 @@ export function SubscriptionsAdmin({ subs, rules }: { subs: S[]; rules: Rules })
                     <tr key={s.id} className="align-top">
                       <td className="py-3"><b>{s.name}</b><br /><a className="text-muted underline" href={`https://wa.me/${s.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">{s.phone}</a></td>
                       <td className="max-w-[260px] py-3">{s.items}{s.lastError && <p className="mt-1 text-xs text-sale">{s.lastError}</p>}</td>
-                      <td className="py-3">{s.every === 1 ? "Monthly" : "Every 3 months"}<br /><span className="text-xs text-muted">{s.status}</span></td>
+                      <td className="py-3">{s.every === 1 ? "Monthly" : `Every ${s.every} months`}<br /><span className="text-xs text-muted">{s.status}</span></td>
                       <td className="py-3"><input type="date" defaultValue={s.nextAt} onChange={(e) => e.target.value && call({ id: s.id, action: "date", date: e.target.value })} className="rounded-lg border border-line px-2 py-1" aria-label="Next order date" /></td>
                       <td className="max-w-[240px] py-3 text-xs">
                         {s.progress.legacy ? <span>Older plan: −{s.progress.pct}% always</span> : s.progress.unlocked ? <span className="font-semibold text-green-700">Unlocked −{s.progress.pct}%</span> : <span><b>{s.progress.done} of {s.progress.need}</b> deliveries</span>}

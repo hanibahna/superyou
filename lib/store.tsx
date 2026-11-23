@@ -5,6 +5,7 @@
 // re-prices everything from the live catalog at checkout.
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { Every } from "@/lib/every";
 import { firstImage, type AnyProduct } from "@/lib/data/catalog";
 import { deliveryFor } from "@/lib/site";
 import { useSettings } from "@/lib/site-context";
@@ -22,8 +23,8 @@ export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
   ...("origin" in p && p.origin ? { origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax } : {}),
 });
 
-/** every: subscription interval in months (1 or 3); none = one-time purchase. */
-export type CartLine = { productId: string; qty: number; product: ProductSnap; every?: 1 | 3 };
+/** every: subscription interval in months (1, 2, 3, 4 or 6, per product); none = one-time purchase. */
+export type CartLine = { productId: string; qty: number; product: ProductSnap; every?: Every };
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
@@ -43,8 +44,8 @@ export type ServerQuote = {
 type ShopState = {
   lines: CartLine[];
   wishlist: ProductSnap[];
-  add: (product: AnyProduct | ProductSnap, qty?: number, every?: 1 | 3 | null) => void;
-  setEvery: (productId: string, every?: 1 | 3) => void;
+  add: (product: AnyProduct | ProductSnap, qty?: number, every?: Every | null) => void;
+  setEvery: (productId: string, every?: Every) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
@@ -165,7 +166,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const discountTotal = fresh ? quote.discountTotal : 0;
     const delivery = fresh ? quote.delivery : deliveryFor(settings, subtotal, zone);
     const giftCardAmount = fresh && quote.giftCard ? quote.giftCard.amount : 0;
-    const add = (product: AnyProduct | ProductSnap, qty = 1, every?: 1 | 3 | null) => {
+    const add = (product: AnyProduct | ProductSnap, qty = 1, every?: Every | null) => {
       const s = snap(product);
       setLines((prev) => {
         const found = prev.find((l) => l.productId === s.id);

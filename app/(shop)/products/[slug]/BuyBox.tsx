@@ -2,6 +2,7 @@
 
 import { ShareButton } from "@/components/ShareButton";
 import { SubscribeChoice } from "@/components/SubscribePlan";
+import type { Every } from "@/lib/every";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { track } from "@/lib/track";
@@ -27,9 +28,11 @@ export function BuyBox({
   freeOver,
   children,
   subOk = true,
+  life = null,
   underImage,
 }: {
   subOk?: boolean;
+  life?: { days: number; every: Every; basis: string } | null;
   underImage?: React.ReactNode;
   variants: ProductLite[];
   initialId: string;
@@ -42,7 +45,7 @@ export function BuyBox({
   const { add, toggleWish, isWished } = useShop();
   const [id, setId] = useState(initialId);
   const [qty, setQty] = useState(1);
-  const [plan, setPlan] = useState<0 | 1 | 3>(0);
+  const [plan, setPlan] = useState<0 | Every>(0);
   const v = variants.find((x) => x.id === id) ?? variants[0];
   const [shown, setShown] = useState<string | undefined>(v.image ?? gallery[0]);
   const pct = discountPct(v);
@@ -125,7 +128,7 @@ export function BuyBox({
           </div>
         )}
 
-        {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={setPlan} />}
+        {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={setPlan} life={life} />}
         <div className="mt-6 flex items-center gap-3">
           {v.inStock ? (
             <>

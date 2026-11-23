@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
+import { everyText, tierOf, type Every } from "@/lib/every";
 import { db } from "@/lib/db";
 import type { CheckoutInput, Order } from "@/lib/orders";
 import { siteUrl } from "@/lib/site-url";
@@ -12,7 +13,7 @@ export type Subscription = {
   id: string;
   token: string;
   status: "active" | "paused" | "cancelled";
-  every: 1 | 3; // months
+  every: Every; // months (1, 2, 3, 4 or 6), set per product from how long it lasts
   items: { productId: string; qty: number; name: string }[];
   customer: CheckoutInput["customer"];
   nextAt: string; // YYYY-MM-DD (Beirut)
@@ -31,6 +32,7 @@ export type Subscription = {
 };
 
 export const needFor = (s: Pick<Subscription, "every">, g: { unlockMonthly: number; unlockQuarterly: number }) => (s.every === 1 ? g.unlockMonthly : g.unlockQuarterly);
+const pctFor = (e: number, g: { monthly: number; quarterly: number }) => (tierOf(e) === "monthly" ? g.monthly : g.quarterly);
 const R = (s: Subscription) => (s.rebate ??= { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} });
 const note = (s: Subscription, text: string) => { s.log = [...(s.log ?? []), { at: new Date().toISOString(), text }].slice(-40); };
 const OIDX = (orderId: string) => `subord:${orderId}`;
@@ -76,7 +78,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
   const lastCancel = Number(await db.cmd<string | null>(["GET", CANCELLED(phone)]).catch(() => null)) || 0;
   const cooling = g.cooldownDays > 0 && Date.now() - lastCancel < g.cooldownDays * 864e5;
   const made: string[] = [];
-  for (const every of [1, 3] as const) {
+  for (const every of [...new Set(order.lines.map((l) => l.every).filter((e): e is Every => !!e))]) {
     const lines = order.lines.filter((l) => l.every === every && !l.gift && !already.has(l.productId));
     if (!lines.length) continue;
     const s: Subscription = {
@@ -97,7 +99,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
     };
     await saveSubscription(s);
     made.push(s.id);
-    await notify("started", s, { percent: every === 1 ? g.monthly : g.quarterly, deliveries: needFor(s, g), rebate: 0 }).catch(() => {});
+    await notify("started", s, { percent: pctFor(every, g), deliveries: needFor(s, g), rebate: 0 }).catch(() => {});
   }
   await linkOrder(order.id, made);
 }
@@ -107,7 +109,7 @@ async function notify(kind: "started" | "unlocked", s: Subscription, v: { percen
   const wa = await import("@/lib/whatsapp");
   const { smsForOrder } = await import("@/lib/sms");
   const { sendEmail } = await import("@/lib/email");
-  const every = s.every === 1 ? "every month" : "every 3 months";
+  const every = everyText(s.every);
   const vars = { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), every, next_date: prettyDate(s.nextAt), link: manageLink(s), percent: String(v.percent), deliveries: String(v.deliveries), rebate: `$${v.rebate.toFixed(2)}` };
   const terms = `${siteUrl()}/pages/subscription-terms/`;
   if (kind === "started") {
@@ -160,7 +162,7 @@ export async function onSubscriptionOrder(order: Order) {
     if (!s || !s.rules) continue;
     const r = R(s);
     s.delivered ??= {};
-    const pct = s.every === 1 ? g.monthly : g.quarterly;
+    const pct = pctFor(s.every, g);
     const subIds = new Set(s.items.map((i) => i.productId));
     const value = +order.lines.filter((l) => !l.gift && subIds.has(l.productId) && (order.subscriptionId ? true : l.every === s.every)).reduce((a, l) => a + l.lineTotal, 0).toFixed(2);
     if (order.status === "delivered" && !(order.id in s.delivered)) {
@@ -211,7 +213,7 @@ export async function subscriptionPricing(id: string) {
   const s = await getSubscription(id);
   if (!s) return null;
   const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
-  return { pct: !s.rules || s.unlocked ? (s.every === 1 ? g.monthly : g.quarterly) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0 };
+  return { pct: !s.rules || s.unlocked ? pctFor(s.every, g) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0 };
 }
 
 /** Record a rebate spent on an order the subscription placed. */
@@ -226,7 +228,7 @@ async function useRebate(s: Subscription, orderId: string, amount: number) {
 
 /** For the customer's page and admin: progress towards the discount. */
 export function progress(s: Subscription, g: { monthly: number; quarterly: number; unlockMonthly: number; unlockQuarterly: number }) {
-  const pct = s.every === 1 ? g.monthly : g.quarterly;
+  const pct = pctFor(s.every, g);
   if (!s.rules) return { legacy: true, pct, need: 0, done: 0, unlocked: true, rebate: { earned: 0, used: 0, pending: 0, forfeited: 0 } };
   const r = R(s);
   return { legacy: false, pct, need: needFor(s, g), done: Object.keys(s.delivered ?? {}).length, unlocked: !!s.unlocked, noRebate: !!s.noRebate, rebate: { earned: r.earned, used: r.used, pending: r.pending, forfeited: r.forfeited } };

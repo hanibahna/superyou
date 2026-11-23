@@ -3,6 +3,7 @@ import "server-only";
 // Live shop prices (automatic sales applied) and the authoritative cart quote.
 
 import { shopImg } from "@/lib/img-server";
+import type { Every } from "@/lib/every";
 import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
@@ -85,7 +86,7 @@ const snapOf = (p: ProductLite): ProductSnap => ({
   origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
-export type QuoteInput = { items: { productId: string; qty: number; every?: 1 | 3 }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string };
+export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);

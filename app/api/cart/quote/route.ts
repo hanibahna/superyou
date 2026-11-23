@@ -1,9 +1,10 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { everySchema } from "@/lib/every";
 import { serverQuote } from "@/lib/pricing";
 
 const schema = z.object({
-  items: z.array(z.object({ productId: z.string().max(60), qty: z.number().int().min(1).max(20), every: z.union([z.literal(1), z.literal(3)]).optional() })).max(100),
+  items: z.array(z.object({ productId: z.string().max(60), qty: z.number().int().min(1).max(20), every: everySchema.optional() })).max(100),
   code: z.string().max(40).optional(),
   zone: z.string().max(60).optional(),
   giftCard: z.string().max(30).optional(),

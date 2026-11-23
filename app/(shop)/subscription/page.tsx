@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
-type V = { id: string; status: "active" | "paused" | "cancelled"; every: 1 | 3; items: { productId: string; qty: number; name: string }[]; nextAt: string; orders: number; name: string; city: string; progress?: { legacy: boolean; pct: number; need: number; done: number; unlocked: boolean; noRebate?: boolean; rebate: { pending: number; used: number } } };
+type V = { id: string; status: "active" | "paused" | "cancelled"; every: 1 | 2 | 3 | 4 | 6; items: { productId: string; qty: number; name: string }[]; nextAt: string; orders: number; name: string; city: string; progress?: { legacy: boolean; pct: number; need: number; done: number; unlocked: boolean; noRebate?: boolean; rebate: { pending: number; used: number } } };
 const pretty = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
 
 export default function Page() {
@@ -40,9 +40,9 @@ function Manage() {
           <span className={`rounded-full px-3 py-1 text-sm font-semibold ${on ? "bg-green-100 text-green-900" : s.status === "paused" ? "bg-amber-100 text-amber-900" : "bg-gray-200"}`}>{s.status}</span>
         </div>
         {s.status !== "cancelled" && (
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            {([1, 3] as const).map((e) => (
-              <button key={e} disabled={busy} onClick={() => act({ action: "every", every: e })} className={`min-h-[48px] rounded-2xl text-sm font-semibold ${s.every === e ? "bg-ink text-white" : "bg-white"}`}>{e === 1 ? "Every month" : "Every 3 months"}</button>
+          <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {([1, 2, 3, 4, 6] as const).map((e) => (
+              <button key={e} disabled={busy} onClick={() => act({ action: "every", every: e })} className={`min-h-[48px] rounded-2xl text-sm font-semibold ${s.every === e ? "bg-ink text-white" : "bg-white"}`}>{e === 1 ? "Every month" : `Every ${e} months`}</button>
             ))}
           </div>
         )}

@@ -346,7 +346,7 @@ export async function awardReview(r: { id: string; photo?: string; orderId?: str
 
 type Reminder = { kind: "review" | "reorder"; phone: string; firstName: string; orderId: string; token?: string; slug?: string; product?: string };
 
-export async function scheduleAfterDelivery(order: { id: string; accessToken: string; customer: { phone: string; firstName: string }; lines: { productId: string; name: string; gift?: boolean }[] }) {
+export async function scheduleAfterDelivery(order: { id: string; accessToken: string; customer: { phone: string; firstName: string }; lines: { productId: string; name: string; gift?: boolean; qty?: number; every?: number }[] }) {
   const g = await getGrowth();
   const { getIndex } = await import("@/lib/catalog");
   const idx = await getIndex();
@@ -354,11 +354,16 @@ export async function scheduleAfterDelivery(order: { id: string; accessToken: st
   const base = { phone: order.customer.phone, firstName: order.customer.firstName, orderId: order.id };
   if (g.reviews.enabled && g.reviews.askAfterDelivery)
     cmds.push(["ZADD", "remind", Date.now() + 864e5, JSON.stringify({ ...base, kind: "review", token: order.accessToken } satisfies Reminder)]);
+  // Restock reminder a few days before the product runs out: from how long it lasts (AI estimate,
+  // times the quantity bought), else the days set per category. Not for subscribed lines.
+  const lives = g.reorder.enabled ? await (await import("@/lib/lifespan")).getLives(order.lines.map((l) => idx.byId.get(l.productId)?.slug ?? "")) : new Map();
   if (g.reorder.enabled)
-    for (const l of order.lines.filter((x) => !x.gift)) {
+    for (const l of order.lines.filter((x) => !x.gift && !x.every)) {
       const p = idx.byId.get(l.productId);
       if (!p) continue;
-      const days = g.reorder.days.find((d) => d.category === p.category)?.days ?? g.reorder.defaultDays;
+      const life = lives.get(p.slug);
+      if (life && !life.every) continue; // lasts too long or not a repeat buy (perfume, device…)
+      const days = life ? Math.max(7, Math.min(270, life.days * (l.qty ?? 1) - 5)) : g.reorder.days.find((d) => d.category === p.category)?.days ?? g.reorder.defaultDays;
       cmds.push(["ZADD", "remind", Date.now() + days * 864e5, JSON.stringify({ ...base, kind: "reorder", slug: p.slug, product: `${p.brand} ${p.name}` } satisfies Reminder)]);
     }
   if (cmds.length) await db.pipeline(cmds);

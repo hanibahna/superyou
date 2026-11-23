@@ -80,7 +80,9 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const related = cards.filter((c) => c.slug !== initial.slug && c.inStock && (c.brand === initial.brand || c.category === initial.category)).slice(0, 12);
   // Description etc. are shared by all sizes/shades of an item.
   const gallery = Array.from(new Set([...detail.images.map((x) => shopImg(x)!), ...variants.map((v) => v.image).filter((x): x is string => !!x)]));
-  const subOk = isSubscribable(initial) && (!growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id)));
+  // How long this product lasts (AI estimate): sets the subscription frequency, or no subscription at all.
+  const life = await (await import("@/lib/lifespan")).getLife(slug);
+  const subOk = (life ? life.every > 0 : isSubscribable(initial)) && (!growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id)));
   const sec0 = await sectionFor(initial.category);
   const ptips = (await import("@/lib/tips")).productTips({ name: `${initial.name} ${initial.brand}`, category: initial.category, concerns: [...initial.concerns, ...initial.concerns.map((c) => concerns.find((x) => x.slug === c)?.name ?? "")], text: `${detail.ingredients ?? ""}` });
   const sec = sec0 ? { ...sec0, tips: ptips } : null; // only tips about this exact kind of product
@@ -137,7 +139,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <QuickHelp className="mb-3" />
         {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
 
-        <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
+        <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} life={life && life.every ? { days: life.days, every: life.every, basis: life.basis } : null} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <div className="mt-8 divide-y divide-line border-y border-line">
             {detail.description && <Section title={tx("Description")} open>{L(detail.description)}</Section>}
             {(detail.howToUse || how) && (

@@ -35,7 +35,10 @@ struct Product: Codable {
     let rating: Double?; let reviewCount: Int; let variants: [Variant]
     let category: String?; let tips: [String]?; let subscribable: Bool?; let url: String?
     var guide: Guide? = nil
+    var life: Life? = nil
 }
+/// How long the product lasts (AI estimate) and how often to deliver it, in months.
+struct Life: Codable { let days: Int; let every: Int; let basis: String }
 /// "How to use" written once per product by SuperYou AI from the product's own details.
 struct Guide: Codable { let steps: [String]; let when: String; let goodFor: String; let cautions: [String] }
 

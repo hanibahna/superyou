@@ -75,11 +75,16 @@ struct ProductView: View {
 
                     if p.subscribable == true, let s = subscribe {
                         VStack(alignment: .leading, spacing: 8) {
+                            // Delivery as often as this product runs out (AI estimate), plus one step more often.
+                            let rec = p.life?.every ?? 3
+                            let all = [1, 2, 3, 4, 6]
+                            let plans = rec > 1 ? [all[(all.firstIndex(of: rec) ?? 2) - 1], rec] : [1]
+                            if let l = p.life { Text("Lasts about \(l.days < 45 ? "\(l.days / 7) weeks" : "\(Int((Double(l.days) / 30.4).rounded())) months") · \(l.basis)").font(.caption).foregroundStyle(.secondary) }
                             Picker("Buy", selection: $every) {
                                 Text("Once").tag(Int?.none)
-                                Text("Monthly · earn \(Int(s.monthly))%").tag(Int?.some(1))
-                                Text("3 months · earn \(Int(s.quarterly))%").tag(Int?.some(3))
+                                ForEach(plans, id: \.self) { e in Text(e == 1 ? "Monthly" : "Every \(e) mo").tag(Int?.some(e)) }
                             }.pickerStyle(.segmented)
+                            if every == rec { Text("Recommended for this product · earn \(Int(rec == 1 ? s.monthly : s.quarterly))%").font(.caption.bold()).foregroundStyle(Color.greenShip) }
                             if let e = every { Text("After \(e == 1 ? (s.unlockMonthly ?? 3) : (s.unlockQuarterly ?? 2)) deliveries you get \(Int(e == 1 ? s.monthly : s.quarterly))% back on them, then \(Int(e == 1 ? s.monthly : s.quarterly))% off every order. \(s.note)").font(.caption).foregroundStyle(.secondary) }
                         }.padding(.horizontal)
                     }
