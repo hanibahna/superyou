@@ -44,12 +44,17 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
     private let label = UILabel()
     private let percent = UILabel()
     private var ticks: [CAShapeLayer] = []
-    private var lit = [Bool](repeating: false, count: 60)
+    private var lit = [Bool](repeating: false, count: 72) // like the Face ID setup ring
     private var faceNode: SCNNode?
 
     private var front: String?
     private var sideA: String?
     private var sideB: String?
+    private var chinUp: String?
+    private var chinDown: String?
+    private var sYaw: Float = 0, sPitch: Float = 0 // smoothed head pose, so the ring doesn't jitter
+    private var hintAt = Date.distantPast
+    private let green = UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1)
     private var steady = 0
     private var startedAt: Date?
     private var doneAt: Date?
@@ -153,18 +158,19 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
         super.viewDidLayoutSubviews()
         guard ticks.isEmpty else { return }
         let c = CGPoint(x: view.bounds.midX, y: view.bounds.height * 0.42)
-        let rx = view.bounds.width * 0.40, ry = rx * 1.32
+        let r = view.bounds.width * 0.40
         for i in 0..<lit.count {
             let a = CGFloat(i) / CGFloat(lit.count) * .pi * 2
-            let p1 = CGPoint(x: c.x + cos(a) * (rx + 8), y: c.y + sin(a) * (ry + 8))
-            let p2 = CGPoint(x: c.x + cos(a) * (rx + 22), y: c.y + sin(a) * (ry + 22))
+            let p1 = CGPoint(x: c.x + cos(a) * (r + 8), y: c.y + sin(a) * (r + 8))
+            let p2 = CGPoint(x: c.x + cos(a) * (r + 30), y: c.y + sin(a) * (r + 30))
             let path = UIBezierPath()
             path.move(to: p1)
             path.addLine(to: p2)
             let t = CAShapeLayer()
             t.path = path.cgPath
-            t.lineWidth = 4
+            t.lineWidth = 3
             t.lineCap = .round
+            t.strokeEnd = 0.45
             t.strokeColor = UIColor.white.withAlphaComponent(0.35).cgColor
             view.layer.addSublayer(t)
             ticks.append(t)
@@ -236,8 +242,8 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
                 front = shot
                 startedAt = Date()
                 haptic.impactOccurred()
-                label.text = "Now slowly move your head in a circle"
-                updateGuide()
+                label.text = "Move your head slowly to complete the circle"
+                hintAt = Date()
             }
             return
         }
@@ -245,27 +251,39 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
         distances.append(cm)
         lights.append(light)
         temps.append(temp)
-        let mag = hypot(yaw, pitch)
-        if mag > 0.15 {
-            let ang = (atan2(pitch, -yaw) + .pi * 2).truncatingRemainder(dividingBy: .pi * 2)
+        sYaw += (yaw - sYaw) * 0.25
+        sPitch += (pitch - sPitch) * 0.25
+        let mag = hypot(sYaw, sPitch)
+        if mag > 0.12 {
+            let ang = (atan2(sPitch, -sYaw) + .pi * 2).truncatingRemainder(dividingBy: .pi * 2)
             let i = Int(((ang / (.pi * 2)) * Float(lit.count)).rounded()) % lit.count
-            for k in -2...2 {
+            for k in -1...1 {
                 let j = (i + k + lit.count) % lit.count
                 if !lit[j] {
                     lit[j] = true
-                    ticks[j].strokeColor = UIColor(hue: (0.92 + CGFloat(j) / CGFloat(lit.count) * 0.17).truncatingRemainder(dividingBy: 1), saturation: 0.6, brightness: 1, alpha: 1).cgColor
+                    CATransaction.begin()
+                    CATransaction.setAnimationDuration(0.35)
+                    ticks[j].strokeEnd = 1
+                    ticks[j].strokeColor = green.cgColor
+                    CATransaction.commit()
                 }
             }
         }
-        if yaw > 0.38, sideA == nil, let shot = photo() { sideA = shot; haptic.impactOccurred(); if firstSide == 0 { firstSide = 1 } }
-        if yaw < -0.38, sideB == nil, let shot = photo() { sideB = shot; haptic.impactOccurred(); if firstSide == 0 { firstSide = 2 } }
-        updateGuide()
+        // Five photos: front (taken), both sides, chin up and chin down.
+        if sYaw > 0.38, sideA == nil, let shot = photo() { sideA = shot; haptic.impactOccurred(); if firstSide == 0 { firstSide = 1 } }
+        if sYaw < -0.38, sideB == nil, let shot = photo() { sideB = shot; haptic.impactOccurred(); if firstSide == 0 { firstSide = 2 } }
+        if sPitch > 0.25, abs(sYaw) < 0.15, chinUp == nil, let shot = photo() { chinUp = shot; haptic.impactOccurred() }
+        if sPitch < -0.25, abs(sYaw) < 0.15, chinDown == nil, let shot = photo() { chinDown = shot; haptic.impactOccurred() }
+        if Date().timeIntervalSince(hintAt) > 1.5 { updateGuide() }
         let n = lit.filter { $0 }.count
         percent.text = "\(n * 100 / lit.count)%"
-        let enough = Double(n) / Double(lit.count) >= 0.7 && sideA != nil && sideB != nil
-        if enough || Date().timeIntervalSince(startedAt ?? Date()) > 30 {
+        let enough = Double(n) / Double(lit.count) >= 0.92 && sideA != nil && sideB != nil && chinUp != nil && chinDown != nil
+        if enough || Date().timeIntervalSince(startedAt ?? Date()) > 45 {
             doneAt = Date()
-            ticks.forEach { $0.strokeColor = UIColor.systemGreen.cgColor }
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.4)
+            ticks.forEach { $0.strokeEnd = 1; $0.strokeColor = green.cgColor }
+            CATransaction.commit()
             percent.text = "100%"
             label.text = "Scan complete ✓"
             setGuide(nil)
@@ -295,15 +313,16 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
 
     private func setGuide(_ d: Dir?) {
         guide = d
+        hintAt = Date()
         if let d = d {
             switch d {
-            case .right: label.text = "Slowly turn your head this way →"
-            case .left: label.text = "Now slowly turn the other way ←"
-            case .up: label.text = "Now tilt your chin up ↑"
-            case .down: label.text = "Now tilt your chin down ↓"
+            case .right: label.text = "Keep going slowly this way →"
+            case .left: label.text = "Now slowly the other way ←"
+            case .up: label.text = "Slowly lift your chin ↑"
+            case .down: label.text = "Slowly lower your chin ↓"
             }
             let c = CGPoint(x: view.bounds.midX, y: view.bounds.height * 0.42)
-            let rx = view.bounds.width * 0.40 + 6, ry = rx * 1.32
+            let rx = view.bounds.width * 0.40 + 46, ry = rx
             switch d {
             case .right: arrow.center = CGPoint(x: min(view.bounds.width - 36, c.x + rx), y: c.y); arrow.transform = .identity
             case .left: arrow.center = CGPoint(x: max(36, c.x - rx), y: c.y); arrow.transform = CGAffineTransform(rotationAngle: .pi)
@@ -377,7 +396,7 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
         let avgC: ([CGFloat]) -> CGFloat = { $0.isEmpty ? 0 : $0.reduce(0, +) / CGFloat($0.count) }
         onFinish?([
             "front": front,
-            "sides": [sideA, sideB].compactMap { $0 },
+            "sides": [sideA, sideB, chinUp, chinDown].compactMap { $0 },
             "depth": true,
             "distanceCm": Int(avg(distances).rounded()),
             "light": Int(avgC(lights).rounded()),
