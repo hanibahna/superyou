@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { liveProducts } from "@/lib/pricing";
 import { getGuide, makeGuide } from "@/lib/product-guide";
 
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 // The stored AI "How to use" guide for a product; written once on first view if missing.
 export async function GET(req: NextRequest) {

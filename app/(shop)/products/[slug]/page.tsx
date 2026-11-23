@@ -11,7 +11,6 @@ import { getGrowth, productReviews } from "@/lib/growth-store";
 import { toCards } from "@/lib/listing";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { VideoPlayer, VideoStrip, isVertical } from "@/components/Video";
-import { ImageVideos } from "@/components/ImageVideos";
 import { HowToUse } from "@/components/HowToUse";
 import { QuickHelp } from "@/components/QuickHelp";
 import { TipLine } from "@/components/TipLine";
@@ -123,8 +122,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <QuickHelp className="mb-3" />
         {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
 
-        <BuyBox underImage={<ImageVideos slug={slug} brand={initial.brand} name={initial.name} />} subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
-          <HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />
+        <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <div className="mt-8 divide-y divide-line border-y border-line">
             {detail.description && <Section title={tx("Description")} open>{L(detail.description)}</Section>}
             {(detail.howToUse || how) && (
