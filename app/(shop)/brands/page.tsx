@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { liveProducts } from "@/lib/pricing";
 
-export const metadata = { title: "Brands A–Z" };
+export async function generateMetadata() {
+  return { title: 'Brands A–Z', description: 'All the skincare, make-up, hair, fragrance and pharmacy brands at SuperYou, from La Roche-Posay to The Ordinary, delivered across Lebanon.', ...(await (await import("@/lib/seo")).canonical('/brands/')) };
+}
 
 export default async function BrandsPage() {
   const { list } = await liveProducts();

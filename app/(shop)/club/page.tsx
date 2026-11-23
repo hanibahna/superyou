@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { getGrowth } from "@/lib/growth-store";
 import { JoinClub } from "./JoinClub";
 
-export const metadata = { title: "SuperYou Club" };
+export async function generateMetadata() {
+  return { title: 'SuperYou Club', description: 'Join the SuperYou Club: earn points on every order, get rewards, a birthday gift and member prices on beauty and parapharmacy in Lebanon.', ...(await (await import("@/lib/seo")).canonical('/club/')) };
+}
 
 export default async function ClubPage() {
   const tx = await getT();

@@ -141,3 +141,10 @@ export async function prefillVideos(limit = 40) {
   }
   return done;
 }
+
+
+/** Videos already found for a product (no YouTube call): for page structured data. */
+export async function cachedVideos(slug: string): Promise<YtVideo[]> {
+  const hit = await db.cmd<string | null>(["GET", `yt:v6:${slug}`]).catch(() => null);
+  return hit ? (JSON.parse(hit) as YtVideo[]) : [];
+}

@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const brands = [...new Set(live.list.map((p) => p.brand))];
   return [
     { url: `${base}/`, changeFrequency: "daily", priority: 1, alternates: { languages: { fr: `${base}/fr/`, ar: `${base}/ar/` } } },
-    ...["/shop/", "/brands/", "/routine/", ...(process.env.ANTHROPIC_API_KEY ? ["/skin-scan/"] : []), "/shade-finder/", "/services/", "/clinic/", "/club/"].map((u) => ({ url: base + u, changeFrequency: "weekly" as const, priority: 0.7 })),
+    ...["/shop/", "/brands/", "/routine/", ...(process.env.ANTHROPIC_API_KEY ? ["/skin-scan/"] : []), "/shade-finder/", "/services/", "/clinic/", "/club/", "/gift-cards/"].map((u) => ({ url: base + u, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...tax.categories.filter((c) => nav.categories.has(c.slug)).map((c) => ({ url: `${base}/shop/?category=${c.slug}`, changeFrequency: "daily" as const, priority: 0.8 })),
     ...cols.items.filter((c) => !c.hidden && nav.collections.has(c.key.toLowerCase())).map((c) => ({ url: `${base}/collections/${c.key}/`, changeFrequency: "daily" as const, priority: 0.7 })),
     ...brands.map((b) => ({ url: `${base}/shop/?brand=${encodeURIComponent(b)}`, changeFrequency: "weekly" as const, priority: 0.6 })),
@@ -32,6 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Our own info pages only (checking every brand/range page against the catalogue made the sitemap time out).
     ...Object.keys(settings.pages).filter((k) => !foreignPage(k) && ["delivery", "payment", "rewards", "about", "privacy", "contact", "return-policy", "privacy-policy", "delivery-terms", "terms-conditions"].includes(k))
       .map((k) => ({ url: `${base}/pages/${k}/`, changeFrequency: "monthly" as const, priority: 0.3 })),
+    { url: `${base}/pages/subscription-terms/`, changeFrequency: "monthly" as const, priority: 0.3 },
     ...[...products].map(([slug, d]) => ({ url: `${base}/products/${slug}/`, lastModified: d, changeFrequency: "weekly" as const, priority: 0.6, alternates: { languages: { fr: `${base}/fr/products/${slug}/`, ar: `${base}/ar/products/${slug}/` } } })),
   ];
 }

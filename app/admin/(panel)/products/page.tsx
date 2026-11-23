@@ -1,4 +1,5 @@
 import { ProductsTable } from "@/components/admin/ProductsTable";
+import { CleanSlugs } from "@/components/admin/CleanSlugs";
 import { getAllProducts, getTaxonomy } from "@/lib/catalog";
 
 const PER = 50;
@@ -20,7 +21,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   );
   const pages = Math.max(1, Math.ceil(rows.length / PER));
   const page = Math.min(Math.max(1, Number(sp.page ?? 1) || 1), pages);
+  const dirty = new Set(all.filter((p) => /-sks-\d+$/.test(p.slug)).map((p) => p.slug)).size;
   return (
+    <>
+    <CleanSlugs count={dirty} />
     <ProductsTable
       rows={rows.slice((page - 1) * PER, page * PER)}
       matching={rows.length}
@@ -30,5 +34,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       categories={tax.categories}
       query={{ q: sp.q ?? "", filter, cat, brand }}
     />
+    </>
   );
 }

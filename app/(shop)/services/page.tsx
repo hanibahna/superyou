@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { getServices, getSettings } from "@/lib/site-store";
 import { ServicesView } from "./ServicesView";
 
-export const metadata = { title: "Services & Events" };
+export async function generateMetadata() {
+  return { title: 'Services & Events', description: 'Free video consultations with our pharmacist, in-store beauty services and events at SuperYou. Book online in a minute.', ...(await (await import("@/lib/seo")).canonical('/services/')) };
+}
 
 export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [cfg0, settings] = await Promise.all([getServices(), getSettings()]);

@@ -48,5 +48,17 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const picked = (query.concern ?? []).flatMap((s) => [s, tax.concerns.find((c) => c.slug === s)?.name]);
   const tips = listingTips(result.items, [...picked, query.category, tax.categories.find((c) => c.slug === query.category)?.name, query.for === "men" ? "men" : undefined, query.q]);
   const section = base ? { ...base, tips: tips.length ? tips : base.tips } : null;
-  return <ShopView result={result} query={query} videos={videos} category={category} section={section} />;
+  // Structured data for search engines and AI assistants: the products on this list, and where it sits.
+  const site = (await import("@/lib/seo")).siteUrl();
+  const label = [query.brand?.length === 1 ? query.brand[0] : "", concern?.name, category?.name].filter(Boolean).join(" ") || "All products";
+  const ld = [
+    { "@context": "https://schema.org", "@type": "ItemList", name: `${label} at SuperYou`, numberOfItems: result.total ?? result.items.length, itemListElement: result.items.slice(0, 24).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${site}/products/${p.slug}/`, name: `${p.brand} ${p.name}` })) },
+    { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${site}/` }, { "@type": "ListItem", position: 2, name: "Shop", item: `${site}/shop/` }, ...(label !== "All products" ? [{ "@type": "ListItem", position: 3, name: label }] : [])] },
+  ];
+  return (
+    <>
+      {!query.q && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />}
+      <ShopView result={result} query={query} videos={videos} category={category} section={section} />
+    </>
+  );
 }

@@ -89,14 +89,25 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)
     : [];
 
-  // Structured data so Google and AI assistants can read price & availability.
+  // Structured data so Google and AI assistants can read price, availability, reviews, how to use and videos.
+  const guide = await (await import("@/lib/product-guide")).getGuide(slug);
+  const vids = await (await import("@/lib/youtube")).cachedVideos(slug);
+  const code = (initial.barcode ?? "").replace(/\D/g, "");
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: initial.name,
+    "@id": `${siteUrl()}/products/${slug}/#product`,
+    url: `${siteUrl()}/products/${slug}/`,
+    name: `${initial.brand} ${initial.name}`,
     brand: { "@type": "Brand", name: initial.brand },
     image: gallery.slice(0, 5).map((x) => (x.startsWith("/") ? siteUrl() + x : x)),
-    description: detail.description.slice(0, 5000),
+    description: (detail.description || `${initial.brand} ${initial.name}, original, delivered across Lebanon by SuperYou.`).slice(0, 5000),
+    ...(category ? { category: category.name } : {}),
+    ...(initial.sku ? { sku: initial.sku } : {}),
+    ...(code.length === 13 ? { gtin13: code } : code.length === 12 ? { gtin12: code } : code.length === 8 ? { gtin8: code } : code.length === 14 ? { gtin14: code } : {}),
+    ...(initial.size ? { size: initial.size } : {}),
+    ...(reviews.length ? { review: reviews.slice(0, 5).map((r) => ({ "@type": "Review", reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 }, author: { "@type": "Person", name: r.name || "SuperYou customer" }, datePublished: r.createdAt.slice(0, 10), ...(r.title ? { name: r.title } : {}), reviewBody: r.body.slice(0, 1000) })) } : {}),
+    ...(vids.length ? { subjectOf: vids.map((v) => ({ "@type": "VideoObject", name: v.title, embedUrl: `https://www.youtube.com/embed/${v.id}`, contentUrl: `https://www.youtube.com/watch?v=${v.id}`, thumbnailUrl: `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`, ...(v.lang ? { inLanguage: v.lang } : {}), description: `${v.title} (${v.channel})`, uploadDate: initial.updatedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10) })) } : {}),
     ...(reviews.length ? { aggregateRating: { "@type": "AggregateRating", ratingValue: +(reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1), reviewCount: reviews.length } } : {}),
     offers: variants.map((v) => ({
       "@type": "Offer",
@@ -115,6 +126,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      {guide?.steps?.length ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "HowTo", name: `How to use ${initial.brand} ${initial.name}`, ...(guide.goodFor ? { description: guide.goodFor } : {}), supply: [{ "@type": "HowToSupply", name: `${initial.brand} ${initial.name}` }], step: guide.steps.map((t, i) => ({ "@type": "HowToStep", position: i + 1, text: t })), about: { "@id": `${siteUrl()}/products/${slug}/#product` } }).replace(/</g, "\\u003c") }} /> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl()}/` }, ...(category ? [{ "@type": "ListItem", position: 2, name: category.name, item: `${siteUrl()}/shop/?category=${category.slug}` }] : []), { "@type": "ListItem", position: category ? 3 : 2, name: initial.name }] }).replace(/</g, "\\u003c") }} />
       <div className="container-x py-8">
         <nav className="mb-5 line-clamp-1 text-xs text-muted">

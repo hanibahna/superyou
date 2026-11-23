@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { getGrowth } from "@/lib/growth-store";
 import { Advent } from "./Advent";
 
-export const metadata = { title: "Beauty advent calendar" };
+export async function generateMetadata() {
+  return { title: 'Beauty advent calendar', description: 'The SuperYou beauty advent calendar: a new offer every day on skincare, make-up and fragrance.', ...(await (await import("@/lib/seo")).canonical('/advent/')) };
+}
 
 export default async function AdventPage() {
   const g = await getGrowth();

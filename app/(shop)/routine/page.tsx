@@ -5,7 +5,7 @@ import { getRoutine } from "@/lib/site-store";
 import { RoutineWizard } from "./RoutineWizard";
 
 export async function generateMetadata() {
-  return { title: (await getRoutine()).title };
+  return { title: (await getRoutine()).title, description: "Build your skincare routine in a minute: describe your skin or answer 5 questions, and our AI picks a morning and evening routine from products in stock, with the reason for each pick.", ...(await (await import("@/lib/seo")).canonical("/routine/")) };
 }
 
 export default async function RoutinePage() {
