@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const brands = [...new Set(live.list.map((p) => p.brand))];
   return [
     { url: `${base}/`, changeFrequency: "daily", priority: 1, alternates: { languages: { fr: `${base}/fr/`, ar: `${base}/ar/` } } },
-    ...["/shop/", "/brands/", "/routine/", ...(process.env.ANTHROPIC_API_KEY ? ["/skin-scan/"] : []), "/shade-finder/", "/services/", "/club/"].map((u) => ({ url: base + u, changeFrequency: "weekly" as const, priority: 0.7 })),
+    ...["/shop/", "/brands/", "/routine/", ...(process.env.ANTHROPIC_API_KEY ? ["/skin-scan/"] : []), "/shade-finder/", "/services/", "/clinic/", "/club/"].map((u) => ({ url: base + u, changeFrequency: "weekly" as const, priority: 0.7 })),
     ...tax.categories.filter((c) => nav.categories.has(c.slug)).map((c) => ({ url: `${base}/shop/?category=${c.slug}`, changeFrequency: "daily" as const, priority: 0.8 })),
     ...cols.items.filter((c) => !c.hidden && nav.collections.has(c.key.toLowerCase())).map((c) => ({ url: `${base}/collections/${c.key}/`, changeFrequency: "daily" as const, priority: 0.7 })),
     ...brands.map((b) => ({ url: `${base}/shop/?brand=${encodeURIComponent(b)}`, changeFrequency: "weekly" as const, priority: 0.6 })),
