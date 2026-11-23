@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const taken = new Set(all.map((p) => p.slug));
   const bad = [...new Set(all.map((p) => p.slug).filter((s) => /-sks-\d+$/.test(s)))];
   const moves: [string, string][] = [];
-  const { slugify } = await import();
+  const { slugify } = await import("@/lib/data/catalog");
   const brandOf = new Map(all.map((p) => [p.slug, p.brand]));
   for (const old of bad) {
     const name = old.replace(/-sks-\d+$/, "");
