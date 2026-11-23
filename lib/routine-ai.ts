@@ -10,6 +10,8 @@ type Cand = { slug: string; name: string; brand: string; price: number };
 export type AiStep = { id: string; pick: string; alts: string[]; why: string };
 export type AiPlan = { summary: string; notes: string[]; steps: AiStep[] };
 
+export let lastErr = "";
+export let lastText = "";
 async function ask(prompt: string, max = 1200): Promise<string> {
   const { anthropicKey } = await import("@/lib/extras");
   const key = await anthropicKey();
@@ -20,9 +22,11 @@ async function ask(prompt: string, max = 1200): Promise<string> {
     body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5", max_tokens: max, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(45_000),
   }).catch(() => null);
-  if (!r?.ok) return "";
+  if (!r?.ok) { lastErr = r ? `${r.status} ${(await r.text().catch(() => "")).slice(0, 300)}` : "no response"; return ""; }
   const j = (await r.json().catch(() => ({}))) as { content?: { text?: string }[] };
-  return (j.content ?? []).map((c) => c.text ?? "").join("");
+  const t = (j.content ?? []).map((c) => c.text ?? "").join("");
+  lastErr = t ? "" : "empty"; lastText = t.slice(0, 500);
+  return t;
 }
 const json = <T,>(t: string): T | null => { try { return JSON.parse(t.match(/\{[\s\S]*\}/)?.[0] ?? "") as T; } catch { return null; } };
 
