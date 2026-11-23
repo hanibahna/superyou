@@ -55,7 +55,7 @@ struct AccountView: View {
                 Section("Help") {
                     Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("Ask a pharmacist on WhatsApp", systemImage: "message") }
                     Link(destination: URL(string: "https://www.shopsuperyou.com/club/")!) { Label("Join SuperYou Club", systemImage: "star") }
-                    Link(destination: URL(string: "https://www.shopsuperyou.com/pages/privacy/")!) { Label("Privacy policy", systemImage: "lock") }
+                    Link(destination: URL(string: "https://www.shopsuperyou.com/pages/privacy-policy/")!) { Label("Privacy policy", systemImage: "lock") }
                 }
             }
             .navigationTitle("Account")
