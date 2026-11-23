@@ -16,7 +16,7 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   if (pin) return [{ id: pin, title: `${p.brand} ${p.name}`, channel: "" }];
   const key = cfg.key || process.env.YOUTUBE_API_KEY;
   if (!key) return [];
-  const ck = `yt:v3:${p.slug}`;
+  const ck = `yt:v4:${p.slug}`;
   const hit = await db.cmd<string | null>(["GET", ck]).catch(() => null);
   if (hit) return JSON.parse(hit) as YtVideo[];
   const out: YtVideo[] = [];
@@ -24,7 +24,7 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   const words = (x: string) => x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
   const clean = p.name.replace(/\b\d+([.,]\d+)?\s?(ml|g|gr|oz|pcs|mcg|mg|caps?|tabs?|x|iu|kg|l)\b/gi, "").replace(/[()|,+]/g, " ").replace(/\s+/g, " ").trim();
   const brandWords = words(p.brand).filter((w) => w.length > 1);
-  const FILLER = new Set(["for", "with", "and", "the", "de", "la", "le", "les", "des", "et", "pour", "avec", "a", "of", "in", "to", "new", "skin", "all", "types", "type", "pack", "refill", "travel", "size", "mini", "spray", "tube", "jar", "bottle", "pump"]);
+  const FILLER = new Set(["for", "with", "and", "the", "de", "la", "le", "les", "des", "et", "pour", "avec", "a", "of", "in", "to", "new", "skin", "all", "types", "type", "pack", "refill", "travel", "size", "mini", "spray", "tube", "jar", "bottle", "pump", "oily", "dry", "combination", "sensitive", "normal", "prone", "acne", "face", "facial", "body", "women", "men", "adults", "adult", "kids", "daily", "care"]);
   const nameWords = words(clean).filter((w) => !brandWords.includes(w) && !FILLER.has(w) && (w.length > 2 || /\d/.test(w)));
   // Strict: the title names the brand AND every distinctive word of the product name (same line, same
   // variant), and it is not a comparison, list, haul or "dupe" video about several products.
@@ -32,10 +32,15 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   const fits = (title: string, channel: string) => {
     const t = words(title), c = words(channel);
     const hasBrand = brandWords.length > 0 && brandWords.every((w) => t.includes(w) || c.includes(w)) && brandWords.some((w) => t.includes(w));
-    const hasAll = nameWords.length > 0 && nameWords.every((w) => t.includes(w) || t.some((x) => x.length > 4 && (x.startsWith(w) || w.startsWith(x))));
+    // The product line (first distinctive words of the name) must all be there; with the rest, most of them.
+    const inT = (w: string) => t.includes(w) || t.some((x) => x.length > 4 && (x.startsWith(w) || w.startsWith(x)));
+    const line = nameWords.slice(0, 2);
+    const hits = nameWords.filter(inT).length;
+    const hasAll = nameWords.length > 0 && line.every(inT) && hits >= Math.min(nameWords.length, Math.max(2, Math.ceil(nameWords.length * 0.6)));
     return hasBrand && hasAll && !MULTI.test(title);
   };
-  for (const q of [`"${p.brand}" "${clean}"`, `${p.brand} ${clean} review`]) {
+  const short = `${p.brand} ${nameWords.slice(0, 4).join(" ")}`;
+  for (const q of [`${short} review`, `${p.brand} ${clean}`]) {
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&videoEmbeddable=true&safeSearch=strict&q=${encodeURIComponent(q)}&key=${encodeURIComponent(key)}`;
     const r = await fetch(url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
     if (!r?.ok) {
@@ -91,7 +96,7 @@ export async function prefillVideos(limit = 40) {
   for (const p of list) {
     if (done >= limit) break;
     if (cfg.pins[p.slug]) continue;
-    if (await db.cmd<number>(["EXISTS", `yt:v3:${p.slug}`]).catch(() => 1)) continue;
+    if (await db.cmd<number>(["EXISTS", `yt:v4:${p.slug}`]).catch(() => 1)) continue;
     await videosForProduct({ slug: p.slug, brand: p.brand, name: p.name });
     done++;
   }
