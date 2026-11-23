@@ -48,7 +48,7 @@ struct Config: Codable {
     struct Store: Codable { let name: String; let tagline: String; let whatsapp: String; let phone: String; let email: String }
     struct Delivery: Codable { let fee: Double; let freeThreshold: Double; let estimate: String; let zones: [Zone] }
     struct Advisor: Codable { let name: String; let greeting: String; let suggestions: [String] }
-    struct Subscribe: Codable { let monthly: Double; let quarterly: Double; let note: String }
+    struct Subscribe: Codable { let monthly: Double; let quarterly: Double; let note: String; var unlockMonthly: Int? = nil; var unlockQuarterly: Int? = nil }
     struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe? }
     struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double

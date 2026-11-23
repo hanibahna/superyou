@@ -20,7 +20,21 @@ export type Subscription = {
   orders: string[];
   remindedFor?: string; // nextAt date the reminder was sent for
   lastError?: string;
+  // Earn-it rules (subscriptions started from Nov 2026). Older ones have no `rules` and keep their discount.
+  rules?: 2;
+  delivered?: Record<string, number>; // orderId → value of the subscribed items in it, once delivered
+  unlocked?: boolean; // the discount is earned after N delivered orders
+  unlockedAt?: string;
+  noRebate?: boolean; // started within the cooldown after cancelling another one: no rebate on past orders
+  rebate?: { earned: number; used: number; pending: number; forfeited: number; uses: Record<string, number> };
+  log?: { at: string; text: string }[];
 };
+
+export const needFor = (s: Pick<Subscription, "every">, g: { unlockMonthly: number; unlockQuarterly: number }) => (s.every === 1 ? g.unlockMonthly : g.unlockQuarterly);
+const R = (s: Subscription) => (s.rebate ??= { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} });
+const note = (s: Subscription, text: string) => { s.log = [...(s.log ?? []), { at: new Date().toISOString(), text }].slice(-40); };
+const OIDX = (orderId: string) => `subord:${orderId}`;
+const CANCELLED = (phone: string) => `subcancel:${phone.replace(/\D/g, "")}`;
 
 const K = (id: string) => `sub:${id}`;
 const LIST = "subs";
@@ -52,11 +66,19 @@ export function addMonths(date: string, n: number) {
 export const manageLink = (s: Subscription) => `${siteUrl()}/subscription/?id=${s.id}&t=${s.token}`;
 export const prettyDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-/** After checkout: one subscription per plan (monthly / every 3 months) in the order. */
+/** After checkout: one subscription per plan (monthly / every 3 months) in the order. A product the
+ * customer already gets on another active subscription isn't added twice. */
 export async function startSubscriptions(order: Order, input: CheckoutInput) {
   const wa = await import("@/lib/whatsapp");
+  const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
+  const phone = input.customer.phone.replace(/\D/g, "");
+  const mine = (await listSubscriptions()).filter((x) => x.status !== "cancelled" && x.customer.phone.replace(/\D/g, "") === phone);
+  const already = new Set(mine.flatMap((x) => x.items.map((i) => i.productId)));
+  const lastCancel = Number(await db.cmd<string | null>(["GET", CANCELLED(phone)]).catch(() => null)) || 0;
+  const cooling = g.cooldownDays > 0 && Date.now() - lastCancel < g.cooldownDays * 864e5;
+  const made: string[] = [];
   for (const every of [1, 3] as const) {
-    const lines = order.lines.filter((l) => l.every === every && !l.gift);
+    const lines = order.lines.filter((l) => l.every === every && !l.gift && !already.has(l.productId));
     if (!lines.length) continue;
     const s: Subscription = {
       id: `SUB-${Date.now().toString(36).toUpperCase()}${every}`,
@@ -68,10 +90,106 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
       nextAt: addMonths(today(), every),
       createdAt: new Date().toISOString(),
       orders: [order.id],
+      rules: 2,
+      delivered: {},
+      rebate: { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} },
+      ...(cooling ? { noRebate: true } : {}),
+      log: [{ at: new Date().toISOString(), text: `Started with order ${order.id}${cooling ? " (no rebate on past orders: cancelled another subscription recently)" : ""}` }],
     };
     await saveSubscription(s);
+    made.push(s.id);
     await wa.trigger("subscriptionStarted", s.customer.phone, { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), every: every === 1 ? "every month" : "every 3 months", next_date: prettyDate(s.nextAt), link: manageLink(s) }).catch(() => false);
   }
+  await linkOrder(order.id, made);
+}
+
+/** Remember which subscriptions an order belongs to (its first order, or one it placed itself). */
+async function linkOrder(orderId: string, subIds: string[]) {
+  if (subIds.length) await db.cmd(["SET", OIDX(orderId), JSON.stringify(subIds)]).catch(() => {});
+}
+
+/** Order status changed: count delivered orders, unlock the discount and rebate, reverse on return. */
+export async function onSubscriptionOrder(order: Order) {
+  const raw = await db.cmd<string | null>(["GET", OIDX(order.id)]).catch(() => null);
+  const ids: string[] = raw ? JSON.parse(raw) : order.subscriptionId ? [order.subscriptionId] : [];
+  if (!ids.length) return;
+  const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
+  for (const id of ids) {
+    const s = await getSubscription(id);
+    if (!s || !s.rules) continue;
+    const r = R(s);
+    s.delivered ??= {};
+    const pct = s.every === 1 ? g.monthly : g.quarterly;
+    const subIds = new Set(s.items.map((i) => i.productId));
+    const value = +order.lines.filter((l) => !l.gift && subIds.has(l.productId) && (order.subscriptionId ? true : l.every === s.every)).reduce((a, l) => a + l.lineTotal, 0).toFixed(2);
+    if (order.status === "delivered" && !(order.id in s.delivered)) {
+      s.delivered[order.id] = value;
+      note(s, `Order ${order.id} delivered (${Object.keys(s.delivered).length} of ${needFor(s, g)})`);
+      if (s.unlocked && order.subscriptionId) { /* already unlocked: the discount was on the order itself */ }
+      if (!s.unlocked && Object.keys(s.delivered).length >= needFor(s, g)) {
+        s.unlocked = true;
+        s.unlockedAt = new Date().toISOString();
+        const back = s.noRebate ? 0 : +((Object.values(s.delivered).reduce((a, v) => a + v, 0) * pct) / 100).toFixed(2);
+        r.earned = +(r.earned + back).toFixed(2);
+        r.pending = +(r.pending + back).toFixed(2);
+        note(s, `Unlocked: ${pct}% off from now on${back ? `, $${back.toFixed(2)} rebate on past orders` : ""}`);
+        const wa = await import("@/lib/whatsapp");
+        await wa.trigger("subscriptionReminder", s.customer.phone, { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), next_date: prettyDate(s.nextAt), total: back ? `$${back.toFixed(2)} rebate earned` : `${pct}% off unlocked`, link: manageLink(s) }).catch(() => false);
+      }
+    }
+    if ((order.status === "returned" || order.status === "cancelled" || order.status === "payment_failed")) {
+      if (order.id in s.delivered) {
+        const v = s.delivered[order.id];
+        delete s.delivered[order.id];
+        if (s.unlocked && !s.noRebate) {
+          const take = Math.min(r.pending, +((v * pct) / 100).toFixed(2));
+          r.pending = +(r.pending - take).toFixed(2);
+          r.earned = +(r.earned - take).toFixed(2);
+        }
+        if (s.unlocked && Object.keys(s.delivered).length < needFor(s, g)) { s.unlocked = false; note(s, `Order ${order.id} ${order.status}: discount locked again until ${needFor(s, g)} orders are delivered`); }
+        else note(s, `Order ${order.id} ${order.status}: removed from the count`);
+      }
+      // A rebate used on an order that didn't go through goes back to the customer.
+      const used = r.uses[order.id];
+      if (used) { r.pending = +(r.pending + used).toFixed(2); r.used = +(r.used - used).toFixed(2); delete r.uses[order.id]; note(s, `$${used.toFixed(2)} rebate restored (order ${order.id} ${order.status})`); }
+    }
+    await saveSubscription(s);
+  }
+}
+
+/** Customer or admin cancelled: an unused rebate is lost, and a new one can't be earned for a while. */
+export async function cancelSubscription(s: Subscription, by: string) {
+  s.status = "cancelled";
+  const r = R(s);
+  if (r.pending > 0) { r.forfeited = +(r.forfeited + r.pending).toFixed(2); note(s, `Cancelled by ${by}: $${r.pending.toFixed(2)} unused rebate forfeited`); r.pending = 0; }
+  else note(s, `Cancelled by ${by}`);
+  await db.cmd(["SET", CANCELLED(s.customer.phone), String(Date.now())]).catch(() => {});
+}
+
+/** Pricing for a subscription's own order: the earned % (or the old discount for older subscriptions) and the rebate. */
+export async function subscriptionPricing(id: string) {
+  const s = await getSubscription(id);
+  if (!s) return null;
+  const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
+  return { pct: !s.rules || s.unlocked ? (s.every === 1 ? g.monthly : g.quarterly) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0 };
+}
+
+/** Record a rebate spent on an order the subscription placed. */
+async function useRebate(s: Subscription, orderId: string, amount: number) {
+  if (amount <= 0) return;
+  const r = R(s);
+  r.pending = +Math.max(0, r.pending - amount).toFixed(2);
+  r.used = +(r.used + amount).toFixed(2);
+  r.uses[orderId] = amount;
+  note(s, `$${amount.toFixed(2)} rebate used on order ${orderId}`);
+}
+
+/** For the customer's page and admin: progress towards the discount. */
+export function progress(s: Subscription, g: { monthly: number; quarterly: number; unlockMonthly: number; unlockQuarterly: number }) {
+  const pct = s.every === 1 ? g.monthly : g.quarterly;
+  if (!s.rules) return { legacy: true, pct, need: 0, done: 0, unlocked: true, rebate: { earned: 0, used: 0, pending: 0, forfeited: 0 } };
+  const r = R(s);
+  return { legacy: false, pct, need: needFor(s, g), done: Object.keys(s.delivered ?? {}).length, unlocked: !!s.unlocked, noRebate: !!s.noRebate, rebate: { earned: r.earned, used: r.used, pending: r.pending, forfeited: r.forfeited } };
 }
 
 /** Daily (cron): reminders 3 days ahead, and today's orders. */
@@ -87,7 +205,7 @@ export async function runSubscriptions() {
   for (const s of (await listSubscriptions()).filter((x) => x.status === "active")) {
     const items = s.items.map((i) => ({ productId: i.productId, qty: i.qty, every: s.every }));
     if (s.nextAt <= soon && s.nextAt > now && s.remindedFor !== s.nextAt) {
-      const q = await serverQuote({ items, zone: s.customer.zone }).catch(() => null);
+      const q = await serverQuote({ items, zone: s.customer.zone, subscriptionId: s.id }).catch(() => null);
       await wa.trigger("subscriptionReminder", s.customer.phone, { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), next_date: prettyDate(s.nextAt), total: q ? `$${q.total.toFixed(2)}` : "", link: manageLink(s) }).catch(() => false);
       s.remindedFor = s.nextAt;
       await saveSubscription(s);
@@ -96,11 +214,13 @@ export async function runSubscriptions() {
     if (s.nextAt <= now) {
       try {
         // Items that sold out or left the shop are skipped this time; the rest ships.
-        const q = await serverQuote({ items, zone: s.customer.zone });
+        const q = await serverQuote({ items, zone: s.customer.zone, subscriptionId: s.id });
         const ok = items.filter((i) => q.lines.find((l) => l.productId === i.productId)?.available);
         if (!ok.length) throw new Error("Everything in this subscription is out of stock");
         const o = await createOrder({ items: ok, customer: s.customer, paymentMethod: "cod", waUpdates: true, subscriptionId: s.id });
         s.orders.push(o.id);
+        await linkOrder(o.id, [s.id]);
+        await useRebate(s, o.id, o.discounts?.find((d) => d.name.startsWith("Subscription rebate"))?.amount ?? 0);
         s.lastError = undefined;
         placed++;
       } catch (e) {

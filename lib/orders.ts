@@ -111,7 +111,7 @@ export const orderValue = (o: Order) => +(o.total + (o.giftCard?.amount ?? 0)).t
 
 /** Recompute every price, discount, gift and delivery fee on the server — never trust client totals. */
 export async function priceOrder(input: CheckoutInput) {
-  const q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone });
+  const q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId });
   const { isSubscribable } = await import("@/lib/subscribable");
   const everyOf = (id: string) => { const l = q._lines.find((x) => x.productId === id); return l && isSubscribable({ name: l.name, category: l.category }) ? input.items.find((i) => i.productId === id)?.every : undefined; };
   for (const i of input.items) {
@@ -294,6 +294,7 @@ export async function updateOrder(id: string, patch: Partial<Order>, by = "syste
   }
   await saveOrder(next);
   if (changed) await notifyOrderStatus(next);
+  if (changed && ["delivered", "returned", "cancelled", "payment_failed"].includes(patch.status!)) await (await import("@/lib/subscriptions")).onSubscriptionOrder(next).catch((e) => console.error("[subscriptions]", e));
   return next;
 }
 

@@ -11,6 +11,7 @@ export function SubscribeChoice({ price, value, onChange }: { price: number; val
   const sub = useGrowth().subscribe;
   if (!sub?.enabled || (!sub.monthly && !sub.quarterly)) return null;
   const opts: [0 | 1 | 3, string, number][] = [[0, t("One-time purchase"), 0], ...(sub.monthly ? [[1, t("Every month"), sub.monthly] as [1, string, number]] : []), ...(sub.quarterly ? [[3, t("Every 3 months"), sub.quarterly] as [3, string, number]] : [])];
+  const need = (k: 0 | 1 | 3) => (k === 1 ? sub.unlockMonthly ?? 3 : sub.unlockQuarterly ?? 2);
   return (
     <fieldset className="mt-5">
       <legend className="mb-2 text-sm font-semibold">{t("Subscribe & save")}</legend>
@@ -20,13 +21,14 @@ export function SubscribeChoice({ price, value, onChange }: { price: number; val
             <input type="radio" name="sub-plan" checked={value === k} onChange={() => onChange(k)} className="h-4 w-4 accent-[var(--color-ink)]" />
             <span className="flex-1">
               <span className="font-semibold">{label}</span>
-              {pct > 0 && <span className="ms-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">−{pct}%</span>}
+              {pct > 0 && <span className="ms-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">{t("earn")} {pct}%</span>}
+              {pct > 0 && <span className="block text-xs text-muted">{t("After")} {need(k)} {t("deliveries")}: {pct}% {t("back on them, then")} {pct}% {t("off every order")}</span>}
             </span>
-            <span className="text-sm font-semibold">{money(+(price * (1 - pct / 100)).toFixed(2))}</span>
+            <span className="text-sm font-semibold">{money(price)}</span>
           </label>
         ))}
       </div>
-      {value !== 0 && sub.note && <p className="mt-2 text-xs text-muted">{t(sub.note)}</p>}
+      {value !== 0 && <p className="mt-2 text-xs text-muted">{t("Your first deliveries are full price. Once they're delivered, the rebate comes off your next delivery automatically.")} {sub.note ? t(sub.note) : ""}</p>}
     </fieldset>
   );
 }
@@ -37,7 +39,7 @@ export function LinePlan({ productId, every, readOnly = false, name }: { product
   const sub = useGrowth().subscribe;
   const { setEvery } = useShop();
   if (!sub?.enabled || (name && !isSubscribable({ name }))) return null;
-  const label = (e?: 1 | 3) => (e === 1 ? `${t("Every month")} · −${sub.monthly}%` : e === 3 ? `${t("Every 3 months")} · −${sub.quarterly}%` : t("One-time"));
+  const label = (e?: 1 | 3) => (e === 1 ? `${t("Every month")} · ${t("earn")} ${sub.monthly}%` : e === 3 ? `${t("Every 3 months")} · ${t("earn")} ${sub.quarterly}%` : t("One-time"));
   if (readOnly) return every ? <p className="mt-0.5 text-xs font-semibold text-brand-700">↻ {label(every)}</p> : null;
   return (
     <label className="mt-1 block text-xs">

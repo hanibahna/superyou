@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
-type V = { id: string; status: "active" | "paused" | "cancelled"; every: 1 | 3; items: { productId: string; qty: number; name: string }[]; nextAt: string; orders: number; name: string; city: string };
+type V = { id: string; status: "active" | "paused" | "cancelled"; every: 1 | 3; items: { productId: string; qty: number; name: string }[]; nextAt: string; orders: number; name: string; city: string; progress?: { legacy: boolean; pct: number; need: number; done: number; unlocked: boolean; noRebate?: boolean; rebate: { pending: number; used: number } } };
 const pretty = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
 
 export default function Page() {
@@ -69,6 +69,22 @@ function Manage() {
           {on && <button disabled={busy} onClick={() => act({ action: "skip" })} className="min-h-[48px] rounded-full border border-ink px-5 font-semibold">Skip the next order</button>}
           {on ? <button disabled={busy} onClick={() => act({ action: "pause" })} className="min-h-[48px] rounded-full border border-line px-5 font-semibold">Pause</button> : <button disabled={busy} onClick={() => act({ action: "resume" })} className="min-h-[48px] rounded-full bg-ink px-5 font-semibold text-white">Resume</button>}
           <button disabled={busy} onClick={() => confirm("Cancel this subscription?") && act({ action: "cancel" })} className="min-h-[48px] rounded-full px-5 font-semibold text-sale">Cancel subscription</button>
+        </div>
+      )}
+      {s.progress && !s.progress.legacy && s.status !== "cancelled" && (
+        <div className="mt-6 rounded-2xl border-2 border-[#d13f74]/30 bg-[#fdf6f8] p-4">
+          {s.progress.unlocked ? (
+            <>
+              <p className="font-semibold">✓ {s.progress.pct}% off unlocked on every order</p>
+              {s.progress.rebate.pending > 0 && <p className="mt-1 text-sm">${s.progress.rebate.pending.toFixed(2)} rebate comes off your next delivery.</p>}
+            </>
+          ) : (
+            <>
+              <p className="font-semibold">{s.progress.done} of {s.progress.need} deliveries done</p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white"><div className="h-full bg-[#d13f74]" style={{ width: `${Math.min(100, (s.progress.done / Math.max(1, s.progress.need)) * 100)}%` }} /></div>
+              <p className="mt-2 text-sm text-muted">After {s.progress.need} delivered orders you unlock {s.progress.pct}% off every order{s.progress.noRebate ? "" : `, plus ${s.progress.pct}% back on the orders you've already received`}. Skipped months don't count; cancelling before then loses the rebate.</p>
+            </>
+          )}
         </div>
       )}
       <p className="mt-6 text-sm text-muted">Orders are placed automatically and paid on delivery to {s.city}. We'll message you on WhatsApp 3 days before each one. {s.orders} order{s.orders === 1 ? "" : "s"} so far.</p>

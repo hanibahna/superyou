@@ -77,10 +77,10 @@ struct ProductView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Picker("Buy", selection: $every) {
                                 Text("Once").tag(Int?.none)
-                                Text("Monthly −\(Int(s.monthly))%").tag(Int?.some(1))
-                                Text("Every 3 months −\(Int(s.quarterly))%").tag(Int?.some(3))
+                                Text("Monthly · earn \(Int(s.monthly))%").tag(Int?.some(1))
+                                Text("3 months · earn \(Int(s.quarterly))%").tag(Int?.some(3))
                             }.pickerStyle(.segmented)
-                            if every != nil { Text(s.note).font(.caption).foregroundStyle(.secondary) }
+                            if let e = every { Text("After \(e == 1 ? (s.unlockMonthly ?? 3) : (s.unlockQuarterly ?? 2)) deliveries you get \(Int(e == 1 ? s.monthly : s.quarterly))% back on them, then \(Int(e == 1 ? s.monthly : s.quarterly))% off every order. \(s.note)").font(.caption).foregroundStyle(.secondary) }
                         }.padding(.horizontal)
                     }
                     Button {

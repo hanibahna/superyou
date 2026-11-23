@@ -224,6 +224,10 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <Num label="Monthly: extra % off" value={g.subscribe.monthly} onChange={(monthly) => up("subscribe", { monthly })} />
               <Num label="Every 3 months: extra % off" value={g.subscribe.quarterly} onChange={(quarterly) => up("subscribe", { quarterly })} />
+              <Num label="Monthly: unlocks after N delivered orders" value={g.subscribe.unlockMonthly} onChange={(unlockMonthly) => up("subscribe", { unlockMonthly })} />
+              <Num label="Every 3 months: unlocks after N delivered orders" value={g.subscribe.unlockQuarterly} onChange={(unlockQuarterly) => up("subscribe", { unlockQuarterly })} />
+              <Num label="Max rebate used per order ($)" value={g.subscribe.maxRebate} onChange={(maxRebate) => up("subscribe", { maxRebate })} />
+              <Num label="No rebate if re-subscribing within (days)" value={g.subscribe.cooldownDays} onChange={(cooldownDays) => up("subscribe", { cooldownDays })} />
               <Text label="Only for this collection (empty = every product)" value={g.subscribe.collection} onChange={(collection) => up("subscribe", { collection })} placeholder="collection slug" />
               <Text label="Note under the options" value={g.subscribe.note} onChange={(note) => up("subscribe", { note })} />
             </div>
