@@ -55,6 +55,17 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
     private var sYaw: Float = 0, sPitch: Float = 0 // smoothed head pose, so the ring doesn't jitter
     private var hintAt = Date.distantPast
     private let green = UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1)
+
+    // Oval safeguard: the scan only runs while the face sits inside the oval at the right distance.
+    private let ovalDim = CAShapeLayer()
+    private let ovalLine = CAShapeLayer()
+    private var ovalCenter = CGPoint.zero
+    private var ovalRX: CGFloat = 0, ovalRY: CGFloat = 0
+    private var inS: CGFloat = 0
+    private var inside = false
+    private var lastFrame = Date()
+    private var placeAt = Date.distantPast
+    private var lastPlace = ""
     private var steady = 0
     private var startedAt: Date?
     private var doneAt: Date?
@@ -158,6 +169,22 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
         super.viewDidLayoutSubviews()
         guard ticks.isEmpty else { return }
         let c = CGPoint(x: view.bounds.midX, y: view.bounds.height * 0.42)
+        ovalCenter = c
+        ovalRX = view.bounds.width * 0.30
+        ovalRY = ovalRX * 1.32
+        let ovalRect = CGRect(x: c.x - ovalRX, y: c.y - ovalRY, width: ovalRX * 2, height: ovalRY * 2)
+        let dim = UIBezierPath(rect: view.bounds)
+        dim.append(UIBezierPath(ovalIn: ovalRect))
+        ovalDim.path = dim.cgPath
+        ovalDim.fillRule = .evenOdd
+        ovalDim.fillColor = UIColor.black.withAlphaComponent(0.45).cgColor
+        view.layer.insertSublayer(ovalDim, above: sceneView.layer)
+        ovalLine.path = UIBezierPath(ovalIn: ovalRect).cgPath
+        ovalLine.fillColor = UIColor.clear.cgColor
+        ovalLine.lineWidth = 3
+        ovalLine.lineDashPattern = [10, 8]
+        ovalLine.strokeColor = UIColor.white.withAlphaComponent(0.6).cgColor
+        view.layer.addSublayer(ovalLine)
         let r = view.bounds.width * 0.40
         for i in 0..<lit.count {
             let a = CGFloat(i) / CGFloat(lit.count) * .pi * 2
@@ -218,8 +245,9 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
             if Date().timeIntervalSince(done) > 1.0 { finish() }
             return
         }
+        let dt = min(0.1, Date().timeIntervalSince(lastFrame)); lastFrame = Date()
         guard let face = frame.anchors.compactMap({ $0 as? ARFaceAnchor }).first, face.isTracked else {
-            label.text = "Fit your face inside the circle"
+            updateOval(place: "none", dt: dt)
             return
         }
         // Head pose and distance relative to the camera (the depth sensor gives real centimetres).
@@ -231,9 +259,23 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
         let light = frame.lightEstimate?.ambientIntensity ?? 1000
         let temp = frame.lightEstimate?.ambientColorTemperature ?? 6500
 
+        // Where is the face on screen, and how far (the depth camera measures real centimetres)?
+        let wp = face.transform.columns.3
+        let sp = sceneView.projectPoint(SCNVector3(wp.x, wp.y, wp.z))
+        let loose = front != nil // turning the head moves the face, so allow more room during the circle
+        let tol: CGFloat = loose ? 0.4 : 0.24
+        let place: String
+        if cm > (loose ? 50 : 45) { place = "far" }
+        else if cm < (loose ? 20 : 22) { place = "near" }
+        else if abs(CGFloat(sp.x) - ovalCenter.x) > ovalRX * tol || abs(CGFloat(sp.y) - ovalCenter.y) > ovalRY * tol { place = "off" }
+        else { place = "ok" }
+        updateOval(place: place, dt: dt)
+        if !inside {
+            if front == nil { steady = max(0, steady - 2) } else { startedAt = startedAt?.addingTimeInterval(dt) } // paused: the clock stops
+            return
+        }
+
         if front == nil {
-            if cm > 45 { label.text = "Move a little closer"; steady = 0; return }
-            if cm < 22 { label.text = "Move the phone back a little"; steady = 0; return }
             if light < 350 { label.text = "Too dark: face a window or a light"; steady = 0; return }
             if abs(yaw) > 0.12 || abs(pitch) > 0.12 { label.text = "Look straight at the screen"; steady = 0; return }
             steady += 1
@@ -288,6 +330,31 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
             label.text = "Scan complete ✓"
             setGuide(nil)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+    }
+
+    /// Smoothly turns the oval green when the face is in place, pauses the scan (with hysteresis) when it isn't.
+    private func updateOval(place: String, dt: TimeInterval) {
+        inS += ((place == "ok" ? 1 : 0) - inS) * 0.12
+        let was = inside
+        if inside && inS < 0.35 { inside = false } else if !inside && inS > 0.7 { inside = true }
+        let col = UIColor(red: 1 - inS * 0.71, green: 1 - inS * 0.13, blue: 1 - inS * 0.5, alpha: 0.6 + inS * 0.4)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        ovalLine.strokeColor = col.cgColor
+        CATransaction.commit()
+        if was != inside {
+            ovalLine.lineDashPattern = inside ? nil : [10, 8]
+            if inside { lastPlace = ""; UIImpactFeedbackGenerator(style: .soft).impactOccurred(); if front == nil { label.text = "Hold still…" } else { hintAt = .distantPast } }
+            else { setGuide(nil) }
+        }
+        if !inside && place != lastPlace && Date().timeIntervalSince(placeAt) > 0.7 {
+            lastPlace = place; placeAt = Date()
+            switch place {
+            case "far": label.text = "Move a little closer"
+            case "near": label.text = "Move the phone back a little"
+            case "off": label.text = "Centre your face in the oval"
+            default: label.text = front == nil ? "Place your face in the oval" : "Move back into the oval to continue"
+            }
         }
     }
 

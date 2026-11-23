@@ -142,14 +142,14 @@ struct CheckoutView: View {
     func place() async {
         busy = true; error = nil; defer { busy = false }
         var body: [String: Any] = [
-            "items": bag.lines.map { ["productId": $0.productId, "qty": $0.qty] },
+            "items": bag.lines.map { l -> [String: Any] in var d: [String: Any] = ["productId": l.productId, "qty": l.qty]; if let e = l.every { d["every"] = e }; return d },
             "customer": ["firstName": first, "lastName": last, "phone": phone, "email": email, "zone": zone, "city": city, "address": address, "notes": notes],
             "paymentMethod": "cod", "waUpdates": waUpdates,
             "attribution": ["source": "ios-app", "medium": "app"],
         ]
         if !code.isEmpty { body["code"] = code }
         do {
-            let r = try await API.post("/api/checkout", body: body, as: CheckoutReply.self)
+            let r = try await API.post("/api/app/v1/checkout", body: body, as: CheckoutReply.self)
             if let id = r.orderId, let u = r.confirmUrl { done = (id, u); lastOrder = id; bag.clear() } else { error = r.error ?? "Something went wrong. Please try again." }
         } catch { self.error = "We couldn't reach the shop. Check your connection." }
     }

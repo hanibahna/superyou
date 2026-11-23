@@ -1,18 +1,21 @@
 import SwiftUI
 import UIKit
+import UserNotifications
+#if canImport(FirebaseCore)
 import FirebaseCore
 import FirebaseMessaging
-import UserNotifications
+#endif
 
 @main
 struct SuperYouApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var bag = Bag()
+    @StateObject private var wishlist = Wishlist()
     @StateObject private var router = Router.shared
 
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(bag).environmentObject(router).tint(.rose)
+            RootView().environmentObject(bag).environmentObject(wishlist).environmentObject(router).tint(.rose)
         }
     }
 }
@@ -25,7 +28,8 @@ final class Router: ObservableObject {
     @Published var pendingLink: String?
 }
 
-/// Push notifications through Firebase (only when GoogleService-Info.plist is in the app).
+/// Push notifications through Firebase (only when Firebase is added and GoogleService-Info.plist is in the app).
+#if canImport(FirebaseCore)
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else { return true }
@@ -37,24 +41,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         return true
     }
-
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Messaging.messaging().apnsToken = deviceToken
-    }
-
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) { Messaging.messaging().apnsToken = deviceToken }
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         Task { _ = try? await API.post("/api/app/push-token", body: ["token": token, "platform": "ios"], as: [String: Bool].self) }
     }
-
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions { [.banner, .sound, .badge] }
-
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        if let url = response.notification.request.content.userInfo["url"] as? String {
-            await MainActor.run { Router.shared.pendingLink = url }
-        }
+        if let url = response.notification.request.content.userInfo["url"] as? String { await MainActor.run { Router.shared.pendingLink = url } }
     }
 }
+#else
+final class AppDelegate: NSObject, UIApplicationDelegate {}
+#endif
 
 struct RootView: View {
     @EnvironmentObject var bag: Bag
@@ -62,9 +61,10 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $router.tab) {
             HomeView().tabItem { Label("Home", systemImage: "house") }.tag(0)
-            ShopView().tabItem { Label("Shop", systemImage: "magnifyingglass") }.tag(1)
-            BagView().tabItem { Label("Bag", systemImage: "bag") }.badge(bag.count).tag(2)
-            AccountView().tabItem { Label("Account", systemImage: "person") }.tag(3)
+            ShopView().tabItem { Label("Shop", systemImage: "square.grid.2x2") }.tag(1)
+            SuperScanView().tabItem { Label("SuperScan", systemImage: "faceid") }.tag(2)
+            BagView().tabItem { Label("Bag", systemImage: "bag") }.badge(bag.count).tag(3)
+            AccountView().tabItem { Label("Account", systemImage: "person") }.tag(4)
         }
     }
 }

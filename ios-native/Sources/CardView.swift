@@ -68,6 +68,7 @@ struct ProductListView: View {
 }
 
 struct ShopView: View {
+    @State private var who = ""
     @State private var text = ""
     @State private var submitted = ""
     private let cats: [(String, String)] = [("Skin care", "collection=skin-care"), ("Make up", "collection=make-up"), ("Fragrance", "collection=fragrances"), ("Hair", "collection=hair-expert"), ("Bath & body", "collection=bath-body"), ("Baby & mom", "collection=baby-mom"), ("Supplements", "category=supplements"), ("Parapharmacy", "collection=parapharmacy"), ("Imported from the USA", "origin=international"), ("On sale", "sale=1")]
@@ -75,9 +76,12 @@ struct ShopView: View {
         NavigationStack {
             Group {
                 if submitted.isEmpty {
-                    List(cats, id: \.0) { c in NavigationLink(c.0) { ProductListView(title: c.0, query: c.1) } }
+                    List {
+                        Picker("For", selection: $who) { Text("Everyone").tag(""); Text("Women").tag("women"); Text("Men").tag("men") }.pickerStyle(.segmented)
+                        ForEach(cats, id: \.0) { c in NavigationLink(c.0) { ProductListView(title: c.0, query: c.1 + (who.isEmpty ? "" : "&for=\(who)")) } }
+                    }
                 } else {
-                    ProductListView(title: "“\(submitted)”", query: "q=\(submitted.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")").id(submitted)
+                    ProductListView(title: "“\(submitted)”", query: "q=\(submitted.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" + (who.isEmpty ? "" : "&for=\(who)")).id(submitted + who)
                 }
             }
             .navigationTitle("Shop")

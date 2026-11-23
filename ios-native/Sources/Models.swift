@@ -33,14 +33,23 @@ struct Product: Codable {
     let slug: String; let name: String; let brand: String; let images: [String]
     let description: String; let howToUse: String; let ingredients: String
     let rating: Double?; let reviewCount: Int; let variants: [Variant]
+    let category: String?; let tips: [String]?; let subscribable: Bool?; let url: String?
 }
+
+struct Video: Codable, Identifiable, Hashable { let id: String; let title: String; let channel: String? }
+struct VideoList: Codable { let videos: [Video] }
 
 struct Zone: Codable, Hashable { let name: String; let fee: Double? }
 struct Payment: Codable, Hashable { let id: String; let label: String; let description: String? }
 struct Config: Codable {
     struct Store: Codable { let name: String; let tagline: String; let whatsapp: String; let phone: String; let email: String }
     struct Delivery: Codable { let fee: Double; let freeThreshold: Double; let estimate: String; let zones: [Zone] }
+    struct Advisor: Codable { let name: String; let greeting: String; let suggestions: [String] }
+    struct Subscribe: Codable { let monthly: Double; let quarterly: Double; let note: String }
+    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe? }
+    struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double
+    let features: Features?; let services: [Service]?
 }
 
 struct Quote: Codable {
@@ -59,7 +68,7 @@ struct OrderLine: Codable, Hashable { let name: String; let qty: Int; let lineTo
 struct Order: Codable, Identifiable, Hashable {
     let id: String; let createdAt: String; let status: String; let total: Double; let lines: [OrderLine]
 }
-struct Member: Codable { let name: String; let points: Int; let tier: String }
+struct Member: Codable { let name: String; let points: Int; let tier: String; let ref: String? }
 struct Account: Codable { let member: Member?; let orders: [Order] }
 
 /** One line in the bag (kept on the phone). */
@@ -67,4 +76,5 @@ struct BagLine: Codable, Identifiable, Hashable {
     var id: String { productId }
     let productId: String; let slug: String; let name: String; let brand: String; let variant: String
     var price: Double; let image: String; var qty: Int; let origin: String
+    var every: Int? = nil // Subscribe & save: 1 = monthly, 3 = quarterly
 }

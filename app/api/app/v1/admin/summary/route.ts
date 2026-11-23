@@ -20,7 +20,7 @@ export async function GET() {
     me: { name: me.name, role: me.role },
     today: { orders: today.length, sales: sum(today) },
     week: { orders: week.length, sales: sum(week) },
-    toHandle: live.filter((o) => ["pending", "confirmed", "processing"].includes(o.status)).length,
+    toHandle: live.filter((o) => ["pending_cod", "awaiting_payment", "paid", "confirmed", "packed"].includes(o.status)).length,
     orders: orders.slice(0, 50).map((o) => ({
       id: o.id, createdAt: o.createdAt, status: o.status, total: o.total, payment: o.paymentMethod,
       customer: `${o.customer.firstName} ${o.customer.lastName}`.trim(), phone: o.customer.phone, city: o.customer.city, address: o.customer.address, notes: o.customer.notes ?? "",

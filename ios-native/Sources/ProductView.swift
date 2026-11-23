@@ -4,6 +4,12 @@ struct ProductView: View {
     let slug: String
     @EnvironmentObject var bag: Bag
     @EnvironmentObject var router: Router
+    @EnvironmentObject var wishlist: Wishlist
+    @State private var videos: [Video] = []
+    @State private var playing: Video?
+    @State private var howTo = false
+    @State private var every: Int? = nil
+    @State private var subscribe: Config.Subscribe?
     @State private var product: Product?
     @State private var selected: Variant?
     @State private var added = false
@@ -16,9 +22,29 @@ struct ProductView: View {
                     TabView {
                         ForEach(p.images, id: \.self) { RemoteImage(url: $0).padding() }
                     }.tabViewStyle(.page).frame(height: 340).background(Color.white)
+                    if !videos.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(videos.prefix(4)) { vid in
+                                    Button { playing = vid } label: {
+                                        ZStack {
+                                            RemoteImage(url: "https://i.ytimg.com/vi/\(vid.id)/mqdefault.jpg", fit: .fill).frame(width: 112, height: 64).clipped()
+                                            Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(.white).shadow(radius: 3)
+                                        }.clipShape(RoundedRectangle(cornerRadius: 10))
+                                    }.accessibilityLabel("Play video: \(vid.title)")
+                                }
+                            }.padding(.horizontal)
+                        }
+                    }
                     VStack(alignment: .leading, spacing: 8) {
                         Text(p.brand.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                        Text(p.name).font(.title3.bold())
+                        HStack(alignment: .top) {
+                            Text(p.name).font(.title3.bold())
+                            Spacer()
+                            Button { wishlist.toggle(card(p, v)) } label: {
+                                Image(systemName: wishlist.has(p.slug) ? "heart.fill" : "heart").font(.title3).foregroundStyle(Color.rose)
+                            }.accessibilityLabel(wishlist.has(p.slug) ? "Remove from wishlist" : "Save to wishlist")
+                        }
                         if let r = p.rating, p.reviewCount >= 3 { Label(String(format: "%.1f · %d reviews", r, p.reviewCount), systemImage: "star.fill").font(.footnote).foregroundStyle(Color.rose) }
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(money(v.price)).font(.title2.bold()).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
@@ -47,13 +73,32 @@ struct ProductView: View {
                         }
                     }
 
+                    if let tips = p.tips, !tips.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Pharmacist tip", systemImage: "lightbulb").font(.caption.weight(.bold)).foregroundStyle(Color.rose)
+                            ForEach(tips, id: \.self) { Text("• \($0)").font(.footnote) }
+                        }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Color.blush.opacity(0.6), in: RoundedRectangle(cornerRadius: 12)).padding(.horizontal)
+                    }
+                    if p.subscribable == true, let s = subscribe {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Picker("Buy", selection: $every) {
+                                Text("Once").tag(Int?.none)
+                                Text("Monthly −\(Int(s.monthly))%").tag(Int?.some(1))
+                                Text("Every 3 months −\(Int(s.quarterly))%").tag(Int?.some(3))
+                            }.pickerStyle(.segmented)
+                            if every != nil { Text(s.note).font(.caption).foregroundStyle(.secondary) }
+                        }.padding(.horizontal)
+                    }
+                    Button { howTo = true } label: {
+                        Label("How to use", systemImage: "sparkles").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(12)
+                    }.buttonStyle(.bordered).tint(Color.rose).padding(.horizontal)
                     Button {
-                        bag.add(p, v); added = true
+                        bag.add(p, v, every: every); added = true
                     } label: {
                         Text(v.inStock ? (added ? "Added ✓  ·  Add another" : "Add to bag") : "Out of stock").font(.headline).frame(maxWidth: .infinity).padding()
                     }
                     .buttonStyle(.borderedProminent).tint(Color.ink).disabled(!v.inStock).padding(.horizontal)
-                    if added { Button("Go to bag") { router.tab = 2 }.frame(maxWidth: .infinity) }
+                    if added { Button("Go to bag") { router.tab = 3 }.frame(maxWidth: .infinity) }
 
                     HStack(spacing: 18) {
                         Label("Original", systemImage: "checkmark.seal")
@@ -82,12 +127,16 @@ struct ProductView: View {
             }
         }
         .task { if product == nil { await load() } }
+        .sheet(item: $playing) { vid in YouTubeSheet(video: vid) }
+        .sheet(isPresented: $howTo) { if let p = product { HowToSheet(product: p, videos: videos) { vid in howTo = false; playing = vid } } }
     }
 
     func load() async {
         do {
             let p = try await API.product(slug)
             product = p; selected = p.variants.first(where: { $0.inStock }) ?? p.variants.first; failed = false
+            subscribe = await API.sharedConfig()?.features?.subscribe
+            videos = (try? await API.videos(slug))?.videos ?? []
         } catch { failed = true }
     }
 }
@@ -102,6 +151,48 @@ private struct Section: View {
             } label: { Text(title).font(.subheadline.bold()).foregroundStyle(Color.ink) }
             .padding(.horizontal)
             Divider().padding(.horizontal)
+        }
+    }
+}
+
+private func card(_ p: Product, _ v: Variant) -> Card {
+    Card(id: v.id, slug: p.slug, name: p.name, brand: p.brand, price: v.price, compareAt: v.compareAt, image: v.image.isEmpty ? p.images.first : v.image, inStock: v.inStock, variantCount: p.variants.count, priceMax: nil, origin: v.origin, shipFrom: v.shipFrom, daysMin: v.daysMin, daysMax: v.daysMax)
+}
+
+/// Plays a YouTube video inside the app; the X closes it and you're back on the product.
+struct YouTubeSheet: View {
+    let video: Video
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            WebView(url: URL(string: "https://www.youtube-nocookie.com/embed/\(video.id)?autoplay=1&playsinline=1&rel=0")!)
+                .background(Color.black)
+                .navigationTitle(video.title).navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Close") } }
+        }
+    }
+}
+
+/// Directions, pharmacist tips and videos in one place.
+struct HowToSheet: View {
+    let product: Product
+    let videos: [Video]
+    let play: (Video) -> Void
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            List {
+                if !product.howToUse.isEmpty { SwiftUI.Section("Directions") { Text(product.howToUse).font(.footnote) } }
+                if let t = product.tips, !t.isEmpty { SwiftUI.Section("Pharmacist tips") { ForEach(t, id: \.self) { Text($0).font(.footnote) } } }
+                if !videos.isEmpty {
+                    SwiftUI.Section("Videos") {
+                        ForEach(videos) { v in Button { play(v) } label: { Label(v.title, systemImage: "play.rectangle.fill").font(.footnote) } }
+                    }
+                }
+                SwiftUI.Section { Text("Patch-test new products on a small area first. Stop and ask a pharmacist if your skin reacts.").font(.caption).foregroundStyle(.secondary) }
+            }
+            .navigationTitle("How to use").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }
     }
 }

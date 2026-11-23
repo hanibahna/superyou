@@ -7,6 +7,7 @@ struct AccountView: View {
     @State private var error: String?
     @State private var busy = false
     @State private var confirmDelete = false
+    @AppStorage("sy.myref") private var referral: String?
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,18 @@ struct AccountView: View {
                         Button(busy ? "Finding…" : "Find my account") { Task { await load() } }.disabled(busy || phone.isEmpty || order.isEmpty)
                     }
                 }
+                Section("More") {
+                    NavigationLink { WishlistView() } label: { Label("Wishlist", systemImage: "heart") }
+                    NavigationLink { AdvisorView() } label: { Label("Ask our AI advisor", systemImage: "sparkles") }
+                    NavigationLink { ServicesView() } label: { Label("Book a pharmacist video call", systemImage: "video") }
+                    if account != nil { NavigationLink { MyScansView(phone: phone, order: order) } label: { Label("My SuperScans", systemImage: "faceid") } }
+                    if let r = referral, !r.isEmpty {
+                        ShareLink(item: URL(string: "https://www.shopsuperyou.com/?ref=\(r)")!, message: Text("Shop original beauty and pharmacy at SuperYou with my link:")) { Label("Invite friends (your code \(r))", systemImage: "gift") }
+                    }
+                }
+                Section("Business") {
+                    NavigationLink { OwnerView() } label: { Label("Owner sign-in", systemImage: "lock.shield") }
+                }
                 Section("Help") {
                     Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("Ask a pharmacist on WhatsApp", systemImage: "message") }
                     Link(destination: URL(string: "https://www.shopsuperyou.com/club/")!) { Label("Join SuperYou Club", systemImage: "star") }
@@ -56,12 +69,42 @@ struct AccountView: View {
         busy = true; error = nil; defer { busy = false }
         let p = phone.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let o = order.uppercased().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        do { account = try await API.get("/api/club/?phone=\(p)&order=\(o)", as: Account.self) }
+        do { account = try await API.get("/api/app/v1/club?phone=\(p)&order=\(o)", as: Account.self); if let r = account?.member?.ref, !r.isEmpty { referral = r } }
         catch { self.error = "We couldn't match that phone number and order number." }
     }
 
     func deleteAccount() async {
-        _ = try? await API.post("/api/account/delete/", body: ["phone": phone, "order": order.uppercased(), "confirm": true], as: [String: Bool].self)
+        _ = try? await API.post("/api/app/v1/account-delete", body: ["phone": phone, "order": order.uppercased(), "confirm": true], as: [String: Bool].self)
         account = nil; order = ""
+    }
+}
+
+private struct ScanRow: Codable, Identifiable { let id: String; let link: String; let createdAt: String; let skinType: String?; let concerns: [String] }
+private struct ScanList: Codable { let scans: [ScanRow] }
+
+struct MyScansView: View {
+    let phone: String; let order: String
+    @State private var scans: [ScanRow]?
+    var body: some View {
+        List {
+            if let s = scans {
+                if s.isEmpty { Text("No scans yet. Open the SuperScan tab to take one.").foregroundStyle(.secondary) }
+                ForEach(s) { x in
+                    Link(destination: URL(string: API.base.absoluteString + x.link)!) {
+                        VStack(alignment: .leading) {
+                            Text("\(x.skinType ?? "") skin").font(.headline)
+                            Text(x.concerns.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
+                            Text(String(x.createdAt.prefix(10))).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } else { ProgressView() }
+        }
+        .navigationTitle("My SuperScans")
+        .task {
+            let p = phone.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            let o = order.uppercased().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            scans = (try? await API.get("/api/app/v1/skin-scan/history?phone=\(p)&order=\(o)", as: ScanList.self))?.scans ?? []
+        }
     }
 }

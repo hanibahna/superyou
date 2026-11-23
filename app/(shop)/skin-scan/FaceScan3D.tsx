@@ -30,6 +30,8 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
     const prog = new Array<number>(TICKS).fill(0); // each tick grows smoothly (0 → 1) once reached
     let sdx = 0, sdy = 0; // smoothed head direction, so the ring and guide don't jitter
     let hintAt = 0, arrowAng = 0, gapAng = 0;
+    // Oval safeguard: the scan only runs while the face sits inside the oval (smoothed, with hysteresis so it never flickers).
+    let inS = 0, inside = false, lastFrame = 0, placeAt = 0, lastPlace = "";
     let base: { x: number; y: number } | null = null, calib: { x: number; y: number }[] = [];
     let startedCircle = 0, doneAt = 0, lastLit = 0, lastGuide: Dir | null = null;
     let tess: { start: number; end: number }[] = [];
@@ -76,10 +78,40 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       const W = cv.width, H = cv.height, now = performance.now();
       // mirrored preview
       g.save(); g.translate(W, 0); g.scale(-1, 1); g.drawImage(v, sx, 0, cw, vh, 0, 0, W, H); g.restore();
-      g.fillStyle = "rgba(0,0,0,.35)"; g.fillRect(0, 0, W, H);
       const res = landmarker.detectForVideo(v, now);
       const lm = res.faceLandmarks?.[0];
-      const cx = W / 2;
+      const cx = W / 2, OY = H * 0.45, ORX = W * 0.29, ORY = H * 0.27;
+      const dt = lastFrame ? Math.min(100, now - lastFrame) : 16; lastFrame = now;
+      // Is the face inside the oval, at the right distance?
+      let place = "none";
+      if (lm) {
+        const P = (i: number) => ({ x: W - ((lm[i].x * vw - sx) / cw) * W, y: lm[i].y * H });
+        const fcx = (P(234).x + P(454).x) / 2, fcy = (P(10).y + P(152).y) / 2, fh = P(152).y - P(10).y;
+        const loose = !!base && !doneAt; // turning the head moves the face, so allow more room during the circle
+        const tol = loose ? 0.38 : 0.22, minH = ORY * 2 * (loose ? 0.5 : 0.62), maxH = ORY * 2 * (loose ? 1.12 : 1.02);
+        place = fh < minH ? "far" : fh > maxH ? "near" : Math.abs(fcx - cx) > ORX * tol || Math.abs(fcy - OY) > ORY * tol ? "off" : "ok";
+      }
+      inS += ((place === "ok" ? 1 : 0) - inS) * 0.12;
+      if (inside && inS < 0.35) inside = false;
+      else if (!inside && inS > 0.7) inside = true;
+      if (doneAt) inside = true;
+      // Darken everything outside the oval (like Face ID), lighter inside.
+      g.save();
+      g.fillStyle = "rgba(0,0,0,.55)";
+      g.beginPath(); g.rect(0, 0, W, H); g.ellipse(cx, OY, ORX, ORY, 0, 0, Math.PI * 2); g.fill("evenodd");
+      g.fillStyle = "rgba(0,0,0,.12)"; g.beginPath(); g.ellipse(cx, OY, ORX, ORY, 0, 0, Math.PI * 2); g.fill();
+      g.restore();
+      // Oval outline: fades from white to green as the face settles in.
+      const og = Math.round(255 - inS * (255 - 222)), orr = Math.round(255 - inS * (255 - 74)), ob = Math.round(255 - inS * (255 - 128));
+      g.strokeStyle = `rgba(${orr},${og},${ob},${(0.55 + inS * 0.45).toFixed(2)})`;
+      g.lineWidth = 3; g.setLineDash(inside ? [] : [10, 8]);
+      g.beginPath(); g.ellipse(cx, OY, ORX, ORY, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+      if (!inside && !doneAt && now - placeAt > 700 && place !== lastPlace) {
+        lastPlace = place; placeAt = now;
+        setGuide(null); lastGuide = null;
+        setMsg(place === "far" ? t("Move a little closer") : place === "near" ? t("Move back a little") : place === "off" ? t("Centre your face in the oval") : base ? t("Move back into the oval to continue") : t("Place your face in the oval"));
+      }
+      if (inside && lastPlace) { lastPlace = ""; if (!base) setMsg(t("Hold still…")); }
       if (lm) {
         // to canvas coords (mirrored)
         const pts = lm.map((p) => ({ x: W - ((p.x * vw - sx) / cw) * W, y: p.y * H }));
@@ -100,10 +132,8 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         // head direction from the nose relative to the face outline (works without depth hardware)
         const L = lm[234], R = lm[454], N = lm[1], T = lm[10], C = lm[152];
         const dir = { x: (N.x - L.x) / (R.x - L.x) - 0.5, y: (N.y - T.y) / (C.y - T.y) };
-        const faceW = Math.abs(R.x - L.x) * vw / cw;
         if (!base) {
-          if (faceW < 0.3) setMsg(t("Move closer"));
-          else if (faceW > 0.85) setMsg(t("Move back a little"));
+          if (!inside) { if (calib.length) calib = calib.slice(-4); }
           else {
             calib.push(dir);
             if (calib.length > 12) {
@@ -115,6 +145,8 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
               lastGuide = null;
             } else setMsg(t("Hold still…"));
           }
+        } else if (!doneAt && !inside) {
+          startedCircle += dt; // paused: the clock stops while the face is out of the oval
         } else if (!doneAt) {
           // Smooth the head direction (removes jitter), mirrored to match the screen.
           sdx += (-(dir.x - base.x) - sdx) * 0.25;
@@ -161,7 +193,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
           const enough = n / TICKS >= 0.92 && shots.a && shots.b && shots.up && shots.down;
           if (enough || now - startedCircle > 45000) { doneAt = now; lit.fill(1); setPct(100); setStage("done"); setGuide(null); setMsg(t("Scan complete")); }
         }
-      } else if (!doneAt) setMsg(t("Fit your face in the circle"));
+      } else if (!doneAt && startedCircle) startedCircle += dt;
       // Face ID-style ring: a true circle of thin ticks that grow and turn green smoothly.
       const R = W * 0.4, rcy = H * 0.45;
       for (let i = 0; i < TICKS; i++) {
@@ -175,7 +207,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 + Math.cos(a) * len, y1 + Math.sin(a) * len); g.stroke();
       }
       // Guide arrow glides around the ring to the part still to fill.
-      if (startedCircle && !doneAt && lastLit >= 3) {
+      if (startedCircle && !doneAt && inside && lastLit >= 3) {
         let d = gapAng - arrowAng;
         d = Math.atan2(Math.sin(d), Math.cos(d));
         arrowAng += d * 0.06;

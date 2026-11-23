@@ -13,6 +13,14 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     Promise()
+                    HStack(spacing: 10) {
+                        Button { router.tab = 2 } label: { Label("SuperScan", systemImage: "faceid").frame(maxWidth: .infinity).padding(.vertical, 12) }
+                            .buttonStyle(.borderedProminent).tint(Color.rose)
+                        NavigationLink { AdvisorView() } label: { Label("Ask AI", systemImage: "sparkles").frame(maxWidth: .infinity).padding(.vertical, 12) }
+                            .buttonStyle(.bordered)
+                        NavigationLink { ServicesView() } label: { Label("Video call", systemImage: "video").frame(maxWidth: .infinity).padding(.vertical, 12) }
+                            .buttonStyle(.bordered)
+                    }.font(.footnote.weight(.semibold)).padding(.horizontal)
                     if let h = home {
                         if !h.banners.isEmpty { Banners(banners: h.banners) { b in open(b.href, b.title) } }
                         if !h.categories.isEmpty {

@@ -30,6 +30,27 @@ enum API {
     static func config() async throws -> Config { try await get("/api/app/v1/config") }
     static func product(_ slug: String) async throws -> Product { try await get("/api/app/v1/product/\(slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug)") }
     static func products(_ query: String, page: Int = 1) async throws -> ProductPage { try await get("/api/app/v1/products?\(query)&page=\(page)") }
+    static func videos(_ slug: String) async throws -> VideoList { try await get("/api/app/v1/videos?slug=\(slug.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? slug)") }
+
+    /// Shared config, loaded once per launch.
+    @MainActor static var cachedConfig: Config?
+    @MainActor static func sharedConfig() async -> Config? {
+        if let c = cachedConfig { return c }
+        cachedConfig = try? await config()
+        return cachedConfig
+    }
+
+    /// POST with an Encodable body; returns the raw status and data (for screens that show server messages).
+    static func send(_ path: String, method: String = "POST", body: [String: Any]?) async throws -> (Int, Data) {
+        var req = URLRequest(url: url(path))
+        req.httpMethod = method
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("SuperYou-iOS", forHTTPHeaderField: "X-Client")
+        req.timeoutInterval = 90
+        if let b = body { req.httpBody = try JSONSerialization.data(withJSONObject: b) }
+        let (data, res) = try await URLSession.shared.data(for: req)
+        return ((res as? HTTPURLResponse)?.statusCode ?? 0, data)
+    }
 }
 
 enum APIError: LocalizedError {
