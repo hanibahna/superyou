@@ -59,6 +59,14 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
     private var temps: [CGFloat] = []
     private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
+    // Head-turn guide: a small head icon showing the movement, and a pulsing arrow on the side to turn to.
+    private enum Dir { case right, left, up, down }
+    private let headIcon = UIImageView(image: UIImage(systemName: "face.smiling"))
+    private let headBadge = UIView()
+    private let arrow = UIImageView(image: UIImage(systemName: "arrow.right.circle.fill"))
+    private var guide: Dir?
+    private var firstSide: Int = 0 // 1 = side A was reached first (so A is "this way →"), 2 = side B
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
@@ -100,6 +108,25 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
         close.accessibilityLabel = "Close"
         view.addSubview(close)
 
+        headBadge.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+        headBadge.layer.cornerRadius = 18
+        headBadge.translatesAutoresizingMaskIntoConstraints = false
+        headBadge.isUserInteractionEnabled = false
+        view.addSubview(headBadge)
+        headIcon.tintColor = .white
+        headIcon.contentMode = .scaleAspectFit
+        headIcon.translatesAutoresizingMaskIntoConstraints = false
+        headBadge.addSubview(headIcon)
+
+        arrow.tintColor = .white
+        arrow.contentMode = .scaleAspectFit
+        arrow.frame = CGRect(x: 0, y: 0, width: 60, height: 60)
+        arrow.isHidden = true
+        arrow.layer.shadowColor = UIColor.black.cgColor
+        arrow.layer.shadowOpacity = 0.35
+        arrow.layer.shadowRadius = 8
+        view.addSubview(arrow)
+
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             label.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
@@ -110,7 +137,16 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
             close.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             close.widthAnchor.constraint(equalToConstant: 44),
             close.heightAnchor.constraint(equalToConstant: 44),
+            headBadge.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            headBadge.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            headBadge.widthAnchor.constraint(equalToConstant: 72),
+            headBadge.heightAnchor.constraint(equalToConstant: 72),
+            headIcon.centerXAnchor.constraint(equalTo: headBadge.centerXAnchor),
+            headIcon.centerYAnchor.constraint(equalTo: headBadge.centerYAnchor),
+            headIcon.widthAnchor.constraint(equalToConstant: 46),
+            headIcon.heightAnchor.constraint(equalToConstant: 46),
         ])
+        animateHead(nil)
     }
 
     override func viewDidLayoutSubviews() {
@@ -201,6 +237,7 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
                 startedAt = Date()
                 haptic.impactOccurred()
                 label.text = "Now slowly move your head in a circle"
+                updateGuide()
             }
             return
         }
@@ -220,18 +257,100 @@ final class FaceScanViewController: UIViewController, ARSCNViewDelegate, ARSessi
                 }
             }
         }
-        if yaw > 0.38, sideA == nil, let shot = photo() { sideA = shot; haptic.impactOccurred() }
-        if yaw < -0.38, sideB == nil, let shot = photo() { sideB = shot; haptic.impactOccurred() }
+        if yaw > 0.38, sideA == nil, let shot = photo() { sideA = shot; haptic.impactOccurred(); if firstSide == 0 { firstSide = 1 } }
+        if yaw < -0.38, sideB == nil, let shot = photo() { sideB = shot; haptic.impactOccurred(); if firstSide == 0 { firstSide = 2 } }
+        updateGuide()
         let n = lit.filter { $0 }.count
         percent.text = "\(n * 100 / lit.count)%"
         let enough = Double(n) / Double(lit.count) >= 0.7 && sideA != nil && sideB != nil
-        if enough || Date().timeIntervalSince(startedAt ?? Date()) > 25 {
+        if enough || Date().timeIntervalSince(startedAt ?? Date()) > 30 {
             doneAt = Date()
             ticks.forEach { $0.strokeColor = UIColor.systemGreen.cgColor }
             percent.text = "100%"
             label.text = "Scan complete ✓"
+            setGuide(nil)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
+    }
+
+    /// Which way to turn next: one side, the other side, then whatever part of the ring is still empty.
+    private func updateGuide() {
+        var next: Dir
+        if sideA == nil && sideB == nil {
+            next = .right
+        } else if sideA == nil || sideB == nil {
+            next = .left // the first side reached was "this way →", so the other is ←
+        } else {
+            var best = -1.0, bestLen = 0
+            for i in 0..<lit.count where !lit[i] {
+                var len = 0
+                while len < lit.count && !lit[(i + len) % lit.count] { len += 1 }
+                if len > bestLen { bestLen = len; best = Double(i) + Double(len) / 2 }
+            }
+            let deg = (best < 0 ? 0 : best) / Double(lit.count) * 360
+            next = (deg < 45 || deg >= 315) ? .right : deg < 135 ? .down : deg < 225 ? .left : .up
+        }
+        if next != guide { setGuide(next) }
+    }
+
+    private func setGuide(_ d: Dir?) {
+        guide = d
+        if let d = d {
+            switch d {
+            case .right: label.text = "Slowly turn your head this way →"
+            case .left: label.text = "Now slowly turn the other way ←"
+            case .up: label.text = "Now tilt your chin up ↑"
+            case .down: label.text = "Now tilt your chin down ↓"
+            }
+            let c = CGPoint(x: view.bounds.midX, y: view.bounds.height * 0.42)
+            let rx = view.bounds.width * 0.40 + 6, ry = rx * 1.32
+            switch d {
+            case .right: arrow.center = CGPoint(x: min(view.bounds.width - 36, c.x + rx), y: c.y); arrow.transform = .identity
+            case .left: arrow.center = CGPoint(x: max(36, c.x - rx), y: c.y); arrow.transform = CGAffineTransform(rotationAngle: .pi)
+            case .up: arrow.center = CGPoint(x: c.x, y: c.y - ry); arrow.transform = CGAffineTransform(rotationAngle: -.pi / 2)
+            case .down: arrow.center = CGPoint(x: c.x, y: c.y + ry); arrow.transform = CGAffineTransform(rotationAngle: .pi / 2)
+            }
+            arrow.isHidden = false
+            arrow.layer.removeAllAnimations()
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 0.55
+            pulse.toValue = 1.0
+            pulse.duration = 0.5
+            pulse.autoreverses = true
+            pulse.repeatCount = .infinity
+            arrow.layer.add(pulse, forKey: "pulse")
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } else {
+            arrow.isHidden = true
+            arrow.layer.removeAllAnimations()
+        }
+        animateHead(d)
+    }
+
+    /// The little head turns the way the customer should turn (or swivels in a circle before the turning starts).
+    private func animateHead(_ d: Dir?) {
+        headIcon.layer.removeAllAnimations()
+        headIcon.transform = .identity
+        let anim = CAKeyframeAnimation(keyPath: "transform.translation")
+        let s: CGFloat = 7
+        if let d = d {
+            let v: CGSize
+            switch d {
+            case .right: v = CGSize(width: s, height: 0)
+            case .left: v = CGSize(width: -s, height: 0)
+            case .up: v = CGSize(width: 0, height: -s)
+            case .down: v = CGSize(width: 0, height: s)
+            }
+            anim.values = [CGSize.zero, v, v, CGSize.zero].map { NSValue(cgSize: $0) }
+            anim.keyTimes = [0, 0.45, 0.8, 1]
+            anim.duration = 1.4
+        } else {
+            anim.values = [CGSize(width: s, height: 0), CGSize(width: 0, height: s), CGSize(width: -s, height: 0), CGSize(width: 0, height: -s), CGSize(width: s, height: 0)].map { NSValue(cgSize: $0) }
+            anim.duration = 2.4
+        }
+        anim.repeatCount = .infinity
+        anim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        headIcon.layer.add(anim, forKey: "swivel")
     }
 
     /// A clean photo of the face (mesh hidden), cropped to 3:4 portrait and sized for the AI.
