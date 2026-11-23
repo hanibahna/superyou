@@ -16,8 +16,13 @@ export async function POST(req: NextRequest) {
   const taken = new Set(all.map((p) => p.slug));
   const bad = [...new Set(all.map((p) => p.slug).filter((s) => /-sks-\d+$/.test(s)))];
   const moves: [string, string][] = [];
+  const { slugify } = await import();
+  const brandOf = new Map(all.map((p) => [p.slug, p.brand]));
   for (const old of bad) {
-    const base = old.replace(/-sks-\d+$/, "");
+    const name = old.replace(/-sks-\d+$/, "");
+    const b = slugify(brandOf.get(old) ?? "");
+    // Prefer the brand in front (clear and good for search), else -2, -3…
+    const base = b && !name.startsWith(b) ? `${b}-${name}` : name;
     let next = base;
     for (let n = 2; taken.has(next); n++) next = `${base}-${n}`;
     taken.add(next);
