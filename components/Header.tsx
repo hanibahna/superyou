@@ -107,7 +107,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
         </nav>
       </div>
       {/* Phones & tablets: our promise as a slim line under the logo row */}
-      {store.tagline && <p className="site-id-sm container-x -mt-1.5 pb-1.5 text-center text-[10.5px] leading-snug text-muted md:hidden lg:block lg:text-start lg:text-xs xl:hidden">{store.tagline}</p>}
+      {store.tagline && <p className="site-id-sm container-x -mt-1.5 pb-1.5 text-center text-[10px] leading-snug tracking-[-0.01em] text-muted [text-wrap:balance] min-[400px]:text-[10.5px] md:hidden lg:block lg:text-start lg:text-xs xl:hidden">{store.tagline}</p>}
       {/* Phones: on the home page, search sits in plain view under the logo. */}
       {path === "/" && <div className="container-x pb-3 lg:hidden"><SearchBox /></div>}
 
