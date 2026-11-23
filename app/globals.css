@@ -412,5 +412,5 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 @media (max-width: 1023px) { .site-header .hdr-bag { margin-inline-end: 14px !important; } }
 
 /* SHOP and .COM in the brand colour next to the logo, whatever the look */
-.site-header .sy-accent { color: var(--color-brand-600) !important; }
-[data-header="dark"] .site-header .sy-accent { color: var(--color-brand-100) !important; }
+.site-header .sy-accent { color: #d13f74 !important; }
+[data-header="dark"] .site-header .sy-accent { color: #ff8fb6 !important; }

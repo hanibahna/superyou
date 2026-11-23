@@ -62,7 +62,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
 
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
-      <div className="hdr-row container-x flex h-16 items-center gap-4">
+      <div className="hdr-row container-x flex h-16 items-center gap-4 md:h-[72px] lg:h-16">
         <button className="-ms-2.5 grid h-11 w-11 place-items-center lg:hidden" onClick={() => setMenuOpen(true)} aria-label={tx("Open menu")}>
           <MenuIcon />
         </button>
