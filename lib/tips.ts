@@ -122,62 +122,74 @@ export function tipsFor(words: (string | undefined)[]): string[] {
   return out.slice(0, 6);
 }
 
-// Product-specific tips: matched on the product's own name (and ingredients when we have them).
-const PRODUCT: Rule[] = [
-  { match: /sponge|blender|puff/i, tips: ["Dampen the sponge and squeeze out the water, then bounce it on the skin rather than dragging.", "Wash make-up sponges after each use, let them dry fully and replace them every 1 to 3 months."] },
-  { match: /brush/i, tips: ["Wash make-up brushes weekly with a gentle shampoo and dry them flat so water doesn't loosen the bristles."] },
+// Product-specific tips, matched on the product's NAME only (descriptions and ingredient lists mention
+// too many things). Each rule says what the product must be (match), what rules it out (not) and,
+// for supplements, that it really is one (need). No match = no tips: a wrong tip is worse than none.
+type PRule = { match: RegExp; not?: RegExp; need?: RegExp; tips: string[] };
+const SUPP = /\d+\s?mg\b|\d+\s?iu\b|\bcaps|capsule|tablet|\btabs?\b|softgel|gumm(y|ies|ee)|sachet|powder|drink|\bshot\b|ampoule buvable|effervescent|supplement|chewable|syrup|sirop|g[ée]lules?|comprim/i;
+const HAIR = /hair|shampoo|cheveu|capillaire|scalp|cuir chevelu/i;
+const LIPS = /\blip|l[èe]vres|lipstick|gloss/i;
+const MAKEUP = /concealer|foundation|tint|mascara|lipstick|gloss|blush|primer|eyeliner|eyeshadow|eye shadow|palette|powder\b/i;
+const rx = (...r: RegExp[]) => new RegExp(r.map((x) => x.source).join("|"), "i");
+// Sets, duos and offers hold several different products: no tips, so none can be about the wrong one.
+const BUNDLE = /\b(trio|duo|set|kit|offer|bundle|coffret|routine|gift box|value pack)\b|\s&\s.*\s&\s/i;
+const PRODUCT: PRule[] = [
+  { match: /make-?up sponge|beauty ?blender|blending sponge|powder puff/i, tips: ["Dampen the sponge and squeeze out the water, then bounce it on the skin rather than dragging.", "Wash make-up sponges after each use, let them dry fully and replace them every 1 to 3 months."] },
+  { match: /(make-?up|foundation|powder|blush|kabuki|contour|eyeshadow|eye shadow|concealer) brush|kabuki|make-?up brushes/i, not: /tooth|hair|nail|cleansing/i, tips: ["Wash make-up brushes weekly with a gentle shampoo and dry them flat so water doesn't loosen the bristles."] },
   { match: /tweezer/i, tips: ["Clean tweezers with alcohol before and after use; plucking after a warm shower hurts less."] },
-  { match: /dryer|straightener|flat ?iron|curl(er|ing)|styler/i, tips: ["Always use a heat protectant first, and keep styling tools at the lowest heat that works for your hair."] },
-  { match: /razor|blade|shaver/i, tips: ["Change razor blades every 5 to 7 shaves and rinse them after each stroke to avoid irritation."] },
-  { match: /nail ?file|clipper|cuticle ?(pusher|nipper)/i, tips: ["File nails in one direction and disinfect clippers and nippers after each use."] },
-  { match: /eyelash ?curler/i, tips: ["Curl lashes before mascara, never after, and replace the curler pad every few months."] },
-  { match: /retinol|retinal|retinoid|adapalene|bakuchiol/i, tips: ["Use retinol at night only, starting 2 to 3 times a week, and wear SPF 30+ every morning.", "Apply retinol to dry skin, a pea-sized amount for the whole face. Not for pregnancy or breastfeeding."] },
-  { match: /vitamin\s*c|ascorbic|\bvit\.?\s*c\b/i, tips: ["Apply vitamin C in the morning under sunscreen; keep it closed and away from light so it stays effective."] },
-  { match: /niacinamide/i, tips: ["Niacinamide suits most skin types and can be used morning and night, alongside other actives."] },
-  { match: /glycolic|lactic|aha\b|mandelic|peel/i, tips: ["Exfoliating acids make skin more sun-sensitive: use them at night and wear SPF the next day. Start 2 to 3 times a week."] },
-  { match: /salicylic|bha\b/i, tips: ["Salicylic acid unclogs pores: start once a day and moisturise if skin feels dry."] },
+  { match: /hair ?dryer|blow ?dryer|hair straightener|(satin hair|ghd|babyliss|remington|philips).*straightener|flat ?iron|curling (iron|wand|tong)|hot ?brush|airwrap/i, not: /toe|finger|roller|eye|baby hair|retinol/i, tips: ["Always use a heat protectant first, and keep styling tools at the lowest heat that works for your hair."] },
+  { match: /\brazor\b|razor blade|shaver/i, not: /after ?shave|cream|gel|foam|bump/i, tips: ["Change razor blades every 5 to 7 shaves and rinse them after each stroke to avoid irritation."] },
+  { match: /nail ?file|nail ?clipper|cuticle ?(pusher|nipper|cutter)|nail trimmer/i, tips: ["File nails in one direction and disinfect clippers and nippers after each use."] },
+  { match: /eyelash ?curler|lash ?curler/i, tips: ["Curl lashes before mascara, never after, and replace the curler pad every few months."] },
+  { match: /retinol|retinal\b|retinoid|adapalene/i, not: rx(SUPP, HAIR, /\bday\b|\bspf|mask|roller|lip|body|hand/), tips: ["Use retinol at night only, starting 2 to 3 times a week, and wear SPF 30+ every morning."] },
+  { match: /retinol|retinal\b|retinoid|adapalene/i, need: /serum|cream|cr[èe]me|squalane|treatment|oil|night/i, not: rx(SUPP, HAIR, /\bday\b|\bspf|mask|eye|roller|lip|body|hand/), tips: ["Apply retinol to dry skin, a pea-sized amount for the whole face. Not for pregnancy or breastfeeding."] },
+  { match: /vitamin\s*c\b|ascorbic|\bvit\.?\s*c\b/i, need: /serum|booster|ampoule|concentrate|\bday\b|fluid/i, not: rx(SUPP, HAIR, LIPS, /night|wash|cleans|mask|zinc|echinacea/), tips: ["Apply vitamin C in the morning under sunscreen; keep it closed and away from light so it stays effective."] },
+  { match: /niacinamide/i, not: rx(SUPP, HAIR, LIPS, /after ?sun|sunscreen|spf|body/), tips: ["Niacinamide suits most skin types and can be used morning and night, alongside other actives."] },
+  { match: /glycolic|lactic acid|\baha\b|mandelic|exfoliating (toner|tonic|solution)|peeling (toner|solution|cream)|chemical peel/i, not: /peel-?off|body|foot|feet|hand|shampoo|cleans|wash|foam|bar\b|scrub/i, tips: ["Exfoliating acids make skin more sun-sensitive: use them at night and wear SPF the next day. Start 2 to 3 times a week."] },
+  { match: /salicylic|\bbha\b/i, not: /shampoo|body|scalp|corn|wart|callus|foot|feet|peel-?off|scrub|wash|cleans|micellar|bar\b|foam/i, tips: ["Salicylic acid unclogs pores: start once a day and moisturise if skin feels dry."] },
   { match: /benzoyl/i, tips: ["Benzoyl peroxide can bleach towels and pillowcases; start with a thin layer once a day."] },
-  { match: /hyaluronic/i, tips: ["Apply hyaluronic acid on damp skin, then seal it in with moisturiser."] },
-  { match: /spf|sunscreen|sun\s*(cream|fluid|spray|stick|milk)|uv\b|anthelios|photoderm/i, tips: ["Apply sunscreen 15 minutes before going out, about a teaspoon for face and neck, and reapply every 2 hours outdoors."] },
-  { match: /cleanser|cleansing|micellar|face\s*wash|gel\s*nettoyant/i, tips: ["Cleanse for about 30 seconds with lukewarm water and pat dry; twice a day is enough."] },
-  { match: /serum/i, tips: ["Apply serums after cleansing and before moisturiser, on dry skin."] },
-  { match: /eye\s*cream|contour|eye\s*gel/i, tips: ["Tap eye cream gently with the ring finger along the orbital bone, not on the lids."] },
-  { match: /mascara/i, tips: ["Replace mascara every 3 months and never share it, to avoid eye infections."] },
-  { match: /foundation|concealer|bb\s*cream|cc\s*cream|tinted/i, tips: ["Test shade on the jawline in daylight; apply over moisturiser and sunscreen."] },
-  { match: /lipstick|lip\s*(gloss|balm|liner|tint)/i, tips: ["Exfoliate lips gently and apply balm first for a smoother, longer-lasting finish."] },
-  { match: /nail\s*polish|vernis|gel\s*polish/i, tips: ["Use a base coat to prevent staining and a top coat to make polish last longer."] },
+  { match: /hyaluronic/i, need: /serum|booster|ampoule|concentrate|essence/i, not: rx(SUPP, HAIR, LIPS, MAKEUP, /spf|sunscreen|body/), tips: ["Apply hyaluronic acid on damp skin, then seal it in with moisturiser."] },
+  { match: /\bspf\b|sunscreen|sun ?(cream|fluid|spray|stick|milk|screen|lotion|block)|anthelios|photoderm|solaire|écran/i, not: /after ?sun|apr[èe]s|\bspf ?[1-9]\b|foundation|lip|tanning|bronz/i, tips: ["Apply sunscreen 15 minutes before going out, about a teaspoon for face and neck, and reapply every 2 hours outdoors."] },
+  { match: /cleanser|cleansing (gel|foam|milk|water|oil|balm)|micellar|face ?wash|facial wash|gel nettoyant|eau micellaire/i, not: /body|intimate|hand|baby|hair|brush|device|tooth|gum|dental|nose|denture|makeup brush/i, tips: ["Cleanse for about 30 seconds with lukewarm water and pat dry; twice a day is enough."] },
+  { match: /serum|sérum/i, not: rx(HAIR, SUPP, MAKEUP, LIPS, /lash|brow|nail|body|spf|sunscreen|mask/), tips: ["Apply serums after cleansing and before moisturiser, on dry skin."] },
+  { match: /eye ?(cream|gel|contour|serum)|contour des yeux|contour yeux|eye care/i, not: /makeup|make-up|remover|démaquillant|pencil|liner|colou?r|shadow|primer|mask|patch|roller|drops/i, tips: ["Tap eye cream gently with the ring finger along the orbital bone, not on the lids."] },
+  { match: /mascara/i, not: /remover|démaquillant/i, tips: ["Replace mascara every 3 months and never share it, to avoid eye infections."] },
+  { match: /foundation|concealer|\bbb ?cream|\bcc ?cream|skin tint|tinted (moisturi[sz]er|cream|fluid)/i, not: /brush|sponge|primer/i, tips: ["Test shade on the jawline in daylight; apply over moisturiser and sunscreen."] },
+  { match: /lipstick|lip ?(gloss|liner|tint|stain)|rouge [àa] l[èe]vres/i, not: /remover|nail/i, tips: ["Exfoliate lips gently and apply balm first for a smoother, longer-lasting finish."] },
+  { match: /nail ?polish|vernis|gel ?polish|nail ?lacquer/i, not: /remover|dissolvant|file|correct/i, tips: ["Use a base coat to prevent staining and a top coat to make polish last longer."] },
   { match: /minoxidil/i, tips: ["Minoxidil must be used every day to keep results; shedding in the first weeks is normal. Not for pregnancy."] },
-  { match: /shampoo/i, tips: ["Massage shampoo into the scalp, not the lengths, and rinse well."] },
-  { match: /conditioner|mask|masque|après/i, tips: ["Apply conditioner or masks to mid-lengths and ends, leave 2 to 5 minutes, then rinse."] },
-  { match: /oil\b|huile/i, tips: ["A few drops are enough; warm oil between your palms before applying."] },
-  { match: /deodorant|anti-?perspirant/i, tips: ["Antiperspirant works best applied at night on clean, dry skin."] },
-  { match: /body\s*(lotion|milk|cream|butter)|lait\s*corps/i, tips: ["Apply body lotion within 3 minutes of showering, on slightly damp skin."] },
-  { match: /hand\s*cream|crème\s*mains/i, tips: ["Reapply hand cream after every wash; at night, use a thick layer and cotton gloves for very dry hands."] },
-  { match: /perfume|parfum|eau de|cologne|body\s*mist/i, tips: ["Spray perfume on pulse points from about 15 cm away and don't rub it in."] },
-  { match: /collagen/i, tips: ["Collagen supplements need 8 to 12 weeks of daily use; take them consistently."] },
-  { match: /biotin/i, tips: ["High-dose biotin can affect some blood test results: tell your lab before any test."] },
-  { match: /\biron\b|ferrous|fer\b|actiheme|heme/i, tips: ["Take iron with vitamin C (like orange juice), not with tea, coffee or dairy, which reduce absorption. Don't exceed the dose: iron can be harmful in excess."] },
-  { match: /vitamin\s*d|d3\b/i, tips: ["Vitamin D is best absorbed with a meal that contains some fat."] },
-  { match: /magnesium/i, tips: ["Magnesium is often taken in the evening; it can loosen stools at higher doses."] },
-  { match: /omega|fish\s*oil/i, tips: ["Take omega-3 with food to reduce aftertaste and improve absorption."] },
-  { match: /probiotic/i, tips: ["Take probiotics at the same time each day; if on antibiotics, keep them 2 hours apart."] },
-  { match: /zinc/i, tips: ["Take zinc with food if it upsets your stomach; long-term high doses need a doctor's advice."] },
-  { match: /baby|bébé|infant|nappy|diaper/i, tips: ["Check the age on the label and ask our pharmacist before use on babies under 6 months."] },
+  { match: /shampoo|shampoing/i, not: /dry shampoo|shampooing sec|dog|cat|pet|carpet|conditioner|brush/i, tips: ["Massage shampoo into the scalp, not the lengths, and rinse well."] },
+  { match: /conditioner|apr[èe]s-?shampo|hair ?mask|masque (capillaire|cheveux)|hair ?masque/i, not: /leave-?in|sans rin[cç]age|nail|lash|brow/i, tips: ["Apply conditioner or masks to mid-lengths and ends, leave 2 to 5 minutes, then rinse."] },
+  { match: /(hair|face|facial|body|dry|argan|jojoba|rosehip|nourishing|precious) oil|huile (s[èe]che|prodigieuse|visage|corps|cheveux|d'argan|nourrissante)/i, not: /cleansing|démaquillant|fish|cod|oil-?free|oil control|capsule|softgel|conditioner|shampoo|mask|masque|cream|lotion|spf|tanning|lip/i, tips: ["A few drops are enough; warm oil between your palms before applying."] },
+  { match: /deodorant|d[ée]odorant|anti-?perspirant/i, not: /foot|feet|shoe|room|home/i, tips: ["Antiperspirant works best applied at night on clean, dry skin."] },
+  { match: /body ?(lotion|milk|cream|butter|balm)|lait corps|baume corps|cr[èe]me corps/i, not: /baby|sun|spf|tanning/i, tips: ["Apply body lotion within 3 minutes of showering, on slightly damp skin."] },
+  { match: /hand ?cream|cr[èe]me mains/i, tips: ["Reapply hand cream after every wash; at night, use a thick layer and cotton gloves for very dry hands."] },
+  { match: /eau de (toilette|parfum|cologne)|\bparfum\b|perfume|cologne|body ?mist/i, not: /free|sans parfum|unscented|deodorant|lotion|cream|shower|gel|hair/i, tips: ["Spray perfume on pulse points from about 15 cm away and don't rub it in."] },
+  { match: /collagen/i, need: SUPP, tips: ["Collagen supplements need 8 to 12 weeks of daily use; take them consistently."] },
+  { match: /biotin/i, need: SUPP, not: HAIR, tips: ["High-dose biotin can affect some blood test results: tell your lab before any test."] },
+  { match: /\biron\b|ferrous|\bfer\b|actiheme|\bheme\b/i, need: SUPP, not: /flat ?iron|curling|styl|straighten/i, tips: ["Take iron with vitamin C (like orange juice), not with tea, coffee or dairy, which reduce absorption. Don't exceed the dose: iron can be harmful in excess."] },
+  { match: /vitamin\s*d\b|vitamin\s*d3|\bd3\b/i, need: SUPP, tips: ["Vitamin D is best absorbed with a meal that contains some fat."] },
+  { match: /magnesium/i, need: SUPP, tips: ["Magnesium is often taken in the evening; it can loosen stools at higher doses."] },
+  { match: /omega|fish ?oil|cod liver|\bdha\b/i, need: SUPP, not: /zinc/i, tips: ["Take omega-3 with food to reduce aftertaste and improve absorption."] },
+  { match: /probiotic|lactobacill|bifido/i, need: SUPP, tips: ["Take probiotics at the same time each day; if on antibiotics, keep them 2 hours apart."] },
+  { match: /\bzinc\b/i, need: SUPP, not: /oxide|cream|cr[èe]me|spf|paste|ointment|omega/i, tips: ["Take zinc with food if it upsets your stomach; long-term high doses need a doctor's advice."] },
+  { match: /\bbaby\b|b[ée]b[ée]|infant|nappy|diaper/i, not: /baby got|baby ?lips|babyliss|baby ?face|baby ?doll|baby ?pink|baby ?skin|baby ?blue|baby ?boom|baby hair|tooth|nail|clipper|trimmer|diaper|nappy|pants/i, tips: ["Check the age on the label and ask our pharmacist before use on babies under 6 months."] },
 ];
 
-/** Tips for one product (its type and ingredients), then its concerns and category. */
+const fits = (r: PRule, name: string) => !BUNDLE.test(name) && r.match.test(name) && !(r.not && r.not.test(name)) && !(r.need && !r.need.test(name));
+
+/** Tips for one product, from what its name says it is. Only tips that are specifically about this
+ * kind of product; nothing generic from its category or concerns. Can be empty. */
 export function productTips(p: { name: string; category?: string; concerns?: string[]; text?: string }): string[] {
-  const hay = `${p.name} ${p.text ?? ""}`;
   const out: string[] = [];
-  for (const r of PRODUCT) if (r.match.test(hay)) for (const t of r.tips) if (!out.includes(t)) out.push(t);
-  for (const t of tipsFor([...(p.concerns ?? []), p.category])) if (!out.includes(t)) out.push(t);
-  return out.slice(0, 6);
+  for (const r of PRODUCT) if (fits(r, p.name)) for (const t of r.tips) if (!out.includes(t)) out.push(t);
+  return out.slice(0, 4);
 }
 
 /** Tips for a listing: the products shown on the page first (most common types), then the filters. */
 export function listingTips(products: { name: string; category: string; concerns: string[] }[], filters: (string | undefined)[]): string[] {
   const score = new Map<string, number>();
-  for (const p of products.slice(0, 24)) for (const r of PRODUCT) if (r.match.test(p.name)) for (const t of r.tips) score.set(t, (score.get(t) ?? 0) + 1);
+  for (const p of products.slice(0, 24)) for (const r of PRODUCT) if (fits(r, p.name)) for (const t of r.tips) score.set(t, (score.get(t) ?? 0) + 1);
   const fromProducts = [...score.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 3);
   const out = [...tipsFor(filters).slice(0, 3), ...fromProducts];
   for (const t of tipsFor(products.slice(0, 24).flatMap((p) => [...p.concerns, p.category]))) if (out.length < 6 && !out.includes(t)) out.push(t);

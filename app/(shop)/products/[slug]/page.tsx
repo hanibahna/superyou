@@ -81,7 +81,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const subOk = isSubscribable(initial) && (!growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id)));
   const sec0 = await sectionFor(initial.category);
   const ptips = (await import("@/lib/tips")).productTips({ name: `${initial.name} ${initial.brand}`, category: initial.category, concerns: [...initial.concerns, ...initial.concerns.map((c) => concerns.find((x) => x.slug === c)?.name ?? "")], text: `${detail.ingredients ?? ""}` });
-  const sec = sec0 ? { ...sec0, tips: ptips.length ? ptips : sec0.tips } : null;
+  const sec = sec0 ? { ...sec0, tips: ptips } : null; // only tips about this exact kind of product
   const how = detail.video;
   const videos = lib.show.product
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)
