@@ -115,7 +115,7 @@ struct Goals: View {
             }
             if let r = quote?.routine, r.need > 1, r.have > 0 {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(r.have >= r.need ? "Routine set: \(Int(r.percent))% off applied 🎉" : "Your routine: \(r.have) of \(r.need) steps · add \(r.need - r.have) for \(Int(r.percent))% off").font(.caption.bold())
+                    Text(r.have >= r.need ? "Routine set: \(r.have) steps · \(Int(r.percent))% off applied 🎉" : "Your routine: \(r.have) of \(r.need) steps · add \(r.need - r.have) for \(Int(r.percent))% off").font(.caption.bold())
                     HStack(spacing: 3) { ForEach(0..<r.need, id: \.self) { i in Capsule().fill(i < r.have ? Color.rose : Color.ink.opacity(0.1)).frame(height: 5) } }
                     if r.have < r.need { Text("Missing: " + r.all.filter { !r.steps.contains($0) }.prefix(3).joined(separator: ", ")).font(.caption2).foregroundStyle(.secondary) }
                 }.padding(8).background(Color.paper, in: RoundedRectangle(cornerRadius: 10))

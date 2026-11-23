@@ -46,13 +46,15 @@ export function RewardLadder() {
         {steps.map((s) => <span key={s.label} className={subtotal >= s.at ? "font-semibold text-ink" : ""}>{subtotal >= s.at ? "✓" : money(s.at)} {s.label}</span>)}
       </div>
       {points > 0 && <p className="mt-2 text-xs text-muted">✦ {tx("This order earns")} <b className="text-ink">{points} {club.name || "Club"} {tx("points")}</b></p>}
-      {r && r.need > 1 && r.have > 0 && (
+      {r && r.need > 1 && r.have > 0 && (r.have >= r.need ? (
+        <p className="mt-2 text-xs font-semibold text-brand-700">🧴 {tx("Routine set")}: {r.have} {tx("steps")} · {r.percent}% {tx("off applied")}</p>
+      ) : (
         <div className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-xs">
-          <p><b>{tx("Your routine")}: {Math.min(r.have, r.need)} {tx("of")} {r.need} {tx("steps")}</b> {r.have >= r.need ? `· ${r.percent}% ${tx("routine set discount applied")} 🎉` : `· ${tx("add")} ${r.need - r.have} ${tx("more step(s) for")} ${r.percent}% ${tx("off the set")}`}</p>
+          <p><b>{tx("Your routine")}: {r.have} {tx("of")} {r.need} {tx("steps")}</b> · {tx("add")} {r.need - r.have} {tx("more for")} {r.percent}% {tx("off the set")}</p>
           <div className="mt-1.5 flex gap-1">{Array.from({ length: r.need }, (_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i < r.have ? "bg-brand-500" : "bg-white"}`} />)}</div>
-          {r.have < r.need && r.all.length > 0 && <p className="mt-1.5 text-muted">{tx("You have")}: {r.steps.join(", ")}. {tx("Missing")}: {r.all.filter((x) => !r.steps.includes(x)).slice(0, 3).join(", ")}</p>}
+          {r.all.length > 0 && <p className="mt-1.5 text-muted">{tx("Missing")}: {r.all.filter((x) => !r.steps.includes(x)).slice(0, 3).join(", ")}</p>}
         </div>
-      )}
+      ))}
     </div>
   );
 }
