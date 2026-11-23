@@ -51,3 +51,9 @@ Every push to `main` that touches `mobile/` also builds a test Android APK on Gi
   (Account → Delete my account).
 - Apple can reject apps that are "just a website". Ours adds push notifications, the share sheet and an
   offline screen; mention these in the review notes.
+
+## iOS notes (Xcode 27 / iOS 27)
+- The iOS project uses Swift packages (no CocoaPods). Open `ios/App/App.xcodeproj`.
+- iOS 27 requires the scene life cycle: `SceneDelegate` lives in `AppDelegate.swift`, configured in `Info.plist`.
+- `WKAppBoundDomains` in `Info.plist` lists shopsuperyou.com (needed because `limitsNavigationsToAppBoundDomains` is on).
+- Push (Firebase) is removed from `CapApp-SPM/Package.swift` until `GoogleService-Info.plist` is added; `npx cap sync ios` puts it back, so only sync once Firebase is set up.
