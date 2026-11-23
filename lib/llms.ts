@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { getTaxonomy } from "@/lib/catalog";
@@ -58,7 +59,7 @@ export async function llmsText(full: boolean) {
   for (const c of cats) {
     const top = live.filter((p) => p.category === c.slug).sort((a, b) => Number(b.tags.includes("favorite")) - Number(a.tags.includes("favorite")) || (b.reviewCount ?? 0) - (a.reviewCount ?? 0)).slice(0, 25);
     out.push("", `### ${c.name}`);
-    for (const p of top) out.push(`- [${p.brand} ${p.name}](${base}/products/${p.slug}/): ${money(p.price)}${p.compareAt && p.compareAt > p.price ? ` (was ${money(p.compareAt)})` : ""}`);
+    for (const p of top) out.push(`- [${fullName(p.brand, p.name)}](${base}/products/${p.slug}/): ${money(p.price)}${p.compareAt && p.compareAt > p.price ? ` (was ${money(p.compareAt)})` : ""}`);
   }
   const { PROCEDURES, CLINIC } = await import("@/lib/clinic");
   out.push("", `## Clinic treatments (${CLINIC.partner}, prices indicative)`);

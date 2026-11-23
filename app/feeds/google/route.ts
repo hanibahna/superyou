@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import { getProductsDetailed } from "@/lib/catalog";
 import { shopImg } from "@/lib/img-server";
 import { liveProducts } from "@/lib/pricing";
@@ -32,7 +33,7 @@ export async function GET() {
       const image = abs(p.image ?? d?.images?.[0]);
       if (!image) continue; // Google requires an image
       const sale = p.compareAt && p.compareAt > p.price;
-      const title = `${p.brand} ${p.name}${p.variant ? ` - ${p.variant}` : p.size ? ` ${p.size}` : ""}`.slice(0, 150);
+      const title = `${fullName(p.brand, p.name)}${p.variant ? ` - ${p.variant}` : p.size ? ` ${p.size}` : ""}`.slice(0, 150);
       items.push(`<item>
 <g:id>${esc(p.sku)}</g:id><g:title>${esc(title)}</g:title>
 <g:description>${esc((d?.description || title).slice(0, 4900))}</g:description>

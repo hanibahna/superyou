@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { db } from "@/lib/db";
@@ -44,7 +45,7 @@ async function judge(items: Item[]): Promise<Map<string, Omit<Life, "by" | "v">>
   const { anthropicKey } = await import("@/lib/extras");
   const key = await anthropicKey();
   if (!key || !items.length) return out;
-  const list = items.map((p, i) => `${i + 1}. ${p.brand} ${p.name}${p.size ? ` | ${p.size}` : ""} | ${p.category}`).join("\n");
+  const list = items.map((p, i) => `${i + 1}. ${fullName(p.brand, p.name)}${p.size ? ` | ${p.size}` : ""} | ${p.category}`).join("\n");
   const prompt = `For a pharmacy and beauty shop's "Subscribe & save", work out how fast one person uses up each product below, as directed by the maker, for one typical user.
 
 For each product give:
@@ -100,7 +101,7 @@ export async function buildLifespans(calls = 10, parallel = 5, match = "") {
   // Redo the first-pass estimates (v1, a guessed total); keep anything corrected by hand.
   // With `match`: re-estimate the products whose name contains it (corrections by hand are kept).
   const m = match.toLowerCase().trim();
-  const todo = [...bySlug.values()].filter((p) => { const l = have.get(p.slug); return m ? `${p.brand} ${p.name}`.toLowerCase().includes(m) && l?.by !== "admin" : !l || (l.by === "ai" && (l.v ?? 1) < 3); });
+  const todo = [...bySlug.values()].filter((p) => { const l = have.get(p.slug); return m ? `${fullName(p.brand, p.name)}`.toLowerCase().includes(m) && l?.by !== "admin" : !l || (l.by === "ai" && (l.v ?? 1) < 3); });
   const batches: Item[][] = [];
   for (let i = 0; i < todo.length && batches.length < calls; i += 40) batches.push(todo.slice(i, i + 40));
   let saved = 0;

@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { randomBytes } from "node:crypto";
@@ -86,7 +87,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
       token: randomBytes(16).toString("hex"),
       status: "active",
       every,
-      items: lines.map((l) => ({ productId: l.productId, qty: l.qty, name: `${l.brand} ${l.name}` })),
+      items: lines.map((l) => ({ productId: l.productId, qty: l.qty, name: `${fullName(l.brand, l.name)}` })),
       customer: input.customer,
       nextAt: addMonths(today(), every),
       createdAt: new Date().toISOString(),

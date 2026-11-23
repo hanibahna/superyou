@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   trailingSlash: true,
   // Ship the built-in catalog with the server code.
-  outputFileTracingIncludes: { "/**": ["./data/**/*"] },
+  outputFileTracingIncludes: { "/**": ["./data/**/*"], "/opengraph-image": ["./public/brand/**/*"] },
   // Security headers on every page. Camera/mic are allowed for our video-call providers only.
   async redirects() {
     // Short, shareable name for the 3D AI skin scan; keeps the share tracking (?utm_source=…).

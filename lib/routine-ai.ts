@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import type { RoutineAnswers, RoutineConfig } from "@/lib/routine";
@@ -32,7 +33,7 @@ const json = <T,>(t: string): T | null => { try { return JSON.parse(t.match(/\{[
 
 export async function aiPlan(a: RoutineAnswers & { about?: string; pregnant?: boolean; total?: number }, steps: { id: string; name: string; time: string; cands: Cand[] }[]): Promise<AiPlan | null> {
   if (!steps.some((s) => s.cands.length)) return null;
-  const shelf = steps.map((s) => `STEP ${s.id} (${s.name}, ${s.time}):\n${s.cands.map((c) => `- ${c.slug} | ${c.brand} ${c.name} | $${c.price}`).join("\n") || "- (none in stock)"}`).join("\n\n");
+  const shelf = steps.map((s) => `STEP ${s.id} (${s.name}, ${s.time}):\n${s.cands.map((c) => `- ${c.slug} | ${fullName(c.brand, c.name)} | $${c.price}`).join("\n") || "- (none in stock)"}`).join("\n\n");
   const prompt = `You are the skincare advisor of SuperYou, a beauty and parapharmacy shop in Lebanon. Build one routine for this customer.
 
 Customer:

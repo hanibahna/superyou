@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import { getLang } from "@/lib/i18n-server";
 import { translateDeep, translateMany } from "@/lib/translate";
 import type { Metadata } from "next";
@@ -52,7 +53,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const site = (await import("@/lib/seo")).siteUrl();
   const label = [query.brand?.length === 1 ? query.brand[0] : "", concern?.name, category?.name].filter(Boolean).join(" ") || "All products";
   const ld = [
-    { "@context": "https://schema.org", "@type": "ItemList", name: `${label} at SuperYou`, numberOfItems: result.total ?? result.items.length, itemListElement: result.items.slice(0, 24).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${site}/products/${p.slug}/`, name: `${p.brand} ${p.name}` })) },
+    { "@context": "https://schema.org", "@type": "ItemList", name: `${label} at SuperYou`, numberOfItems: result.total ?? result.items.length, itemListElement: result.items.slice(0, 24).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${site}/products/${p.slug}/`, name: `${fullName(p.brand, p.name)}` })) },
     { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${site}/` }, { "@type": "ListItem", position: 2, name: "Shop", item: `${site}/shop/` }, ...(label !== "All products" ? [{ "@type": "ListItem", position: 3, name: label }] : [])] },
   ];
   return (

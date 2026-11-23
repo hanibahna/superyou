@@ -6,7 +6,7 @@ const OPEN = /^\/(api\/)?admin\/(login|logout)(\/|$)/;
 
 // Private preview: when SITE_PASSWORD is set in Vercel, the shop asks for it before showing anything.
 // The admin keeps its own login; payment returns, webhooks and the daily job keep working.
-const LOCK_FREE = /^\/(admin|api\/admin|api\/webhooks|api\/cron|api\/payments|api\/site-lock|site-lock|img\/|brand|icon|apple-icon|feeds\/|api\/app\/|robots\.txt|sitemap\.xml|llms|favicon)/;
+const LOCK_FREE = /^\/(admin|api\/admin|api\/webhooks|api\/cron|api\/payments|api\/site-lock|site-lock|img\/|brand|icon|apple-icon|feeds\/|api\/app\/|robots\.txt|sitemap\.xml|llms|favicon|opengraph-image)/;
 
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;

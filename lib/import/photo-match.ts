@@ -4,7 +4,7 @@ import "server-only";
 // brand + name + size, with guards so a shampoo never matches a conditioner,
 // retinol never matches retinal, and shade 312 never matches shade 313.
 
-import type { ProductLite } from "@/lib/data/catalog";
+import { fullName, type ProductLite } from "@/lib/data/catalog";
 import type { SourceProduct } from "@/lib/import/shopify-source";
 
 const deaccent = (s: string) => (s ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -101,7 +101,7 @@ export function matchPage(groups: Map<string, Group[]>, page: SourceProduct[], o
       if (s < minScore) continue;
       const prev = best.get(g.slug);
       if (!prev || s > prev.score)
-        best.set(g.slug, { slug: g.slug, ours: `${g.brand} ${g.name}`, oursImage: g.image, already: g.photosFrom, theirs: sp.title, theirsUrl: `${origin}/products/${sp.handle}`, score: Math.round(s * 100) / 100, images: sp.images.slice(0, 8).map((i) => i.src) });
+        best.set(g.slug, { slug: g.slug, ours: `${fullName(g.brand, g.name)}`, oursImage: g.image, already: g.photosFrom, theirs: sp.title, theirsUrl: `${origin}/products/${sp.handle}`, score: Math.round(s * 100) / 100, images: sp.images.slice(0, 8).map((i) => i.src) });
     }
   }
   return [...best.values()];

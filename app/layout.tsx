@@ -22,6 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: s.seo.title || `${s.store.name} – Original beauty & parapharmacy in Lebanon`, template: `%s – ${s.store.name}` },
     description: s.seo.description || `${s.store.tagline}. Every product original, every question answered by a pharmacist, every order at your door, paid when it arrives.`,
+    // Shared links (WhatsApp, Instagram, Facebook) show the SuperYou card unless a page sets its own picture.
+    openGraph: { type: "website", siteName: s.store.name, locale: "en_LB" },
+    twitter: { card: "summary_large_image" },
   };
 }
 

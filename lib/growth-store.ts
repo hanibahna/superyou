@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 // Storage for the growth features: personal voucher codes, reviews, club members,
@@ -364,7 +365,7 @@ export async function scheduleAfterDelivery(order: { id: string; accessToken: st
       const life = lives.get(p.slug);
       if (life && !life.every) continue; // lasts too long or not a repeat buy (perfume, device…)
       const days = life ? Math.max(7, Math.min(270, life.days * (l.qty ?? 1) - 5)) : g.reorder.days.find((d) => d.category === p.category)?.days ?? g.reorder.defaultDays;
-      cmds.push(["ZADD", "remind", Date.now() + days * 864e5, JSON.stringify({ ...base, kind: "reorder", slug: p.slug, product: `${p.brand} ${p.name}` } satisfies Reminder)]);
+      cmds.push(["ZADD", "remind", Date.now() + days * 864e5, JSON.stringify({ ...base, kind: "reorder", slug: p.slug, product: `${fullName(p.brand, p.name)}` } satisfies Reminder)]);
     }
   if (cmds.length) await db.pipeline(cmds);
 }

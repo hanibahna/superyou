@@ -186,3 +186,24 @@ export function discountPct(p: { price: number; compareAt?: number }): number | 
 }
 
 export const brandsOf = (list: { brand: string }[]) => Array.from(new Set(list.map((p) => p.brand))).sort();
+
+/** Tidy a product name for display: one line, single spaces, and SHOUTING names in normal case. */
+export function cleanName(name: string): string {
+  let s = (name ?? "").replace(/\s+/g, " ").trim();
+  const letters = s.replace(/[^A-Za-z]/g, "");
+  if (letters.length >= 8 && letters.replace(/[^A-Z]/g, "").length / letters.length > 0.75) {
+    s = s.toLowerCase().replace(/(^|[\s(\-/&+])([a-z])/g, (_, a, b) => a + b.toUpperCase())
+      .replace(/\b(Spf|Uv|Uva|Uvb|Bb|Cc|Pa|Ml|Mg|Mcg|Iu|Ph|Aha|Bha|Pha|Q10|Dna|Uk|Usa|Xl|Xxl)\b/g, (w) => /^(Ml|Mg|Mcg)$/.test(w) ? w.toLowerCase() : w.toUpperCase())
+      .replace(/\bSpf(?=\d)/g, "SPF");
+  }
+  return s;
+}
+
+/** Brand + name for titles, without repeating the brand when the name already starts with it. */
+export function fullName(brand: string | undefined, name: string): string {
+  const n = cleanName(name);
+  const b = (brand ?? "").trim();
+  if (!b) return n;
+  // Name already starts with the brand: keep the brand's own spelling, then the rest.
+  return n.toLowerCase().startsWith(b.toLowerCase()) ? b + n.slice(b.length) : `${b} ${n}`;
+}

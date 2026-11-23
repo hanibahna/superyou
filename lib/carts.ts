@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 // Abandoned carts: saved when a shopper types their mobile number at checkout. If they don't
@@ -31,7 +32,7 @@ export async function saveCart(input: { phone: string; name: string; items: { pr
   if (!phone || !input.items.length) return null;
   const { liveProducts } = await import("@/lib/pricing");
   const live = await liveProducts();
-  const items = input.items.map((i) => ({ ...i, p: live.byId.get(i.productId) })).filter((i) => i.p).map((i) => ({ productId: i.productId, qty: i.qty, name: `${i.p!.brand} ${i.p!.name}`, price: i.p!.price }));
+  const items = input.items.map((i) => ({ ...i, p: live.byId.get(i.productId) })).filter((i) => i.p).map((i) => ({ productId: i.productId, qty: i.qty, name: `${fullName(i.p!.brand, i.p!.name)}`, price: i.p!.price }));
   if (!items.length) return null;
   const prev = await getCart(phone);
   const now = new Date().toISOString();

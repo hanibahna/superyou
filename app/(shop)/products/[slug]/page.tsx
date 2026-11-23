@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import { getT } from "@/lib/i18n-server";
 import { isSubscribable } from "@/lib/subscribable";
 import { shopImg } from "@/lib/img-server";
@@ -30,12 +31,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const [p] = await getGroupBySlug(slug);
   if (!p) return {};
   const d = await getProductDetail(p.id);
-  const desc = (d?.description || `${p.brand} ${p.name} at SuperYou Lebanon.`).replace(/\s+/g, " ").slice(0, 155);
+  const desc = (d?.description || `${fullName(p.brand, p.name)} at SuperYou Lebanon.`).replace(/\s+/g, " ").slice(0, 155);
   return {
-    title: `${p.brand} ${p.name}${p.size ? ` ${p.size}` : ""}`.slice(0, 70),
+    title: `${fullName(p.brand, p.name)}${p.size ? ` ${p.size}` : ""}`.slice(0, 70),
     description: `${desc}${desc.length >= 155 ? "…" : ""}`,
     ...(await canonical(`/products/${slug}/`)),
-    openGraph: { type: "website", title: `${p.brand} ${p.name}`, description: desc, images: d?.images?.slice(0, 1).map((x) => siteUrl() + (shopImg(x) ?? "")) ?? [] },
+    openGraph: { type: "website", title: `${fullName(p.brand, p.name)}`, description: desc, images: d?.images?.slice(0, 1).map((x) => siteUrl() + (shopImg(x) ?? "")) ?? [] },
   };
 }
 
@@ -100,10 +101,10 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
     "@type": "Product",
     "@id": `${siteUrl()}/products/${slug}/#product`,
     url: `${siteUrl()}/products/${slug}/`,
-    name: `${initial.brand} ${initial.name}`,
+    name: `${fullName(initial.brand, initial.name)}`,
     brand: { "@type": "Brand", name: initial.brand },
     image: gallery.slice(0, 5).map((x) => (x.startsWith("/") ? siteUrl() + x : x)),
-    description: (detail.description || `${initial.brand} ${initial.name}, original, delivered across Lebanon by SuperYou.`).slice(0, 5000),
+    description: (detail.description || `${fullName(initial.brand, initial.name)}, original, delivered across Lebanon by SuperYou.`).slice(0, 5000),
     ...(category ? { category: category.name } : {}),
     ...(initial.sku ? { sku: initial.sku } : {}),
     ...(code.length === 13 ? { gtin13: code } : code.length === 12 ? { gtin12: code } : code.length === 8 ? { gtin8: code } : code.length === 14 ? { gtin14: code } : {}),
@@ -128,16 +129,19 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      {guide?.steps?.length ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "HowTo", name: `How to use ${initial.brand} ${initial.name}`, ...(guide.goodFor ? { description: guide.goodFor } : {}), supply: [{ "@type": "HowToSupply", name: `${initial.brand} ${initial.name}` }], step: guide.steps.map((t, i) => ({ "@type": "HowToStep", position: i + 1, text: t })), about: { "@id": `${siteUrl()}/products/${slug}/#product` } }).replace(/</g, "\\u003c") }} /> : null}
+      {guide?.steps?.length ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "HowTo", name: `How to use ${fullName(initial.brand, initial.name)}`, ...(guide.goodFor ? { description: guide.goodFor } : {}), supply: [{ "@type": "HowToSupply", name: `${fullName(initial.brand, initial.name)}` }], step: guide.steps.map((t, i) => ({ "@type": "HowToStep", position: i + 1, text: t })), about: { "@id": `${siteUrl()}/products/${slug}/#product` } }).replace(/</g, "\\u003c") }} /> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl()}/` }, ...(category ? [{ "@type": "ListItem", position: 2, name: category.name, item: `${siteUrl()}/shop/?category=${category.slug}` }] : []), { "@type": "ListItem", position: category ? 3 : 2, name: initial.name }] }).replace(/</g, "\\u003c") }} />
-      <div className="container-x py-8">
+      <div className="container-x py-4 md:py-8">
         <nav className="mb-5 line-clamp-1 text-xs text-muted">
           <Link href="/" className="hover:underline">Home</Link> /{" "}
           {category && <><Link href={`/shop/?category=${category.slug}`} className="hover:underline">{L(category.name)}</Link> / </>}
           <span>{initial.name}</span>
         </nav>
-        <QuickHelp className="mb-3" />
-        {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
+        {/* Shortcuts and tips sit above the product on desktop; on phones they move below it so name and price come first. */}
+        <div className="hidden md:block">
+          <QuickHelp className="mb-3" />
+          {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
+        </div>
 
         <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} life={life && life.every ? { days: life.days, every: life.every, basis: life.basis } : null} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <div className="mt-8 divide-y divide-line border-y border-line">
@@ -158,6 +162,10 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
             </Section>
           </div>
         </BuyBox>
+        <div className="mt-8 md:hidden">
+          <QuickHelp className="mb-3" />
+          {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
+        </div>
       </div>
       {pairs.length > 0 && (
         <section className="container-x py-8">
@@ -167,7 +175,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         </section>
       )}
       {videos.length > 0 && <div className="container-x"><VideoStrip videos={videos} title={tx("Watch & learn")} eyebrow={tx("Videos")} /></div>}
-      {growth.reviews.enabled && <Reviews slug={slug} product={`${initial.brand} ${initial.name}`} reviews={reviews.map(({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }) => ({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }))} />}
+      {growth.reviews.enabled && <Reviews slug={slug} product={`${fullName(initial.brand, initial.name)}`} reviews={reviews.map(({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }) => ({ id, rating, title, body, name, skinType, photo, verified, createdAt, reply }))} />}
       <ProductCarousel eyebrow="You may also like" title="Related products" products={related} />
       <RecentlyViewed exclude={slug} />
     </>

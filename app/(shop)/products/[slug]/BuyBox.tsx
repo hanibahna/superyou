@@ -9,7 +9,7 @@ import { track } from "@/lib/track";
 import { Qty } from "@/components/CartDrawer";
 import { HeartIcon } from "@/components/Icons";
 import { ProductImage } from "@/components/ProductImage";
-import { discountPct, type ProductLite } from "@/lib/data/catalog";
+import { cleanName, fullName, discountPct, type ProductLite } from "@/lib/data/catalog";
 import { money } from "@/lib/format";
 import { imgUrl } from "@/lib/img";
 import { PharmacistButton, TrackView } from "@/components/Growth";
@@ -68,8 +68,10 @@ export function BuyBox({
   };
 
   return (
-    <div className="grid gap-10 md:grid-cols-2">
-      <div className="relative">
+    // Phones: photos, then name, price and Add to bag, then pharmacist, how-to and videos.
+    // Desktop: photos and extras on the left, the buy column on the right.
+    <div className="grid gap-6 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-10 md:gap-y-0">
+      <div className="relative order-1 md:col-start-1 md:row-start-1">
         <TrackView product={snap(variants.find((x) => x.inStock) ?? v)} />
         {pct && <span dir="ltr" className="absolute start-4 top-4 z-10 rounded-md bg-sale px-2.5 py-1 text-sm font-bold text-white">-{pct}%</span>}
         <ProductImage product={{ ...v, image: shown }} width={1000} className="pdp-main aspect-square w-full rounded-2xl border border-line" />
@@ -83,14 +85,13 @@ export function BuyBox({
             ))}
           </div>
         )}
-        {/* Under the photos: Ask a pharmacist, then How to use and Videos. */}
-        <PharmacistButton product={`${v.brand} ${v.name}${v.variant ? ` (${v.variant})` : ""}`} className="mt-3 rounded-2xl border-2 bg-white p-3" />
-        {underImage}
       </div>
 
-      <div>
+      {/* On phones this wrapper "disappears" (display: contents) so its two parts can sit either side of the extras. */}
+      <div className="contents md:col-start-2 md:row-span-2 md:row-start-1 md:block">
+        <div className="order-2">
         <Link href={`/shop/?brand=${encodeURIComponent(v.brand)}`} className="pdp-brand text-sm font-bold uppercase tracking-wider text-brand-600 hover:underline">{v.brand}</Link>
-        <h1 className="pdp-title mt-1 text-2xl font-semibold leading-tight md:text-3xl">{v.name}</h1>
+        <h1 className="pdp-title mt-1 text-2xl font-semibold leading-tight md:text-3xl">{cleanName(v.name)}</h1>
         {growth.reviews.enabled && reviewCount >= 3 && (
           <a href="#reviews" className="mt-1 inline-flex items-center gap-2 text-sm hover:underline">
             {rating ? <><Stars value={rating} size={15} /> <span>{rating.toFixed(1)} · {reviewCount} {t("Reviews")}</span></> : <span className="text-muted">{t("Write a review")}</span>}
@@ -143,7 +144,7 @@ export function BuyBox({
           <button onClick={() => toggleWish(v)} aria-label={tx("Wishlist")} className={`rounded-lg border border-line p-3 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}>
             <HeartIcon filled={wished} />
           </button>
-          <ShareButton compact title={`${v.brand} ${v.name}`} text={`${v.brand} ${v.name} at SuperYou`} />
+          <ShareButton compact title={`${fullName(v.brand, v.name)}`} text={`${fullName(v.brand, v.name)} at SuperYou`} />
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -171,7 +172,14 @@ export function BuyBox({
             <button onClick={() => add(v, qty, plan || null)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
           </div>
         )}
-        {children}
+        </div>
+        <div className="order-4">{children}</div>
+      </div>
+
+      {/* Under the photos (after the buy column on phones): Ask a pharmacist, then How to use and Videos. */}
+      <div className="order-3 self-start md:col-start-1 md:row-start-2">
+        <PharmacistButton product={`${fullName(v.brand, v.name)}${v.variant ? ` (${v.variant})` : ""}`} className="mt-3 rounded-2xl border-2 bg-white p-3" />
+        {underImage}
       </div>
     </div>
   );

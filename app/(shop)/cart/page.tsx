@@ -1,5 +1,6 @@
 "use client";
 
+import { cleanName } from "@/lib/data/catalog";
 import { LinePlan } from "@/components/SubscribePlan";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
@@ -58,7 +59,7 @@ export default function CartPage() {
               <ProductImage product={product} className="h-24 w-24 shrink-0 rounded-lg" />
               <div className="flex flex-1 flex-col">
                 <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
-                <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{product.name}</Link>
+                <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{cleanName(product.name)}</Link>
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
                 <ShipBadge p={product} className="mt-1 self-start" />
                 <LinePlan name={product.name} productId={product.id} every={every} />

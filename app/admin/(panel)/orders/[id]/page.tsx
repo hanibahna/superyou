@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderActions } from "@/components/admin/OrderActions";
@@ -61,7 +62,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             id={o.id}
             couriers={ops.couriers.map((x) => ({ id: x.id, name: x.name }))}
             shipment={o.shipment}
-            lines={o.lines.map((l) => ({ productId: l.productId, name: `${l.brand} ${l.name}`, qty: l.qty }))}
+            lines={o.lines.map((l) => ({ productId: l.productId, name: `${fullName(l.brand, l.name)}`, qty: l.qty }))}
             maxRefund={max}
             hasGiftCard={!!o.giftCard}
             paymentMethod={o.paymentMethod}

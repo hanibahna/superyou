@@ -12,7 +12,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { db, dbConfigured } from "@/lib/db";
-import {
+import { fullName,
   defaultCategories,
   defaultConcerns,
   sampleProducts,

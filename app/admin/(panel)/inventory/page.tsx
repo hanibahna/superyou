@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import Link from "next/link";
 import { InventoryTable } from "@/components/admin/InventoryTable";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -20,7 +21,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     : show === "out" ? tracked.filter((p) => p.stock === 0)
     : show === "tracked" ? tracked
     : products.filter((p) => p.stock === undefined);
-  if (q) list = list.filter((p) => `${p.brand} ${p.name} ${p.sku} ${p.barcode ?? ""}`.toLowerCase().includes(q));
+  if (q) list = list.filter((p) => `${fullName(p.brand, p.name)} ${p.sku} ${p.barcode ?? ""}`.toLowerCase().includes(q));
   list.sort((a, b) => (a.stock ?? 1e9) - (b.stock ?? 1e9) || a.name.localeCompare(b.name));
   const counts = { low: tracked.filter((p) => p.stock! > 0 && p.stock! <= lowAt).length, out: tracked.filter((p) => p.stock === 0).length, tracked: tracked.length, untracked: products.length - tracked.length };
   const rows = list.slice(0, 300).map((p) => ({ id: p.id, name: p.name, brand: p.brand, variant: p.variant, sku: p.sku, stock: p.stock, image: p.image, status: p.status }));

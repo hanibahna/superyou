@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { db } from "@/lib/db";
@@ -22,7 +23,7 @@ export async function makeGuide(slug: string, p: { brand: string; name: string; 
   const { anthropicKey } = await import("@/lib/extras");
   const key = await anthropicKey();
   if (!key) return null;
-  const info = [`Product: ${p.brand} ${p.name}`, `Category: ${p.category}`, p.description && `Description: ${p.description.slice(0, 2500)}`, p.howToUse && `Directions from the maker: ${p.howToUse.slice(0, 1500)}`, p.ingredients && `Ingredients: ${p.ingredients.slice(0, 800)}`].filter(Boolean).join("\n");
+  const info = [`Product: ${fullName(p.brand, p.name)}`, `Category: ${p.category}`, p.description && `Description: ${p.description.slice(0, 2500)}`, p.howToUse && `Directions from the maker: ${p.howToUse.slice(0, 1500)}`, p.ingredients && `Ingredients: ${p.ingredients.slice(0, 800)}`].filter(Boolean).join("\n");
   const prompt = `You write the "How to use" box for one product on SuperYou, a beauty and parapharmacy shop in Lebanon.
 
 ${info}

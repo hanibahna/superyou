@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { randomBytes } from "node:crypto";
@@ -48,7 +49,7 @@ export async function scansByPhone(phone: string): Promise<SavedScan[]> {
   return (await Promise.all(ids.map(getScan))).filter((x): x is SavedScan => !!x);
 }
 export const scanLink = (s: SavedScan) => `${siteUrl()}/skin-scan/r/${s.id}/?t=${s.token}`;
-export const routineText = (s: SavedScan) => s.steps.filter((x) => x.product).map((x, i) => `${i + 1}. ${x.name} (${x.time === "both" ? "AM+PM" : x.time.toUpperCase()}): ${x.product!.brand} ${x.product!.name}`).join("\n");
+export const routineText = (s: SavedScan) => s.steps.filter((x) => x.product).map((x, i) => `${i + 1}. ${x.name} (${x.time === "both" ? "AM+PM" : x.time.toUpperCase()}): ${fullName(x.product!.brand, x.product!.name)}`).join("\n");
 
 /** Daily (cron): 6 weeks after a scan, invite the customer to rescan and see their progress. */
 export async function runScanFollowUps() {

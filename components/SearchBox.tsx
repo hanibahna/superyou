@@ -1,5 +1,6 @@
 "use client";
 
+import { cleanName } from "@/lib/data/catalog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -109,7 +110,7 @@ export function SearchBox({ onDone, className = "", autoFocus = false }: { onDon
                       <Link href={`/products/${p.slug}/`} onClick={() => (setOpen(false), onDone?.())} className="flex items-center gap-3 rounded-lg p-1.5 hover:bg-brand-50">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         {p.image ? <img src={imgUrl(p.image, 96)} alt="" className="h-10 w-10 rounded object-contain" /> : <span className="h-10 w-10 rounded bg-brand-50" />}
-                        <span className="flex-1 leading-tight"><span className="block text-xs text-muted">{p.brand}</span>{p.name}</span>
+                        <span className="flex-1 leading-tight"><span className="block text-xs text-muted">{p.brand}</span>{cleanName(p.name)}</span>
                         <span className="font-semibold">{money(p.price)}</span>
                       </Link>
                     </li>

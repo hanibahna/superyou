@@ -1,5 +1,6 @@
 "use client";
 
+import { cleanName } from "@/lib/data/catalog";
 import { LinePlan } from "./SubscribePlan";
 import Link from "next/link";
 import { useSettings, useT } from "@/lib/site-context";
@@ -53,7 +54,7 @@ export function CartDrawer() {
                   <ProductImage product={product} className="h-20 w-20 shrink-0 rounded-lg" />
                   <div className="flex flex-1 flex-col">
                     <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
-                    <p className="text-sm font-medium leading-snug">{product.name}</p>
+                    <p className="text-sm font-medium leading-snug">{cleanName(product.name)}</p>
                     {product.variant && <p className="text-xs text-muted">{product.variant}</p>}
                     <ShipBadge p={product} className="mt-1 self-start" />
                     <LinePlan name={product.name} productId={product.id} every={every} />

@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { db } from "@/lib/db";
@@ -14,7 +15,7 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   if (!cfg.enabled) { trace?.push("youtube switched off in admin"); return []; }
   const pin = cfg.pins[p.slug];
   if (pin === "none") return [];
-  if (pin) return [{ id: pin, title: `${p.brand} ${p.name}`, channel: "" }];
+  if (pin) return [{ id: pin, title: `${fullName(p.brand, p.name)}`, channel: "" }];
   const key = cfg.key || process.env.YOUTUBE_API_KEY;
   if (!key) { trace?.push("no key"); return []; }
   const ck = `yt:v6:${p.slug}`;
@@ -94,7 +95,7 @@ async function confirmSameProduct(p: { brand: string; name: string }, vids: { id
   const key = await anthropicKey();
   if (!key) return out;
   const list = vids.map((v, i) => `${i + 1}. id=${v.id}\ntitle: ${v.title}\nchannel: ${v.channel}\nlanguage hint: ${v.hint}\ndescription: ${v.desc.slice(0, 300)}`).join("\n\n");
-  const prompt = `Product sold on our shop: "${p.brand} ${p.name}".
+  const prompt = `Product sold on our shop: "${fullName(p.brand, p.name)}".
 
 For each YouTube video below, decide:
 1. Is it specifically about EXACTLY this product: same brand, same product line and same variant (a different shade family, formula, SPF, "night" vs "day", "serum" vs "cream", or another product of the same range is NOT the same)? Reject comparisons, routines, hauls, lists of several products, dupes and videos where the product is only mentioned. When unsure, reject.

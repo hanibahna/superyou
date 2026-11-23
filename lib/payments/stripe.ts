@@ -2,6 +2,7 @@
 // Stripe-supported country (Stripe does not onboard Lebanese-registered businesses).
 // Env: STRIPE_SECRET_KEY
 
+import { fullName } from "@/lib/data/catalog";
 import type { PaymentProvider } from "./types";
 import { toMinor } from "./types";
 
@@ -21,7 +22,7 @@ export const stripe: PaymentProvider = {
       cancel_url: `${baseUrl}/checkout/?cancelled=1`,
     });
     if (order.customer.email) form.set("customer_email", order.customer.email);
-    const lines = [...order.lines.map((l) => ({ name: `${l.brand} ${l.name}`, amount: l.unitPrice, qty: l.qty }))];
+    const lines = [...order.lines.map((l) => ({ name: `${fullName(l.brand, l.name)}`, amount: l.unitPrice, qty: l.qty }))];
     if (order.delivery > 0) lines.push({ name: "Delivery", amount: order.delivery, qty: 1 });
     lines.forEach((l, i) => {
       form.set(`line_items[${i}][quantity]`, String(l.qty));

@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import { type NextRequest } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { orderValue, refunded, statusLabels } from "@/lib/orders";
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     ["Order", "Date (Beirut)", "Status", "Customer", "Phone", "Area", "Payment", "Items", "Subtotal", "Discounts", "Delivery", "Gift card", "Paid", "Refunded", "Net", "Courier", "Tracking"],
     ...orders.map((o) => [
       o.id, new Date(o.createdAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }), statusLabels[o.status], `${o.customer.firstName} ${o.customer.lastName}`, o.customer.phone, o.customer.zone,
-      o.paymentMethod, o.lines.map((l) => `${l.qty}x ${l.brand} ${l.name}`).join("; "), o.subtotal.toFixed(2), (o.discount ?? 0).toFixed(2), o.delivery.toFixed(2),
+      o.paymentMethod, o.lines.map((l) => `${l.qty}x ${fullName(l.brand, l.name)}`).join("; "), o.subtotal.toFixed(2), (o.discount ?? 0).toFixed(2), o.delivery.toFixed(2),
       (o.giftCard?.amount ?? 0).toFixed(2), o.total.toFixed(2), refunded(o).toFixed(2), (orderValue(o) - refunded(o)).toFixed(2), o.shipment?.courierName ?? "", o.shipment?.tracking ?? "",
     ]),
   ];

@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import { getT } from "@/lib/i18n-server";
 import Link from "next/link";
 import { ProductImage } from "@/components/ProductImage";
@@ -24,7 +25,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
         {unique.map((p) => (
           <div key={p.slug} className="grid gap-4 rounded-2xl border border-line p-5 sm:grid-cols-[96px_1fr]">
             <ProductImage product={p} width={200} className="aspect-square w-24 rounded-lg" />
-            <ReviewForm inline slug={p.slug} product={`${p.brand} ${p.name}`} orderId={order.id} token={t} />
+            <ReviewForm inline slug={p.slug} product={`${fullName(p.brand, p.name)}`} orderId={order.id} token={t} />
           </div>
         ))}
       </div>

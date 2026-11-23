@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 // Stock counts: taken off when an order is placed, put back when it's cancelled or a refund
@@ -35,7 +36,7 @@ export async function adjustStock(changes: StockChange[], reason: string, by = "
     const to = Math.max(0, Math.round(c.set ?? from + (c.delta ?? 0)));
     if (to === from && p.stock !== undefined) continue;
     changed.push({ ...p, stock: to });
-    const mv = { at: Date.now(), productId: p.id, name: `${p.brand} ${p.name}${p.variant ? ` – ${p.variant}` : ""}`, from, to, reason, by };
+    const mv = { at: Date.now(), productId: p.id, name: `${fullName(p.brand, p.name)}${p.variant ? ` – ${p.variant}` : ""}`, from, to, reason, by };
     moves.push(mv);
     if (to < from && to <= ops.stock.lowAt && from > ops.stock.lowAt) low.push(mv);
   }

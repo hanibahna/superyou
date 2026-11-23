@@ -1,3 +1,4 @@
+import { fullName } from "@/lib/data/catalog";
 import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
@@ -34,6 +35,6 @@ export async function POST(req: NextRequest) {
     const o = await getOrder(d.orderId);
     verified = !!o && o.accessToken === d.token && o.lines.some((l) => idx.byId.get(l.productId)?.slug === d.slug);
   }
-  const r = await addReview({ slug: d.slug, product: `${product.brand} ${product.name}`, rating: d.rating, title: d.title, body: d.body, name: d.name, skinType: d.skinType, photo: d.photo || undefined, verified, orderId: verified ? d.orderId : undefined }, g.reviews.autoApprove);
+  const r = await addReview({ slug: d.slug, product: `${fullName(product.brand, product.name)}`, rating: d.rating, title: d.title, body: d.body, name: d.name, skinType: d.skinType, photo: d.photo || undefined, verified, orderId: verified ? d.orderId : undefined }, g.reviews.autoApprove);
   return NextResponse.json({ ok: true, status: r.status });
 }
