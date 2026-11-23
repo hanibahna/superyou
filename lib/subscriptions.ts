@@ -133,8 +133,7 @@ export async function onSubscriptionOrder(order: Order) {
         r.earned = +(r.earned + back).toFixed(2);
         r.pending = +(r.pending + back).toFixed(2);
         note(s, `Unlocked: ${pct}% off from now on${back ? `, $${back.toFixed(2)} rebate on past orders` : ""}`);
-        const wa = await import("@/lib/whatsapp");
-        await wa.trigger("subscriptionReminder", s.customer.phone, { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), next_date: prettyDate(s.nextAt), total: back ? `$${back.toFixed(2)} rebate earned` : `${pct}% off unlocked`, link: manageLink(s) }).catch(() => false);
+        // No WhatsApp message yet: it needs its own approved template (the reminder one would read wrong).
       }
     }
     if ((order.status === "returned" || order.status === "cancelled" || order.status === "payment_failed")) {
