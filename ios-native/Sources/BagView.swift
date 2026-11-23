@@ -7,6 +7,7 @@ struct BagView: View {
     @State private var zone = ""
     @State private var code = ""
     @State private var checkout = false
+    @State private var party = 0
 
     var body: some View {
         NavigationStack {
@@ -19,6 +20,7 @@ struct BagView: View {
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
+                        if let c = config, c.delivery.freeThreshold > 0 { Section { Goals(subtotal: bag.subtotal, threshold: c.delivery.freeThreshold, club: c.features?.club) } }
                         ForEach(bag.lines) { l in
                             HStack(spacing: 12) {
                                 RemoteImage(url: l.image).frame(width: 64, height: 64).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 10))
@@ -68,6 +70,11 @@ struct BagView: View {
                 }
             }
             .navigationTitle("Bag")
+            .overlay { Confetti(fire: $party) }
+            .onChange(of: bag.subtotal) { old, new in
+                // Celebrate the moment the bag crosses the free-delivery line.
+                if let t = config?.delivery.freeThreshold, t > 0, old < t, new >= t { party += 1 }
+            }
             .navigationDestination(isPresented: $checkout) { CheckoutView(config: config, zone: $zone, code: code) }
             .task {
                 if config == nil { config = try? await API.config() }
@@ -76,6 +83,23 @@ struct BagView: View {
         }
     }
     func refresh() { Task { await bag.refresh(zone: zone, code: code) } }
+}
+
+/// Free-delivery goal and the Club points this bag earns, like the website's bag.
+struct Goals: View {
+    let subtotal: Double; let threshold: Double; let club: Config.Club?
+    var body: some View {
+        let left = max(0, threshold - subtotal)
+        VStack(alignment: .leading, spacing: 8) {
+            if left > 0 { (Text("You're ") + Text(money(left)).bold() + Text(" away from free delivery")).font(.footnote) }
+            else { Text("You've unlocked free delivery 🎉").font(.footnote.bold()).foregroundStyle(Color.rose) }
+            ProgressView(value: min(subtotal, threshold), total: threshold).tint(left > 0 ? Color.brand : Color.rose)
+                .animation(.spring(duration: 0.6), value: subtotal)
+            if let c = club, c.pointsPerDollar > 0 {
+                Text("✦ This order earns \(Int(subtotal * c.pointsPerDollar)) \(c.name) points").font(.caption).foregroundStyle(.secondary)
+            }
+        }.padding(.vertical, 4)
+    }
 }
 
 struct LineRow: View {
@@ -101,6 +125,7 @@ struct CheckoutView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var done: (id: String, url: String)?
+    @State private var party = 0
     @State private var method = "cod"
     @State private var payURL: URL?
     @State private var note: String?
@@ -148,6 +173,7 @@ struct CheckoutView: View {
             }
         }
         .navigationTitle(done == nil ? "Checkout" : "Order placed")
+        .overlay { Confetti(fire: $party) }
     }
 
     func place() async {
@@ -163,6 +189,7 @@ struct CheckoutView: View {
             let r = try await API.post("/api/app/v1/checkout", body: body, as: CheckoutReply.self)
             if let id = r.orderId, let u = r.confirmUrl {
                 done = (id, u); lastOrder = id; note = r.message; bag.clear()
+                party += 1
                 OrderUpdates.ask() // first order: now people see why notifications help
                 // Card or Whish: open the secure payment page (Whish's page, or our card page on the site).
                 if let next = r.next?.redirect, next != u, method != "cod" {

@@ -62,7 +62,8 @@ struct Config: Codable {
     struct Delivery: Codable { let fee: Double; let freeThreshold: Double; let estimate: String; let zones: [Zone] }
     struct Advisor: Codable { let name: String; let greeting: String; let suggestions: [String] }
     struct Subscribe: Codable { let monthly: Double; let quarterly: Double; let note: String; var unlockMonthly: Int? = nil; var unlockQuarterly: Int? = nil }
-    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe? }
+    struct Club: Codable { let name: String; let pointsPerDollar: Double; let rewardPoints: Int; let rewardValue: Double }
+    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil }
     struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
     struct Theme: Codable { var primary: String?; var ink: String?; var sale: String?; var background: String?; var headingFont: String?; var buttons: String?; var cards: String?; var preset: String? }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double

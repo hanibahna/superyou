@@ -101,3 +101,40 @@ struct ShipBadge: View {
         .background((intl ? Color(hex: "#eef2ff") : Color(hex: "#ecfdf3")), in: Capsule())
     }
 }
+
+
+/// Confetti burst with a success haptic, for reached goals (free delivery, order placed).
+struct Confetti: View {
+    @Binding var fire: Int
+    @State private var pieces: [Piece] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    struct Piece: Identifiable { let id = UUID(); let x: CGFloat; let dx: CGFloat; let rot: Double; let color: Color; let size: CGFloat; let delay: Double }
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(pieces) { p in Drop(p: p, height: geo.size.height) }
+            }
+        }
+        .allowsHitTesting(false)
+        .onChange(of: fire) { _, _ in
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            guard !reduceMotion else { return }
+            let colors: [Color] = [.rose, .ink, Color(hex: "#ffc2d4"), Color(hex: "#f6d365"), Color(hex: "#e48aa9")]
+            pieces = (0..<70).map { i in Piece(x: .random(in: 0.05...0.95), dx: .random(in: -60...60), rot: .random(in: -540...540), color: colors[i % colors.count], size: .random(in: 6...11), delay: .random(in: 0...0.35)) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { pieces = [] }
+        }
+    }
+    struct Drop: View {
+        let p: Piece; let height: CGFloat
+        @State private var down = false
+        var body: some View {
+            GeometryReader { g in
+                RoundedRectangle(cornerRadius: 2).fill(p.color).frame(width: p.size, height: p.size * 0.5)
+                    .rotationEffect(.degrees(down ? p.rot : 0))
+                    .position(x: g.size.width * p.x + (down ? p.dx : 0), y: down ? height + 20 : -10)
+                    .opacity(down ? 0.2 : 1)
+                    .onAppear { withAnimation(.easeIn(duration: 1.8).delay(p.delay)) { down = true } }
+            }
+        }
+    }
+}
