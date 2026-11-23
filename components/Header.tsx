@@ -84,9 +84,9 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
           </span>
         </Link>
         {/* Our web address (so people remember it) and our promise, next to the logo. */}
-        <div className="site-id -ms-1 hidden min-w-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex">
+        <div className="site-id -ms-1 hidden w-[250px] shrink-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex 2xl:w-[300px]">
           <span dir="ltr" className="text-[13px] font-extrabold tracking-[0.08em]"><span className="sy-accent">SHOP</span>SUPERYOU<span className="sy-accent">.COM</span></span>
-          {store.tagline && <span className="max-w-[260px] truncate text-[11px] text-muted">{store.tagline}</span>}
+          {store.tagline && <span className="mt-0.5 text-[11px] leading-snug text-muted [text-wrap:balance]">{store.tagline}</span>}
         </div>
 
         <SearchBox className="hdr-search mx-auto hidden max-w-xl flex-1 lg:block" />
