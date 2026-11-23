@@ -12,7 +12,7 @@ import { useShop } from "@/lib/store";
 import { AfterRoutine } from "../clinic/AfterRoutine";
 import type { ClinicItem } from "../clinic/ClinicView";
 
-type Step = { id: string; name: string; time: "am" | "pm" | "both"; tip: string; why?: string; picks: CardItem[] };
+type Step = { id: string; name: string; time: "am" | "pm" | "both"; tip: string; why?: string; skipped?: boolean; picks: CardItem[] };
 type Result = { ai: boolean; summary: string; notes: string[]; treatments: ClinicItem[]; clinic?: { partner: string; mock: boolean } };
 
 export function RoutineWizard({ title, intro, skinTypes, concerns, goals, labels = {}, aiReady = false }: { title: string; intro: string; skinTypes: { id: string; label: string; hint: string }[]; concerns: string[]; goals: string[]; labels?: Record<string, string>; aiReady?: boolean }) {
@@ -115,7 +115,8 @@ export function RoutineWizard({ title, intro, skinTypes, concerns, goals, labels
   ];
 
   if (n === 5 && steps) {
-    const picked = steps.map((s) => s.picks[chosen[s.id] ?? 0]).filter((p): p is CardItem => !!p);
+    const idx = (s: Step) => chosen[s.id] ?? (s.skipped ? -1 : 0);
+    const picked = steps.map((s) => s.picks[idx(s)]).filter((p): p is CardItem => !!p);
     const total = picked.reduce((s, p) => s + p.price, 0);
     const am = steps.filter((s) => s.time !== "pm");
     const pm = steps.filter((s) => s.time !== "am");
@@ -136,7 +137,7 @@ export function RoutineWizard({ title, intro, skinTypes, concerns, goals, labels
             <h2 className="mb-3 text-xl font-semibold">{label as string}</h2>
             <ol className="space-y-3">
               {(list as Step[]).map((s, i) => {
-                const p = s.picks[chosen[s.id] ?? 0];
+                const p = s.picks[idx(s)];
                 return (
                   <li key={s.id} className="rounded-xl border border-line p-4">
                     <div className="flex flex-wrap items-start gap-4">
@@ -144,7 +145,7 @@ export function RoutineWizard({ title, intro, skinTypes, concerns, goals, labels
                       <div className="min-w-48 flex-1">
                         <p className="font-semibold">{s.name}</p>
                         <p className="text-xs text-muted">{s.tip}</p>
-                        {s.why && (chosen[s.id] ?? 0) === 0 && <p className="mt-1 text-xs font-medium text-[#d13f74]">✦ {s.why}</p>}
+                        {s.why && (s.skipped ? idx(s) === -1 : idx(s) === 0) && <p className="mt-1 text-xs font-medium text-[#d13f74]">✦ {s.why}</p>}
                       </div>
                       {p ? (
                         <Link href={`/products/${p.slug}/`} className="flex min-w-64 flex-1 items-center gap-3 rounded-lg bg-brand-50 p-2">
@@ -152,13 +153,13 @@ export function RoutineWizard({ title, intro, skinTypes, concerns, goals, labels
                           <span className="flex-1 text-sm leading-snug"><span className="block text-xs font-semibold uppercase text-muted">{p.brand}</span>{p.name}</span>
                           <span className="font-semibold">{money(p.price)}</span>
                         </Link>
-                      ) : <p className="text-sm text-muted">{tx("No match in stock right now.")}</p>}
+                      ) : s.skipped ? <p className="text-sm text-muted">{tx("Optional: not included. Tap a product below to add it.")}</p> : <p className="text-sm text-muted">{tx("No match in stock right now.")}</p>}
                     </div>
-                    {s.picks.length > 1 && (
+                    {(s.picks.length > 1 || (s.skipped && s.picks.length > 0)) && (
                       <div className="ml-12 mt-2 flex flex-wrap gap-2 text-xs">
-                        <span className="self-center text-muted">Alternatives:</span>
+                        <span className="self-center text-muted">{s.skipped ? tx("Optional:") : "Alternatives:"}</span>
                         {s.picks.map((x, k) => (
-                          <button key={x.slug} onClick={() => setChosen({ ...chosen, [s.id]: k })} className={`rounded-full border px-3 py-1 ${k === (chosen[s.id] ?? 0) ? "border-brand-500 bg-brand-50 font-semibold" : "border-line"}`}>
+                          <button key={x.slug} onClick={() => setChosen({ ...chosen, [s.id]: k })} className={`rounded-full border px-3 py-1 ${k === idx(s) ? "border-brand-500 bg-brand-50 font-semibold" : "border-line"}`}>
                             {x.brand} · {money(x.price)}
                           </button>
                         ))}

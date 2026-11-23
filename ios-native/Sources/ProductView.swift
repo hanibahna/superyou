@@ -196,16 +196,22 @@ struct HowToBox: View {
     let product: Product
     let videos: [Video]
     let play: (Video) -> Void
+    @State private var open = false
     var body: some View {
         let g = product.guide
         let steps = g?.steps ?? []
         if !steps.isEmpty || !product.howToUse.isEmpty || !(product.tips ?? []).isEmpty || !videos.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.rose)
-                    Text("How to use").font(.headline)
-                    if let w = g?.when, !w.isEmpty { Text(w).font(.caption.bold()).foregroundStyle(Color.rose).padding(.horizontal, 8).padding(.vertical, 3).background(Color.white, in: Capsule()) }
-                }
+                Button { withAnimation(.easeInOut(duration: 0.25)) { open.toggle() } } label: {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.rose)
+                        Text("How to use").font(.headline).foregroundStyle(Color.ink)
+                        Spacer()
+                        Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0)).foregroundStyle(.secondary)
+                    }.contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                if open {
+                if let w = g?.when, !w.isEmpty { Text(w).font(.caption.bold()).foregroundStyle(Color.rose).padding(.horizontal, 8).padding(.vertical, 3).background(Color.white, in: Capsule()) }
                 if let gf = g?.goodFor, !gf.isEmpty { Text(gf).font(.footnote).foregroundStyle(.secondary) }
                 if !steps.isEmpty {
                     ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
@@ -237,6 +243,7 @@ struct HowToBox: View {
                     }
                 }
                 Text(steps.isEmpty ? "Always read the label; ask our pharmacist if unsure." : "Written by SuperYou AI from this product's details. Always read the label.").font(.caption2).foregroundStyle(.secondary)
+                }
             }
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .background(LinearGradient(colors: [Color(hex: "#fdeef3"), .white], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 20))

@@ -37,7 +37,9 @@ export async function POST(req: NextRequest) {
     const bySlug = (s: string) => picks.find((p) => p.slug === s);
     const ordered = ai?.pick ? [bySlug(ai.pick)!, ...ai.alts.map(bySlug).filter((p): p is (typeof picks)[number] => !!p)] : picks;
     const rest = picks.filter((p) => !ordered.includes(p));
-    return { id: step.id, name: step.name, time: step.time, tip: step.tip, why: ai?.why ?? "", picks: [...ordered, ...rest].slice(0, n) };
+    // The AI left this step out (budget, or to avoid stacking actives): offer it as optional only.
+    const skipped = !!plan && !!ai && !ai.pick;
+    return { id: step.id, name: step.name, time: step.time, tip: step.tip, why: ai?.why ?? "", skipped, picks: [...ordered, ...rest].slice(0, n) };
   });
   const { CLINIC, publicProcedure, treatmentsFor } = await import("@/lib/clinic");
   const words = cfg.concernOptions.filter((c) => parsed.data.concerns.includes(c.label)).flatMap((c) => [c.label, ...c.keywords]);

@@ -14,8 +14,9 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
   const [guide, setGuide] = useState<Guide | null | undefined>(initialGuide ?? undefined);
   const [videos, setVideos] = useState<V[] | null>(null);
   const [playing, setPlaying] = useState("");
+  const [open, setOpen] = useState(false);
   useEffect(() => {
-    const h = () => box.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const h = () => { setOpen(true); setTimeout(() => box.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); };
     window.addEventListener("open-howto", h);
     return () => window.removeEventListener("open-howto", h);
   }, []);
@@ -27,14 +28,19 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
   const steps = guide?.steps?.length ? guide.steps : [];
   if (guide !== undefined && !steps.length && !how && !tips.length && videos !== null && !videos.length) return null;
   return (
-    <section ref={box} id="how-to-use" aria-labelledby="howto-h" className="mt-5 scroll-mt-28 rounded-3xl border-2 border-[#d13f74]/40 bg-gradient-to-br from-[#fdeef3] to-white p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#d13f74] text-white" aria-hidden>
+    <section ref={box} id="how-to-use" aria-labelledby="howto-h" className="mt-5 scroll-mt-28 rounded-3xl border-2 border-[#d13f74]/40 bg-gradient-to-br from-[#fdeef3] to-white p-4">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="howto-body" className="flex w-full items-center gap-3 text-start">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#d13f74] text-white" aria-hidden>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9" /></svg>
         </span>
-        <h2 id="howto-h" className="text-lg font-bold">{t("How to use")}</h2>
-        {guide?.when && <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#d13f74] ring-1 ring-[#d13f74]/30">{guide.when}</span>}
-      </div>
+        <span className="flex-1">
+          <span id="howto-h" className="block text-lg font-bold">{t("How to use")}</span>
+          <span className="block text-xs text-muted">{[steps.length ? `${steps.length} ${t("steps")}` : "", tips.length || guide?.cautions?.length ? t("tips") : "", videos?.length ? t("videos") : ""].filter(Boolean).join(" · ") || t("Directions and tips")}</span>
+        </span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      <div id="howto-body" hidden={!open}>
+      {guide?.when && <p className="mt-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#d13f74] ring-1 ring-[#d13f74]/30">{guide.when}</p>}
       {guide?.goodFor && <p className="mt-2 text-sm text-muted">{guide.goodFor}</p>}
 
       {guide === undefined && !how ? (
@@ -87,6 +93,7 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
         </div>
       )}
       <p className="mt-3 text-[11px] text-muted">{steps.length ? t("Written by SuperYou AI from this product's details. Always read the label; ask our pharmacist if unsure.") : t("Always read the label; ask our pharmacist if unsure.")}</p>
+      </div>
     </section>
   );
 }
