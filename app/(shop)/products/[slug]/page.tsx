@@ -49,6 +49,9 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   if (!variants.length) {
     const kept = live.dupOf.get(slug); // same product shown under the other catalog's listing
     if (kept) permanentRedirect(`/products/${kept}/`);
+    // Old web addresses that carried a supplier code.
+    const moved = await (await import("@/lib/db")).db.cmd<string | null>(["HGET", "slugmove", slug]).catch(() => null);
+    if (moved) permanentRedirect(`/products/${moved}/`);
     notFound();
   }
   const wanted = (await searchParams).v;

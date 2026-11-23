@@ -343,14 +343,16 @@ export async function* iterateDetailed(pageSize = 500): AsyncGenerator<Product[]
  */
 export function assignSlugs(incoming: Product[], existing: Map<string, ProductLite[]>): Product[] {
   const owner = new Map<string, string>(); // slug → group key
-  for (const [slug, list] of existing) owner.set(slug, list[0].group ?? list[0].id);
+  const mine = new Map<string, string>(); // group key → the slug it already has
+  for (const [slug, list] of existing) { const k = list[0].group ?? list[0].id; owner.set(slug, k); if (!/-sks-\d+$/.test(slug)) mine.set(k, slug); }
   const groupSlug = new Map<string, string>();
   return incoming.map((p) => {
     const key = p.group ?? p.id;
-    let slug = groupSlug.get(key) ?? p.slug ?? "";
+    let slug = groupSlug.get(key) ?? mine.get(key) ?? p.slug ?? "";
     if (!slug) slug = slugify(`${p.brand} ${p.name}`) || slugify(p.sku);
-    const o = owner.get(slug);
-    if (o && o !== key) slug = `${slug}-${slugify(p.group ?? p.sku) || p.id.slice(0, 6)}`;
+    // A clash with a different item gets -2, -3… (never a supplier code in the web address).
+    const base = slug;
+    for (let n = 2; owner.get(slug) && owner.get(slug) !== key; n++) slug = `${base}-${n}`;
     owner.set(slug, key);
     groupSlug.set(key, slug);
     return { ...p, slug };
