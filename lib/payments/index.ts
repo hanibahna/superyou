@@ -8,6 +8,7 @@ import type { Order } from "@/lib/orders";
 import { areeba } from "./areeba";
 import { stripe } from "./stripe";
 import { tap } from "./tap";
+import { whish } from "./whish";
 import type { PaymentProvider, StartResult } from "./types";
 
 export type MethodId = "cod" | "card" | "whish";
@@ -15,7 +16,7 @@ export type MethodId = "cod" | "card" | "whish";
 export const methodInfo: Record<MethodId, { label: string; description: string }> = {
   cod: { label: "Cash on delivery", description: "Pay the driver in USD or LBP when your order arrives." },
   card: { label: "Credit / debit card", description: "Visa or Mastercard, processed on a secure 3-D Secure page." },
-  whish: { label: "Whish Money", description: "We'll send you a Whish payment request to confirm your order." },
+  whish: { label: "Whish Money", description: "Pay in the Whish app or with your card on Whish's secure page." },
 };
 
 const cardProviders: Record<string, PaymentProvider> = { tap, areeba, stripe };
@@ -53,9 +54,12 @@ export async function startPayment(order: Order, baseUrl: string): Promise<Start
       return { kind: "confirmed" };
 
     case "whish":
-      // Whish Pay's merchant API isn't public. Until you get API access from Whish,
-      // this works as a manual flow: staff send a Whish payment request by phone/WhatsApp.
-      // When you have API docs, implement it like ./tap.ts and return a redirect.
+      // With Whish API keys (WHISH_CHANNEL / WHISH_SECRET) the customer pays on Whish's page right away.
+      if (whish.isConfigured()) {
+        const r = await whish.start(order, { baseUrl });
+        return { ...r, provider: "whish" };
+      }
+      // Without keys: staff send a Whish payment request by phone/WhatsApp.
       return {
         kind: "instructions",
         message: `We'll send a Whish payment request to ${order.customer.phone} shortly. Your order ships once it's paid.`,

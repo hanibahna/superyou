@@ -66,7 +66,7 @@ struct Quote: Codable {
 
 struct CheckoutReply: Codable {
     struct Next: Codable { let redirect: String }
-    let orderId: String?; let next: Next?; let confirmUrl: String?; let error: String?
+    let orderId: String?; let next: Next?; let confirmUrl: String?; let error: String?; var message: String? = nil
 }
 
 struct OrderLine: Codable, Hashable { let name: String; let qty: Int; let lineTotal: Double }

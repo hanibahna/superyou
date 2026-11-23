@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct BagView: View {
     @EnvironmentObject var bag: Bag
@@ -100,6 +101,9 @@ struct CheckoutView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var done: (id: String, url: String)?
+    @State private var method = "cod"
+    @State private var payURL: URL?
+    @State private var note: String?
 
     var body: some View {
         Form {
@@ -107,7 +111,8 @@ struct CheckoutView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Label("Thank you! Order \(d.id) is in.", systemImage: "checkmark.circle.fill").font(.headline).foregroundStyle(Color.greenShip)
-                        Text("We'll confirm on WhatsApp. Pay cash when it arrives.").font(.footnote)
+                        Text(note ?? (method == "cod" ? "We'll confirm on WhatsApp. Pay cash when it arrives." : "We'll confirm on WhatsApp as soon as the payment goes through.")).font(.footnote)
+                        if let p = payURL { Link(destination: p) { Label(method == "whish" ? "Pay with Whish" : "Pay by card", systemImage: "creditcard.fill").frame(maxWidth: .infinity).padding(10) }.buttonStyle(.borderedProminent).tint(Color.ink) }
                         if let u = URL(string: API.base.absoluteString + d.url) { Link("Track my order", destination: u) }
                     }
                 }
@@ -129,7 +134,13 @@ struct CheckoutView: View {
                 }
                 Section {
                     LineRow("Total", money(bag.quote?.total ?? bag.subtotal)).font(.headline)
-                    Text("Payment: cash on delivery").font(.footnote).foregroundStyle(.secondary)
+                    let methods = config?.payments ?? []
+                    if methods.count > 1 {
+                        Picker("Payment", selection: $method) { ForEach(methods, id: \.id) { Text($0.label).tag($0.id) } }
+                        if let d = methods.first(where: { $0.id == method })?.description { Text(d).font(.caption).foregroundStyle(.secondary) }
+                    } else {
+                        Text("Payment: cash on delivery").font(.footnote).foregroundStyle(.secondary)
+                    }
                     if let e = error { Text(e).foregroundStyle(Color.rose).font(.footnote) }
                     Button { Task { await place() } } label: { Text(busy ? "Placing order…" : "Place order").frame(maxWidth: .infinity) }
                         .disabled(busy || first.isEmpty || last.isEmpty || phone.count < 6 || city.isEmpty || address.count < 3 || zone.isEmpty)
@@ -144,13 +155,21 @@ struct CheckoutView: View {
         var body: [String: Any] = [
             "items": bag.lines.map { l -> [String: Any] in var d: [String: Any] = ["productId": l.productId, "qty": l.qty]; if let e = l.every { d["every"] = e }; return d },
             "customer": ["firstName": first, "lastName": last, "phone": phone, "email": email, "zone": zone, "city": city, "address": address, "notes": notes],
-            "paymentMethod": "cod", "waUpdates": waUpdates,
+            "paymentMethod": method, "waUpdates": waUpdates,
             "attribution": ["source": "ios-app", "medium": "app"],
         ]
         if !code.isEmpty { body["code"] = code }
         do {
             let r = try await API.post("/api/app/v1/checkout", body: body, as: CheckoutReply.self)
-            if let id = r.orderId, let u = r.confirmUrl { done = (id, u); lastOrder = id; bag.clear() } else { error = r.error ?? "Something went wrong. Please try again." }
+            if let id = r.orderId, let u = r.confirmUrl {
+                done = (id, u); lastOrder = id; note = r.message; bag.clear()
+                // Card or Whish: open the secure payment page (Whish's page, or our card page on the site).
+                if let next = r.next?.redirect, next != u, method != "cod" {
+                    let url = next.hasPrefix("http") ? URL(string: next) : URL(string: API.base.absoluteString + next)
+                    payURL = url
+                    if let url { await UIApplication.shared.open(url) }
+                }
+            } else { error = r.error ?? "Something went wrong. Please try again." }
         } catch { self.error = "We couldn't reach the shop. Check your connection." }
     }
 }

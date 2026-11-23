@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   const videos = await (await import("@/lib/youtube")).prefillVideos(15).catch(() => 0);
   const guides = await (await import("@/lib/product-guide")).prefillGuides(4).catch(() => 0);
   const scanFollowUps = await (await import("@/lib/scans")).runScanFollowUps().catch(() => 0);
+  const whishSettled = await (await import("@/lib/payments/whish")).sweepWhish().catch(() => 0);
   const subscriptions = await (await import("@/lib/subscriptions")).runSubscriptions().catch((e) => (console.error("[cron subscriptions]", e), null));
   // Live courier tracking for everything still on its way.
   let tracked = 0;
@@ -29,5 +30,5 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[cron tracking]", e);
   }
-  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts, tracked, subscriptions, videos, guides, scanFollowUps });
+  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts, tracked, subscriptions, videos, guides, scanFollowUps, whishSettled });
 }
