@@ -54,6 +54,40 @@ export type Growth = {
   images: { frame: "white" | "grey"; padding: number }; // uniform product photos
   motion: boolean; // site animations
   trust: { lines: string[]; returnsSummary: string };
+  game: Game;
+};
+
+/** Gamification (Admin › Gamification). Points-only rewards; every-spin-wins wheel lives in popup. */
+export type Game = {
+  enabled: boolean;
+  celebrate: boolean; // confetti and haptics on reached goals
+  badges: { enabled: boolean; points: Record<BadgeId, number> };
+  ladder: { enabled: boolean; doublePointsAt: number }; // spend at which an order earns double Club points (0 = off)
+  streak: { enabled: boolean; every: number; points: number }; // every Nth on-time subscription delivery earns bonus points
+  checkin: { enabled: boolean; days: number; points: number }; // app daily tip: a full streak earns points
+  quest: { enabled: boolean; reviews: number; points: number }; // review N products you bought
+  race: { enabled: boolean; steps: { friends: number; points: number }[] }; // referral milestones
+};
+export type BadgeId = "firstOrder" | "scan" | "routine" | "review" | "photoReview" | "referral" | "subscriber" | "gold";
+export const BADGES: { id: BadgeId; name: string; text: string; icon: string }[] = [
+  { id: "firstOrder", name: "First order", text: "Placed your first SuperYou order", icon: "bag" },
+  { id: "scan", name: "Skin scanned", text: "Took a SuperScan 3D skin scan", icon: "scan" },
+  { id: "routine", name: "Routine builder", text: "Bought 3 or more steps of a routine in one order", icon: "layers" },
+  { id: "review", name: "Reviewer", text: "Wrote your first review", icon: "star" },
+  { id: "photoReview", name: "Show & tell", text: "Added a photo to a review", icon: "camera" },
+  { id: "referral", name: "Friend finder", text: "A friend ordered with your link", icon: "gift" },
+  { id: "subscriber", name: "Never run out", text: "Started a Subscribe & save plan", icon: "repeat" },
+  { id: "gold", name: "Gold member", text: "Reached Gold tier or above", icon: "crown" },
+];
+export const defaultGame: Game = {
+  enabled: true,
+  celebrate: true,
+  badges: { enabled: true, points: { firstOrder: 50, scan: 25, routine: 50, review: 25, photoReview: 50, referral: 100, subscriber: 50, gold: 100 } },
+  ladder: { enabled: true, doublePointsAt: 90 },
+  streak: { enabled: true, every: 3, points: 100 },
+  checkin: { enabled: true, days: 7, points: 20 },
+  quest: { enabled: true, reviews: 3, points: 75 },
+  race: { enabled: true, steps: [{ friends: 3, points: 150 }, { friends: 5, points: 300 }, { friends: 10, points: 750 }] },
 };
 
 export const defaultGrowth: Growth = {
@@ -125,6 +159,7 @@ export const defaultGrowth: Growth = {
   shadeFinder: { enabled: true },
   images: { frame: "grey", padding: 8 },
   motion: true,
+  game: defaultGame,
   trust: {
     lines: ["100% authentic — supplied by a licensed Lebanese pharmacy", "Advice from qualified pharmacists, free on WhatsApp", "Easy returns on unopened items within 7 days"],
     returnsSummary: "Unopened items can be returned within 7 days. Opened skincare can't be returned for hygiene reasons unless faulty.",
@@ -165,6 +200,15 @@ export const growthSchema = z.object({
   images: z.object({ frame: z.enum(["white", "grey"]), padding: z.number().min(0).max(20) }),
   motion: z.boolean(),
   trust: z.object({ lines: z.array(z.string().max(160)).max(6), returnsSummary: z.string().max(400) }),
+  game: z.object({
+    enabled: z.boolean(), celebrate: z.boolean(),
+    badges: z.object({ enabled: z.boolean(), points: z.record(z.string(), z.number().int().min(0).max(10000)) }),
+    ladder: z.object({ enabled: z.boolean(), doublePointsAt: z.number().min(0).max(10000) }),
+    streak: z.object({ enabled: z.boolean(), every: z.number().int().min(2).max(24), points: z.number().int().min(0).max(10000) }),
+    checkin: z.object({ enabled: z.boolean(), days: z.number().int().min(2).max(60), points: z.number().int().min(0).max(1000) }),
+    quest: z.object({ enabled: z.boolean(), reviews: z.number().int().min(1).max(20), points: z.number().int().min(0).max(10000) }),
+    race: z.object({ enabled: z.boolean(), steps: z.array(z.object({ friends: z.number().int().min(1).max(1000), points: z.number().int().min(0).max(100000) })).max(6) }),
+  }).transform((g) => g as Game).default(defaultGame),
 });
 
 export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growth {
@@ -176,6 +220,7 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     reviews: { ...d.reviews, ...v.reviews }, club: { ...d.club, ...v.club, bonus: { ...d.club.bonus, ...v.club?.bonus }, referral: { ...d.club.referral, ...v.club?.referral }, memberPrice: { ...d.club.memberPrice, ...v.club?.memberPrice } }, pharmacist: { ...d.pharmacist, ...v.pharmacist },
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
     skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
+    game: { ...defaultGame, ...v.game, badges: { ...defaultGame.badges, ...v.game?.badges, points: { ...defaultGame.badges.points, ...v.game?.badges?.points } }, ladder: { ...defaultGame.ladder, ...v.game?.ladder }, streak: { ...defaultGame.streak, ...v.game?.streak }, checkin: { ...defaultGame.checkin, ...v.game?.checkin }, quest: { ...defaultGame.quest, ...v.game?.quest }, race: { ...defaultGame.race, ...v.game?.race } },
   };
 }
 
@@ -196,6 +241,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     shadeFinder: g.shadeFinder,
     images: g.images,
     trust: g.trust,
+    game: g.game,
   };
 }
 export type PublicGrowth = ReturnType<typeof publicGrowth>;

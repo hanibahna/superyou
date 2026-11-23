@@ -104,6 +104,9 @@ export function BuyBox({
           {pct && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
           {pct && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
         </div>
+        {growth.club?.enabled && growth.game?.enabled && growth.club.pointsPerDollar > 0 && v.price >= 1 && (
+          <p className="mt-1.5 text-xs text-muted">✦ {t("Earn")} <b className="text-ink">{Math.floor(v.price * growth.club.pointsPerDollar)} {growth.club.name || "Club"} {t("points")}</b>{growth.game.badges.enabled && growth.game.badges.points.review ? <> · {t("review it after delivery for")} +{growth.club.bonus.review || growth.game.badges.points.review}</> : null}</p>
+        )}
 
         {variants.length > 1 && (
           <div className="mt-5">

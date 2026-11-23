@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
   const [g, m, orders] = await Promise.all([getGrowth(), getMember(phone), Promise.all(ids.slice(0, 10).map(getOrder))]);
   const spend = m ? yearSpend(m) : 0;
   const t = tierFor(g.club.tiers, spend);
+  const game = m ? await (await import("@/lib/game")).syncGame(phone).catch(() => null) : null;
   return NextResponse.json({
+    game,
     member: m ? { name: m.name, points: m.points, lifetimePoints: m.lifetimePoints, spend, tier: t.tier.name, next: t.next?.name, toNext: t.toNext, rewards: m.rewards.slice(-10), birthday: m.birthday ?? "", ref: m.ref ?? "", history: (m.history ?? []).slice(-50).reverse() } : null,
     orders: orders.filter((o) => !!o).map((o) => publicOrder(o!)),
   });

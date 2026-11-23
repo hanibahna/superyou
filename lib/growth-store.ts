@@ -308,7 +308,9 @@ export async function awardPoints(order: { id: string; total: number; delivery: 
   if (!m || m.purchases.some((p) => p.orderId === order.id)) return; // only members, once per order
   const spend = Math.max(0, order.total - order.delivery);
   const { tier } = tierFor(g.club.tiers, yearSpend(m));
-  const pts = Math.floor(spend * g.club.pointsPerDollar * tier.multiplier);
+  // Reward ladder: orders at or above the double-points line earn twice the points.
+  const double = g.game?.enabled && g.game.ladder.enabled && g.game.ladder.doublePointsAt > 0 && spend >= g.game.ladder.doublePointsAt;
+  const pts = Math.floor(spend * g.club.pointsPerDollar * tier.multiplier * (double ? 2 : 1));
   const first = m.purchases.length === 0;
   m.purchases = [...m.purchases.filter((p) => Date.parse(p.at) > Date.now() - 400 * 864e5), { at: new Date().toISOString(), amount: spend, orderId: order.id }];
   m.points += pts;

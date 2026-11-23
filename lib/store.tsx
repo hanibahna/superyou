@@ -39,6 +39,8 @@ export type ServerQuote = {
   giftCardError?: string;
   minOrder: number;
   gifts: { id: string; name: string; unlocked: boolean; remaining: number; pick: number; showProgress: boolean; options: ProductSnap[] }[];
+  routine?: { have: number; need: number; percent: number; steps: string[]; all: string[] } | null;
+  doublePointsAt?: number;
 };
 
 type ShopState = {

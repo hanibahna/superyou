@@ -169,6 +169,7 @@ export async function onSubscriptionOrder(order: Order) {
     if (order.status === "delivered" && !(order.id in s.delivered)) {
       s.delivered[order.id] = value;
       note(s, `Order ${order.id} delivered (${Object.keys(s.delivered).length} of ${needFor(s, g)})`);
+      await (await import("@/lib/game")).refillStreak(s, Object.keys(s.delivered).length).catch(() => {});
       if (s.unlocked && order.subscriptionId) { /* already unlocked: the discount was on the order itself */ }
       if (!s.unlocked && Object.keys(s.delivered).length >= needFor(s, g)) {
         s.unlocked = true;

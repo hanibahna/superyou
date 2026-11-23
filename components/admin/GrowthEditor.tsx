@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { Growth } from "@/lib/growth";
+import { BADGES, type Growth } from "@/lib/growth";
 import { Area, Card, Header, ListInput, MediaField, Num, ProductPicker, Select, Text, Toggle, useSaver } from "./fields";
 
-const TABS = ["Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
+const TABS = ["Gamification", "Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
 
 export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth; aiReady: boolean; emailReady: boolean }) {
   const [g, setG] = useState(initial);
@@ -234,6 +234,57 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
           </Card>
           <Card title="Foundation shade finder" sub="Page /shade-finder/: 5 questions → shade range, undertone letters and matching foundations in stock.">
             <Toggle label="Shade finder page is on" checked={g.shadeFinder.enabled} onChange={(enabled) => up("shadeFinder", { enabled })} />
+          </Card>
+        </div>
+      )}
+
+      {tab === "Gamification" && (
+        <div className="space-y-5">
+          <Card title="Gamification" sub="Goals, badges, streaks and quests that reward shoppers with Club points. Points only: no prizes of chance. The spin-to-win wheel is in the Sign-up pop-up tab (every spin wins).">
+            <Toggle label="Gamification on" checked={g.game.enabled} onChange={(enabled) => up("game", { enabled })} />
+            <Toggle label="Celebrations (confetti and phone vibration on reached goals)" hint="Always off for visitors who turn on reduce motion." checked={g.game.celebrate} onChange={(celebrate) => up("game", { celebrate })} />
+          </Card>
+          <Card title="Reward ladder in the bag" sub="One bar with milestones: free delivery, gift and sample tiers (from Promotions and Samples), and double Club points.">
+            <Toggle label="Double points step on" checked={g.game.ladder.enabled} onChange={(enabled) => up("game", { ladder: { ...g.game.ladder, enabled } })} />
+            <Num label="Orders of at least ($) earn double Club points (0 = off)" value={g.game.ladder.doublePointsAt} onChange={(doublePointsAt) => up("game", { ladder: { ...g.game.ladder, doublePointsAt } })} />
+          </Card>
+          <Card title="Badges" sub="Earned once each and shown in the customer's account. Points are paid the first time the account is opened after earning it.">
+            <Toggle label="Badges on" checked={g.game.badges.enabled} onChange={(enabled) => up("game", { badges: { ...g.game.badges, enabled } })} />
+            <div className="grid gap-4 md:grid-cols-4">
+              {BADGES.map((b) => <Num key={b.id} label={`${b.name} (points)`} hint={b.text} value={g.game.badges.points[b.id] ?? 0} onChange={(v) => up("game", { badges: { ...g.game.badges, points: { ...g.game.badges.points, [b.id]: v } } })} />)}
+            </div>
+          </Card>
+          <Card title="Review quest" sub="Review N products you bought (verified reviews from the WhatsApp link).">
+            <Toggle label="Quest on" checked={g.game.quest.enabled} onChange={(enabled) => up("game", { quest: { ...g.game.quest, enabled } })} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Num label="Reviews needed" value={g.game.quest.reviews} onChange={(reviews) => up("game", { quest: { ...g.game.quest, reviews } })} />
+              <Num label="Points when complete" value={g.game.quest.points} onChange={(points) => up("game", { quest: { ...g.game.quest, points } })} />
+            </div>
+          </Card>
+          <Card title="Refill streak" sub="Subscribe & save customers earn bonus points on every Nth delivered refill.">
+            <Toggle label="Refill streak on" checked={g.game.streak.enabled} onChange={(enabled) => up("game", { streak: { ...g.game.streak, enabled } })} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Num label="Every N delivered refills" value={g.game.streak.every} onChange={(every) => up("game", { streak: { ...g.game.streak, every } })} />
+              <Num label="Bonus points" value={g.game.streak.points} onChange={(points) => up("game", { streak: { ...g.game.streak, points } })} />
+            </div>
+          </Card>
+          <Card title="Daily tip check-in (app)" sub="A pharmacist tip a day on the app home. Opening it N days in a row earns points (Club members).">
+            <Toggle label="Check-in on" checked={g.game.checkin.enabled} onChange={(enabled) => up("game", { checkin: { ...g.game.checkin, enabled } })} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Num label="Days in a row" value={g.game.checkin.days} onChange={(days) => up("game", { checkin: { ...g.game.checkin, days } })} />
+              <Num label="Points for a full streak" value={g.game.checkin.points} onChange={(points) => up("game", { checkin: { ...g.game.checkin, points } })} />
+            </div>
+          </Card>
+          <Card title="Referral race" sub="Bonus points when a member's link brings 3, 5, 10… friends (on top of the points per friend).">
+            <Toggle label="Referral race on" checked={g.game.race.enabled} onChange={(enabled) => up("game", { race: { ...g.game.race, enabled } })} />
+            <div className="grid gap-4 md:grid-cols-3">
+              {g.game.race.steps.map((st, i) => (
+                <div key={i} className="grid grid-cols-2 gap-2">
+                  <Num label="Friends" value={st.friends} onChange={(friends) => up("game", { race: { ...g.game.race, steps: g.game.race.steps.map((x, j) => (j === i ? { ...x, friends } : x)) } })} />
+                  <Num label="Points" value={st.points} onChange={(points) => up("game", { race: { ...g.game.race, steps: g.game.race.steps.map((x, j) => (j === i ? { ...x, points } : x)) } })} />
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
       )}

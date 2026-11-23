@@ -135,12 +135,14 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     }
   }
   // Routine bundle: items covering N different routine steps get an extra % off.
+  let routineSteps: string[] = [];
   if (growth.bundles.enabled) {
     const steps = new Map<string, number>();
     for (const l of ok) {
       const s = stepOf({ name: l.name, category: l.category }, routine.steps);
       if (s) steps.set(s, (steps.get(s) ?? 0) + l.price * l.qty);
     }
+    routineSteps = [...steps.keys()];
     if (steps.size >= growth.bundles.minSteps) {
       const spend = [...steps.values()].reduce((a, b) => a + b, 0);
       const amount = +Math.min(q.subtotal - q.discountTotal, (spend * growth.bundles.percent) / 100).toFixed(2);
@@ -188,6 +190,9 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     total: q.total,
     couponError: q.couponError,
     minOrder: settings.checkout.minOrder,
+    // Gamification: routine completion meter and the double-points step of the reward ladder.
+    routine: growth.bundles.enabled ? { have: routineSteps.length, need: growth.bundles.minSteps, percent: growth.bundles.percent, steps: routineSteps.map((id) => routine.steps.find((x) => x.id === id)?.name ?? id), all: routine.steps.filter((x) => x.essential || routine.steps.length <= 6).map((x) => x.name) } : null,
+    doublePointsAt: growth.game?.enabled && growth.game.ladder.enabled && growth.club.enabled ? growth.game.ladder.doublePointsAt : 0,
     gifts: q.gifts.map(({ tier, unlocked, remaining }) => ({
       id: tier.id, name: tier.name, unlocked, remaining, pick: tier.pick, showProgress: tier.showProgress,
       options: tier.choices.map((sku) => bySku.get(sku.toLowerCase())).filter((p): p is ProductLite => !!p).map(snapOf),

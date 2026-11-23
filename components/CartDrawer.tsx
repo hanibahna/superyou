@@ -3,9 +3,8 @@
 import { cleanName } from "@/lib/data/catalog";
 import { LinePlan } from "./SubscribePlan";
 import Link from "next/link";
-import { useGrowth, useSettings, useT } from "@/lib/site-context";
-import { useEffect, useRef } from "react";
-import { celebrate } from "./Celebrate";
+import { useT } from "@/lib/site-context";
+import { RewardLadder } from "./RewardLadder";
 import { CouponBox, GiftPicker, Totals } from "./CartPromos";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
@@ -16,21 +15,7 @@ import { DeliverySplit, ShipBadge } from "./ShipBadge";
 export function CartDrawer() {
   const tx = useT();
   const { drawerOpen, setDrawerOpen, detailed, subtotal, setQty, remove } = useShop();
-  const { delivery: d } = useSettings();
-  const club = useGrowth().club;
-  const threshold = d.freeThreshold;
-  const remaining = Math.max(0, threshold - subtotal);
-  const progress = threshold > 0 ? Math.min(100, (subtotal / threshold) * 100) : 100;
-  // Celebrate the moment the bag crosses the free-delivery line (not when it opens already above it).
-  const wasBelow = useRef<boolean | null>(null);
-  useEffect(() => {
-    if (!drawerOpen || threshold <= 0) { wasBelow.current = null; return; }
-    const below = remaining > 0;
-    if (wasBelow.current === true && !below) celebrate({ y: 120, x: window.innerWidth - 200, count: 60 });
-    wasBelow.current = below;
-  }, [drawerOpen, remaining, threshold]);
   if (!drawerOpen) return null;
-  const points = club?.enabled ? Math.floor(subtotal * (club.pointsPerDollar || 0)) : 0;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -43,19 +28,7 @@ export function CartDrawer() {
           </button>
         </div>
 
-        {threshold > 0 && <div className="border-b border-line px-5 py-3">
-          <p className="text-sm">
-            {remaining > 0 ? (
-              <>You're <b>{money(remaining)}</b> {tx("away from free delivery")}</>
-            ) : (
-              <b className="text-brand-600">{tx("You've unlocked free delivery 🎉")}</b>
-            )}
-          </p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-line">
-            <div className={`h-full rounded-full transition-all duration-700 ${remaining > 0 ? "bg-brand-500" : "bg-gradient-to-r from-brand-500 to-sale"}`} style={{ width: `${progress}%` }} />
-          </div>
-          {points > 0 && <p className="mt-2 text-xs text-muted">✦ {tx("This order earns")} <b className="text-ink">{points} {club.name || "Club"} {tx("points")}</b></p>}
-        </div>}
+        <RewardLadder />
 
         <div className="flex-1 overflow-y-auto p-5">
           {detailed.length === 0 ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { GamePanel, type GameState } from "@/components/GamePanel";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AddressBook } from "@/components/AddressBook";
@@ -17,7 +18,7 @@ export function AccountView() {
   const t = useT();
   const g = useGrowth();
   const { wishlist } = useShop();
-  const [data, setData] = useState<{ member: Member | null; orders: Order[] } | null>(null);
+  const [data, setData] = useState<{ member: Member | null; orders: Order[]; game?: GameState | null } | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [creds, setCreds] = useState({ phone: "", order: "" });
@@ -74,6 +75,7 @@ export function AccountView() {
               </div>
             )
           )}
+          {g.club.enabled && data.game && <GamePanel game={data.game} />}
           {g.club.enabled && data.member?.ref && g.club.referral.enabled && <ReferralBox code={data.member.ref} />}
           {g.club.enabled && (data.member?.history?.length ?? 0) > 0 && (
             <details className="rounded-2xl border border-line p-5">
