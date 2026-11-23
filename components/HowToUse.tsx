@@ -28,7 +28,7 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
   }, []);
   useEffect(() => {
     if (guide === undefined) fetch(`/api/products/guide/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setGuide(d.guide ?? null)).catch(() => setGuide(null));
-    fetch(`/api/products/videos/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setVideos(d.videos ?? [])).catch(() => setVideos([]));
+    fetch(`/api/products/videos/?slug=${encodeURIComponent(slug)}&v=7`).then((r) => r.json()).then((d) => setVideos(d.videos ?? [])).catch(() => setVideos([]));
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const steps = guide?.steps?.length ? guide.steps : [];
@@ -76,6 +76,11 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
       </div>
     </section>
     {playing && <VideoModal id={playing} title={videos?.find((v) => v.id === playing)?.title ?? "Video"} onClose={() => setPlaying("")} />}
+    {videos === null && (
+      <p className="mt-3 flex items-center gap-2 rounded-2xl border-2 border-line bg-white p-3 text-xs text-muted" aria-live="polite">
+        <span className="h-3 w-3 animate-spin rounded-full border-2 border-line border-t-ink" aria-hidden />{t("Looking for videos of this exact product…")}
+      </p>
+    )}
     {videos && videos.length > 0 && (
       <section aria-labelledby="videos-h" className="mt-3 rounded-2xl border-2 border-line bg-white p-3">
         <button type="button" onClick={() => setSec((c) => (c === "videos" ? null : "videos"))} aria-expanded={sec === "videos"} aria-controls="videos-body" className="flex w-full items-center gap-3 text-start">
