@@ -81,7 +81,7 @@ ${list}`;
     const typ = Number(a.typical);
     if (typ > 0 && (days / typ > 1.5 || typ / days > 1.5)) days = Math.sqrt(days * typ);
     days = Math.round(Math.min(3650, Math.max(1, days)));
-    out.set(p.slug, { days, every: a.sub && days <= 270 ? everyForDays(days) : 0, basis: `${String(a.basis ?? "").slice(0, 60)} (${qty} ${a.unit})`.slice(0, 80) });
+    out.set(p.slug, { days, every: a.sub && days <= 400 ? everyForDays(days) : 0, basis: `${String(a.basis ?? "").slice(0, 60)} (${qty} ${a.unit})`.slice(0, 80) });
   }
   return out;
 }

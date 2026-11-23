@@ -11,9 +11,10 @@ export const everyLabel = (e: number) => (e === 1 ? "Every month" : `Every ${e} 
 export const everyText = (e: number) => (e === 1 ? "every month" : `every ${e} months`);
 /** Discount tier: monthly, or longer (2+ months). */
 export const tierOf = (e: number): "monthly" | "quarterly" => (e === 1 ? "monthly" : "quarterly");
-/** The closest plan to a number of days a product lasts (never more often than monthly). */
+/** The plan for a product that lasts `days`: the closest one, leaning shorter so it arrives before
+ * the last one runs out (never more often than monthly). */
 export function everyForDays(days: number): Every {
-  const m = days / 30.4;
+  const m = (days / 30.4) * 0.9;
   let best: Every = 1;
   for (const e of EVERY) if (Math.abs(e - m) < Math.abs(best - m)) best = e;
   return best;
