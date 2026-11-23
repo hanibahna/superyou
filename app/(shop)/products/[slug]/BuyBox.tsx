@@ -76,9 +76,9 @@ export function BuyBox({
         {pct && <span dir="ltr" className="absolute start-4 top-4 z-10 rounded-md bg-sale px-2.5 py-1 text-sm font-bold text-white">-{pct}%</span>}
         <ProductImage product={{ ...v, image: shown }} width={1000} className="pdp-main aspect-square w-full rounded-2xl border border-line" />
         {gallery.length > 1 && (
-          <div className="mt-3 grid grid-cols-5 gap-2">
+          <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto md:grid md:grid-cols-5">
             {gallery.slice(0, 10).map((src) => (
-              <button key={src} onClick={() => setShown(src)} className={`overflow-hidden rounded-lg border ${shown === src ? "border-brand-500 ring-1 ring-brand-500" : "border-line"}`}>
+              <button key={src} onClick={() => setShown(src)} className={`w-16 shrink-0 overflow-hidden rounded-lg border md:w-auto ${shown === src ? "border-brand-500 ring-1 ring-brand-500" : "border-line"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={imgUrl(src, 160)} alt="" className="aspect-square w-full bg-white object-contain" />
               </button>

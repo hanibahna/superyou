@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const d = await getProductDetail(p.id);
   const desc = (d?.description || `${fullName(p.brand, p.name)} at SuperYou Lebanon.`).replace(/\s+/g, " ").slice(0, 155);
   return {
-    title: `${fullName(p.brand, p.name)}${p.size ? ` ${p.size}` : ""}`.slice(0, 70),
+    title: fitTitle(`${fullName(p.brand, p.name)}${p.size ? ` ${p.size}` : ""}`),
     description: `${desc}${desc.length >= 155 ? "…" : ""}`,
     ...(await canonical(`/products/${slug}/`)),
     openGraph: { type: "website", title: `${fullName(p.brand, p.name)}`, description: desc, images: d?.images?.slice(0, 1).map((x) => siteUrl() + (shopImg(x) ?? "")) ?? [] },
@@ -192,4 +192,11 @@ function Section({ title, children, open }: { title: string; children: React.Rea
       <div className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{children}</div>
     </details>
   );
+}
+
+/** Search titles: up to 70 characters, cut at a word, never mid-word ("50m"). */
+function fitTitle(t: string): string {
+  if (t.length <= 70) return t;
+  const cut = t.slice(0, 70);
+  return cut.slice(0, cut.lastIndexOf(" ")).replace(/[\s,–-]+$/, "");
 }
