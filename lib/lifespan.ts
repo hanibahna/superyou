@@ -10,9 +10,11 @@ import { everyForDays, type Every } from "@/lib/every";
 export type Life = { days: number; every: Every | 0; basis: string; by: "ai" | "admin"; v: 1 | 2 | 3 };
 const H = "life";
 
+/** The plan always follows the current rounding rule from the stored days (admin choices kept as set). */
+const norm = (l: Life): Life => (l.by === "ai" && l.every ? { ...l, every: everyForDays(l.days) } : l);
 export async function getLife(slug: string): Promise<Life | null> {
   const raw = await db.cmd<string | null>(["HGET", H, slug]).catch(() => null);
-  return raw ? (JSON.parse(raw) as Life) : null;
+  return raw ? norm(JSON.parse(raw) as Life) : null;
 }
 export async function getLives(slugs: string[]): Promise<Map<string, Life>> {
   const out = new Map<string, Life>();
@@ -20,7 +22,7 @@ export async function getLives(slugs: string[]): Promise<Map<string, Life>> {
   for (let i = 0; i < uniq.length; i += 500) {
     const part = uniq.slice(i, i + 500);
     const vals = await db.cmd<(string | null)[]>(["HMGET", H, ...part]).catch(() => [] as (string | null)[]);
-    (vals ?? []).forEach((v, n) => v && out.set(part[n], JSON.parse(v)));
+    (vals ?? []).forEach((v, n) => v && out.set(part[n], norm(JSON.parse(v))));
   }
   return out;
 }
@@ -29,7 +31,7 @@ export async function lifeStats() {
   const all = await db.cmd<Record<string, string> | string[]>(["HGETALL", H]).catch(() => [] as string[]);
   const vals: string[] = Array.isArray(all) ? all.filter((_, i) => i % 2 === 1) : Object.values(all ?? {});
   const by: Record<string, number> = {};
-  for (const v of vals) { const l = JSON.parse(v) as Life; if (l.by === "ai" && (l.v ?? 1) < 3) continue; const k = l.every ? `${l.every}` : "no"; by[k] = (by[k] ?? 0) + 1; }
+  for (const v of vals) { const l = norm(JSON.parse(v) as Life); if (l.by === "ai" && (l.v ?? 1) < 3) continue; const k = l.every ? `${l.every}` : "no"; by[k] = (by[k] ?? 0) + 1; }
   return { total: Object.values(by).reduce((a, n) => a + n, 0), by };
 }
 
