@@ -13,7 +13,7 @@ const TICKS = 72; // like the Face ID setup ring
 type P = { x: number; y: number; z: number };
 type Dir = "right" | "left" | "up" | "down";
 
-export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: string[]) => void; onFallback: () => void; onClose: () => void }) {
+export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: string[], meshImage?: string) => void; onFallback: () => void; onClose: () => void }) {
   const t = useT();
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -188,7 +188,9 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       if (doneAt && now - doneAt > 1100) {
         stopped = true;
         cancelAnimationFrame(raf);
-        onDone([shots.front, shots.a, shots.b, shots.up, shots.down].filter((s): s is string => !!s));
+        // Keep the finished 3D scan (face mesh + full green ring) as the result picture.
+        const mesh = canvas.current?.toDataURL("image/jpeg", 0.85);
+        onDone([shots.front, shots.a, shots.b, shots.up, shots.down].filter((s): s is string => !!s), mesh);
       }
     }
     return () => { stopped = true; clearTimeout(timeout); cancelAnimationFrame(raf); stream?.getTracks().forEach((x) => x.stop()); landmarker?.close(); };

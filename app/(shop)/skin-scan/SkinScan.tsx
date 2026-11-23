@@ -109,6 +109,9 @@ function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onC
 export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const tx = useT();
   const [preview, setPreview] = useState("");
+  const [mesh, setMesh] = useState("");
+  const [nudge, setNudge] = useState(0);
+  const consentRef = useRef<HTMLLabelElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<{ analysis: Analysis; steps: Step[] } | null>(null);
@@ -174,12 +177,15 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
 
       <div className="mt-8 grid gap-8 md:grid-cols-[320px_1fr]">
         <div>
-          <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-2xl bg-[#f5f5f5]">
-            {preview ? (
+          <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-2xl bg-[#111]">
+            {mesh ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={mesh} alt={tx("Your 3D SuperScan")} className="h-full w-full object-cover" />
+            ) : preview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="Your photo" className="h-full w-full object-cover" />
             ) : (
-              <p className="p-6 text-center text-sm text-muted">{tx("Your SuperScan will appear here. Face the light, no make-up, hair back.")}</p>
+              <ScanPlaceholder caption={tx("Your SuperScan will appear here")} />
             )}
           </div>
           {sides.length > 0 && (
@@ -189,21 +195,27 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <p className="self-center text-xs text-muted">{tx("3D scan: front and both sides")}</p>
             </div>
           )}
-          <label className="mt-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" /> {tx("I agree that the 3 photos from my SuperScan are sent once to an AI service to read my skin. They aren't stored.")}</label>
-          <button disabled={!consent || busy || !ready || !live} onClick={start} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
+          <label ref={consentRef} key={nudge} className={`mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 text-sm transition-colors ${consent ? "border-green-500 bg-green-50" : "consent-pulse border-brand-500 bg-brand-50"} ${nudge ? "consent-shake" : ""}`}>
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-7 w-7 shrink-0 cursor-pointer accent-[#d13f74]" />
+            <span>
+              <b className="block text-base">{consent ? tx("Thank you, you're ready ✓") : tx("Tick to agree, then start")}</b>
+              {tx("I agree that the 5 photos from my SuperScan are sent once to an AI service to read my skin. They aren't stored.")}
+            </span>
+          </label>
+          <button disabled={busy || !ready || !live} onClick={() => (consent ? start() : (setNudge((n) => n + 1), consentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })))} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
             {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : tx("Start SuperScan")}
           </button>
           {!live && <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs">{tx("SuperScan needs a camera. Open this page on your phone, or allow camera access in your browser.")}</p>}
-          {live && !consent && <p className="mt-2 text-center text-xs text-muted">{tx("Tick the box above to start.")}</p>}
+          {live && !consent && <p className="mt-2 text-center text-xs font-semibold text-brand-700">{tx("Tick the box above to start.")}</p>}
           {warn && (
             <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
               <p>{warn}</p>
               <div className="mt-2 flex gap-3"><button onClick={() => (setWarn(""), start())} className="font-semibold underline">{tx("Retake")}</button><button onClick={() => analyse(preview, true, sides)} className="text-muted underline">{tx("Use it anyway")}</button></div>
             </div>
           )}
-          {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); analyse(d, false, []); }} />}
-          {scan3d && <FaceScan3D onClose={() => setScan3d(false)} onFallback={() => { setScan3d(false); setCamera(true); }} onDone={([front, ...rest]) => { setScan3d(false); if (front) analyse(front, false, rest); }} />}
+          {camera && <SelfieCamera onClose={() => setCamera(false)} onShot={(d) => { setCamera(false); setMesh(""); analyse(d, false, []); }} />}
+          {scan3d && <FaceScan3D onClose={() => setScan3d(false)} onFallback={() => { setScan3d(false); setCamera(true); }} onDone={([front, ...rest], m) => { setScan3d(false); setMesh(m ?? ""); if (front) analyse(front, false, rest); }} />}
           {err && <p className="mt-3 text-sm text-sale">{err}</p>}
           <details className="mt-4 rounded-xl border border-line p-3 text-[12px] text-muted">
             <summary className="cursor-pointer font-semibold text-ink">{tx("Important: what this scan is and isn't")}</summary>
@@ -281,6 +293,50 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Before the scan: a Face ID-style animation (a 3D face mesh turning inside a ring that fills green, over and over). */
+function ScanPlaceholder({ caption }: { caption: string }) {
+  const ticks = 72;
+  // Simple 3D-looking face mesh: contour rings and meridians of a head, drawn as an ellipsoid.
+  const rings = [-0.75, -0.45, -0.15, 0.15, 0.45, 0.75];
+  const meridians = [-0.8, -0.5, -0.2, 0.1, 0.4, 0.7];
+  return (
+    <div className="relative h-full w-full">
+      <svg viewBox="0 0 300 400" className="absolute inset-0 h-full w-full" aria-hidden>
+        <defs>
+          <radialGradient id="sp-glow" cx="50%" cy="45%" r="55%"><stop offset="0%" stopColor="#3a1f2c" /><stop offset="100%" stopColor="#111" /></radialGradient>
+        </defs>
+        <rect width="300" height="400" fill="url(#sp-glow)" />
+        <g style={{ transformOrigin: "150px 180px", animation: "sy-head 6s ease-in-out infinite" }}>
+          <ellipse cx="150" cy="180" rx="62" ry="80" fill="none" stroke="#ffb3cf" strokeOpacity=".9" strokeWidth="1.4" />
+          {rings.map((r) => (
+            <ellipse key={r} cx="150" cy={180 + r * 80} rx={62 * Math.sqrt(1 - r * r)} ry={9 * Math.sqrt(1 - r * r)} fill="none" stroke="#ffb3cf" strokeOpacity=".45" strokeWidth="1" />
+          ))}
+          <g style={{ animation: "sy-meridians 6s ease-in-out infinite" }}>
+            {meridians.map((m) => (
+              <ellipse key={m} cx={150 + m * 62} cy="180" rx={Math.max(2, 62 * Math.sqrt(1 - m * m) * 0.35)} ry="80" fill="none" stroke="#ffb3cf" strokeOpacity=".4" strokeWidth="1" />
+            ))}
+          </g>
+          {/* eyes, nose, mouth */}
+          <g style={{ animation: "sy-features 6s ease-in-out infinite" }} fill="#fff">
+            <circle cx="128" cy="168" r="3" /><circle cx="172" cy="168" r="3" />
+            <path d="M150 176 l-6 18 h9" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+            <path d="M134 214 q16 10 32 0" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+          </g>
+        </g>
+        {Array.from({ length: ticks }, (_, i) => {
+          const a = (i / ticks) * Math.PI * 2 - Math.PI / 2;
+          const r1 = 112, r2 = 128;
+          return (
+            <line key={i} x1={150 + Math.cos(a) * r1} y1={180 + Math.sin(a) * r1} x2={150 + Math.cos(a) * r2} y2={180 + Math.sin(a) * r2}
+              stroke="#fff" strokeWidth="3" strokeLinecap="round" style={{ animation: "sy-tick 6s linear infinite", animationDelay: `${(i / ticks) * 4.2}s` }} />
+          );
+        })}
+      </svg>
+      <p className="absolute inset-x-0 bottom-6 px-6 text-center text-sm font-medium text-white/80">{caption}</p>
     </div>
   );
 }

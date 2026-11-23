@@ -423,3 +423,16 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 @keyframes sy-look-down { 0%,15% { transform: translate(0,0) } 55%,80% { transform: translate(0,6px) } 100% { transform: translate(0,0) } }
 @keyframes sy-nudge { 0%,100% { opacity: .65; scale: .92 } 50% { opacity: 1; scale: 1.08 } }
 @media (prefers-reduced-motion: reduce) { [style*="sy-"] { animation: none !important; } }
+
+/* SuperScan placeholder (Face ID-style) */
+@keyframes sy-tick { 0% { stroke: rgba(255,255,255,.3); } 6%, 70% { stroke: #4ade80; } 100% { stroke: rgba(255,255,255,.3); } }
+@keyframes sy-head { 0%,100% { transform: translate(0,0) } 20% { transform: translate(6px,2px) } 40% { transform: translate(0,6px) } 60% { transform: translate(-6px,2px) } 80% { transform: translate(0,-5px) } }
+@keyframes sy-features { 0%,100% { transform: translate(0,0) } 20% { transform: translate(10px,1px) } 40% { transform: translate(0,8px) } 60% { transform: translate(-10px,1px) } 80% { transform: translate(0,-7px) } }
+@keyframes sy-meridians { 0%,100% { transform: translate(0,0) } 20% { transform: translate(8px,0) } 60% { transform: translate(-8px,0) } }
+
+/* SuperScan consent: pulse until ticked, shake when Start is tapped without it */
+@keyframes consent-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(209,63,116,.45); } 50% { box-shadow: 0 0 0 8px rgba(209,63,116,0); } }
+.consent-pulse { animation: consent-pulse 1.6s ease-in-out infinite; }
+@keyframes consent-shake { 0%,100% { transform: translateX(0) } 20%,60% { transform: translateX(-8px) } 40%,80% { transform: translateX(8px) } }
+.consent-shake { animation: consent-shake .45s ease-in-out, consent-pulse 1.6s ease-in-out .45s infinite; }
+@media (prefers-reduced-motion: reduce) { .consent-pulse, .consent-shake { animation: none; } }
