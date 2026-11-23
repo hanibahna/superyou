@@ -22,7 +22,15 @@ struct Card: Codable, Identifiable, Hashable {
 struct Banner: Codable, Hashable { let eyebrow: String; let title: String; let text: String; let cta: String; let href: String; let image: String }
 struct Category: Codable, Hashable { let title: String; let href: String; let image: String; let bg: String }
 struct Row: Codable, Hashable { let title: String; let query: String; let items: [Card] }
-struct Home: Codable { let banners: [Banner]; let categories: [Category]; let rows: [Row] }
+struct Home: Codable { let banners: [Banner]; let categories: [Category]; let rows: [Row]; var sections: [HomeSection]? = nil }
+/// One block of the website's home page, in the same order as on shopsuperyou.com.
+struct HomeSection: Codable, Identifiable {
+    struct Item: Codable, Hashable { var eyebrow: String?; var title: String; var text: String?; var cta: String?; var href: String; var image: String?; var bg: String?; var badge: String? }
+    let type: String; let id: String
+    var eyebrow: String?; var title: String?; var text: String?; var badge: String?
+    var cta: String?; var href: String?; var cta2: String?; var href2: String?; var endsAt: String?
+    var items: [Item]?; var cards: [Card]?
+}
 struct ProductPage: Codable { let items: [Card]; let total: Int; let page: Int; let pages: Int }
 
 struct Variant: Codable, Identifiable, Hashable {

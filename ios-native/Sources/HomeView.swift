@@ -12,41 +12,15 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Promise()
-                    HStack(spacing: 10) {
-                        Button { router.tab = 2 } label: { Label("SuperScan", systemImage: "faceid").frame(maxWidth: .infinity).padding(.vertical, 12) }
-                            .buttonStyle(.borderedProminent).tint(Color.brand)
-                        NavigationLink { AdvisorView() } label: { Label("Ask AI", systemImage: "sparkles").frame(maxWidth: .infinity).padding(.vertical, 12) }
-                            .buttonStyle(.bordered)
-                        NavigationLink { ServicesView() } label: { Label("Video call", systemImage: "video").frame(maxWidth: .infinity).padding(.vertical, 12) }
-                            .buttonStyle(.bordered)
-                    }.font(.footnote.weight(.semibold)).padding(.horizontal)
-                    if let h = home {
+                    if let h = home, let secs = h.sections, !secs.isEmpty {
+                        // Same blocks, same order as the website's home page.
+                        ForEach(secs) { sec in HomeSectionView(sec: sec, open: open, see: { t, href in link = Link(title: t, query: query(fromHref: href)) }, actions: { quickActions }) }
+                    } else if let h = home {
+                        Promise()
+                        quickActions
                         if !h.banners.isEmpty { Banners(banners: h.banners) { b in open(b.href, b.title) } }
-                        if !h.categories.isEmpty {
-                            Text("Shop by category").font(.display(20)).padding(.horizontal)
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 14) {
-                                    ForEach(h.categories, id: \.self) { c in
-                                        Button { open(c.href, c.title) } label: {
-                                            VStack(spacing: 6) {
-                                                RemoteImage(url: c.image).padding(10).frame(width: 84, height: 84).background(Color(hex: c.bg), in: Circle())
-                                                Text(c.title).font(.caption.weight(.semibold)).foregroundStyle(Color.ink)
-                                            }
-                                        }
-                                    }
-                                }.padding(.horizontal)
-                            }
-                        }
                         ForEach(h.rows, id: \.title) { r in
-                            HStack {
-                                Text(r.title).font(.display(20))
-                                Spacer()
-                                Button("See all") { link = Link(title: r.title, query: r.query) }.font(.subheadline.weight(.semibold))
-                            }.padding(.horizontal)
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(alignment: .top, spacing: 12) { ForEach(r.items) { c in NavigationLink(value: c) { CardView(card: c).frame(width: 160) }.buttonStyle(.plain) } }.padding(.horizontal)
-                            }
+                            ProductRow(title: r.title, eyebrow: nil, cards: r.items) { link = Link(title: r.title, query: r.query) }
                         }
                     } else if let e = error {
                         ContentUnavailable(text: e) { Task { await load() } }
@@ -72,11 +46,246 @@ struct HomeView: View {
             link = nil
             let slug = href.replacingOccurrences(of: "/products/", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             openProduct = ProductLink(slug: slug)
-        } else if href.hasPrefix("/routine") || href.contains("wa.me") {
+        } else if href.hasPrefix("/skin-scan") || href.hasPrefix("/superscan") {
+            router.tab = 2
+        } else if href.hasPrefix("/routine") || href.hasPrefix("/services") || href.hasPrefix("/clinic") || href.hasPrefix("/club") || href.hasPrefix("http") {
             if let u = URL(string: href.hasPrefix("http") ? href : "https://www.shopsuperyou.com\(href)") { UIApplication.shared.open(u) }
         } else { link = Link(title: title, query: query(fromHref: href)) }
     }
     @State private var openProduct: ProductLink?
+
+    /// SuperScan, AI and video-call shortcuts (the website's quick links under the banner).
+    var quickActions: some View {
+        HStack(spacing: 10) {
+            Button { router.tab = 2 } label: { Label("SuperScan", systemImage: "faceid").frame(maxWidth: .infinity).padding(.vertical, 12) }
+                .buttonStyle(.borderedProminent).tint(Color.brand)
+            NavigationLink { AdvisorView() } label: { Label("Ask AI", systemImage: "sparkles").frame(maxWidth: .infinity).padding(.vertical, 12) }
+                .buttonStyle(.bordered)
+            NavigationLink { ServicesView() } label: { Label("Video call", systemImage: "video").frame(maxWidth: .infinity).padding(.vertical, 12) }
+                .buttonStyle(.bordered)
+        }.font(.footnote.weight(.semibold)).padding(.horizontal)
+    }
+}
+
+/// A product carousel with a heading and "See all".
+struct ProductRow: View {
+    let title: String; let eyebrow: String?; let cards: [Card]; let seeAll: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .lastTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let e = eyebrow, !e.isEmpty { Text(e.uppercased()).font(.caption2.weight(.bold)).kerning(1.5).foregroundStyle(Color.rose) }
+                    Text(title).font(.display(20))
+                }
+                Spacer()
+                Button("See all", action: seeAll).font(.subheadline.weight(.semibold))
+            }.padding(.horizontal)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) { ForEach(cards) { c in NavigationLink(value: c) { CardView(card: c).frame(width: 160) }.buttonStyle(.plain) } }.padding(.horizontal)
+            }
+        }
+    }
+}
+
+/// Draws one home-page block from the website.
+struct HomeSectionView<Actions: View>: View {
+    let sec: HomeSection
+    let open: (String, String) -> Void
+    let see: (String, String) -> Void
+    @ViewBuilder let actions: () -> Actions
+
+    var body: some View {
+        switch sec.type {
+        case "campaign": Campaign(sec: sec, open: open)
+        case "banners":
+            let items = sec.items ?? []
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    heading
+                    Banners(banners: items.map { Banner(eyebrow: $0.eyebrow ?? "", title: $0.title, text: $0.text ?? "", cta: $0.cta ?? "", href: $0.href, image: $0.image ?? "") }) { b in open(b.href, b.title) }
+                }
+            }
+        case "promise":
+            VStack(spacing: 14) { Promise(); actions() }
+        case "scan":
+            Callout(icon: "faceid", title: sec.title ?? "", text: sec.text ?? "", cta: "Start SuperScan") { open("/skin-scan/", "SuperScan") }
+        case "pharmacist":
+            Callout(icon: "message", title: sec.title ?? "", text: sec.text ?? "", cta: "Chat on WhatsApp") { open("https://wa.me/96170777608", "WhatsApp") }
+        case "circles":
+            VStack(alignment: .leading, spacing: 10) {
+                heading
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 14) {
+                        ForEach(sec.items ?? [], id: \.self) { c in
+                            Button { open(c.href, c.title) } label: {
+                                VStack(spacing: 6) {
+                                    RemoteImage(url: c.image ?? "").padding(10).frame(width: 84, height: 84).background(Color(hex: (c.bg ?? "").isEmpty ? "#f5f5f5" : c.bg!), in: Circle())
+                                    Text(c.title).font(.caption.weight(.semibold)).foregroundStyle(Color.ink).lineLimit(2).multilineTextAlignment(.center).frame(width: 84)
+                                }
+                            }
+                        }
+                    }.padding(.horizontal)
+                }
+            }
+        case "tiles", "offers":
+            VStack(alignment: .leading, spacing: 10) {
+                heading
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(sec.items ?? [], id: \.self) { t in
+                            Button { open(t.href, t.title) } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    if let img = t.image, !img.isEmpty { RemoteImage(url: img).frame(height: 110).frame(maxWidth: .infinity) }
+                                    if let b = t.badge, !b.isEmpty { Text(b).font(.caption2.bold()).padding(.horizontal, 8).padding(.vertical, 3).background(Color.rose, in: Capsule()).foregroundStyle(.white) }
+                                    Text(t.title).font(.display(16)).foregroundStyle(Color.ink).lineLimit(2)
+                                    if let x = t.text, !x.isEmpty { Text(x).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                                    if let c = t.cta, !c.isEmpty { Text(c).font(.caption.weight(.semibold)).foregroundStyle(Color.ink).underline() }
+                                }.padding(12).frame(width: 200, alignment: .leading)
+                                .background(Color(hex: (t.bg ?? "").isEmpty ? "#f6f1f3" : t.bg!), in: RoundedRectangle(cornerRadius: 22))
+                            }.buttonStyle(.plain)
+                        }
+                    }.padding(.horizontal)
+                }
+            }
+        case "chips":
+            VStack(alignment: .leading, spacing: 10) {
+                heading
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(sec.items ?? [], id: \.self) { c in
+                            Button { open(c.href, c.title) } label: {
+                                Text(c.title).font(.subheadline.weight(.semibold)).padding(.horizontal, 14).padding(.vertical, 9)
+                                    .background(Color.paper, in: Capsule()).overlay(Capsule().stroke(Color.ink.opacity(0.12))).foregroundStyle(Color.ink)
+                            }
+                        }
+                    }.padding(.horizontal)
+                }
+            }
+        case "products":
+            if let cards = sec.cards, !cards.isEmpty {
+                ProductRow(title: sec.title ?? "", eyebrow: sec.eyebrow, cards: cards) { see(sec.title ?? "Shop", sec.href ?? "/shop/") }
+            }
+        case "countdown":
+            if let end = sec.endsAt.flatMap(ISO8601DateFormatter.loose) {
+                Button { open(sec.href ?? "/shop/?sale=1", sec.title ?? "Offers") } label: {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let e = sec.eyebrow, !e.isEmpty { Text(e.uppercased()).font(.caption2.weight(.bold)).kerning(1.5).foregroundStyle(Color.rose) }
+                        Text(sec.title ?? "").font(.display(18)).foregroundStyle(Color.ink)
+                        CountdownBoxes(end: end)
+                    }.padding().frame(maxWidth: .infinity, alignment: .leading).background(Color.paper, in: RoundedRectangle(cornerRadius: 22)).padding(.horizontal)
+                }.buttonStyle(.plain)
+            }
+        case "text":
+            Callout(icon: nil, title: sec.title ?? "", text: sec.text ?? "", cta: sec.cta ?? "") { if let h = sec.href, !h.isEmpty { open(h, sec.title ?? "") } }
+        case "newsletter":
+            Newsletter(title: sec.title ?? "Join our newsletter", text: sec.text ?? "")
+        default: EmptyView()
+        }
+    }
+
+    @ViewBuilder var heading: some View {
+        if (sec.title ?? "").isEmpty == false || (sec.eyebrow ?? "").isEmpty == false {
+            VStack(alignment: .leading, spacing: 2) {
+                if let e = sec.eyebrow, !e.isEmpty { Text(e.uppercased()).font(.caption2.weight(.bold)).kerning(1.5).foregroundStyle(Color.rose) }
+                if let t = sec.title, !t.isEmpty { Text(t).font(.display(20)) }
+            }.padding(.horizontal)
+        }
+    }
+}
+
+/// The website's big campaign banner (e.g. Black Friday): badge, title, text, countdown, two buttons, product strip.
+struct Campaign: View {
+    let sec: HomeSection
+    let open: (String, String) -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let b = sec.badge ?? sec.eyebrow, !b.isEmpty {
+                Text(b).font(.caption.weight(.bold)).padding(.horizontal, 12).padding(.vertical, 6).background(Color.ink, in: Capsule()).foregroundStyle(.white)
+            }
+            Text(sec.title ?? "").font(.display(34)).foregroundStyle(Color.ink)
+            if let t = sec.text, !t.isEmpty { Text(t).font(.body).foregroundStyle(Color.ink.opacity(0.8)) }
+            if let end = sec.endsAt.flatMap(ISO8601DateFormatter.loose), end > Date() { CountdownBoxes(end: end) }
+            HStack(spacing: 10) {
+                if let c = sec.cta, !c.isEmpty { Button(c) { open(sec.href ?? "/shop/", c) }.buttonStyle(.borderedProminent).tint(Color.ink) }
+                if let c = sec.cta2, !c.isEmpty { Button(c) { open(sec.href2 ?? "/shop/", c) }.buttonStyle(.bordered).tint(Color.ink) }
+            }.font(.subheadline.weight(.semibold))
+            if let cards = sec.cards, !cards.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 10) { ForEach(cards) { c in NavigationLink(value: c) { CardView(card: c).frame(width: 140) }.buttonStyle(.plain) } }
+                }
+            }
+        }
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(hex: "#ffc2d4"), in: RoundedRectangle(cornerRadius: 26))
+        .padding(.horizontal)
+    }
+}
+
+/// Days, hours, minutes, seconds, ticking every second.
+struct CountdownBoxes: View {
+    let end: Date
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let left = max(0, Int(end.timeIntervalSince(ctx.date)))
+            HStack(spacing: 8) {
+                box(left / 86400, "DAYS"); box(left % 86400 / 3600, "HOURS"); box(left % 3600 / 60, "MINS"); box(left % 60, "SECS")
+            }
+        }
+    }
+    func box(_ n: Int, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(String(format: "%02d", n)).font(.display(24)).monospacedDigit().foregroundStyle(Color.ink)
+                .frame(width: 58, height: 48).background(Color.white.opacity(0.75), in: RoundedRectangle(cornerRadius: 12))
+            Text(label).font(.caption2.weight(.semibold)).kerning(1).foregroundStyle(Color.ink.opacity(0.7))
+        }
+    }
+}
+
+/// Soft card with an icon, title, text and one button.
+struct Callout: View {
+    let icon: String?; let title: String; let text: String; let cta: String; let action: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                if let i = icon { Image(systemName: i).font(.title3).foregroundStyle(Color.rose) }
+                Text(title).font(.display(18)).foregroundStyle(Color.ink)
+            }
+            if !text.isEmpty { Text(text).font(.subheadline).foregroundStyle(.secondary) }
+            if !cta.isEmpty { Button(cta, action: action).buttonStyle(.borderedProminent).tint(Color.brand).font(.subheadline.weight(.semibold)) }
+        }.padding().frame(maxWidth: .infinity, alignment: .leading).background(Color.paper, in: RoundedRectangle(cornerRadius: 22)).padding(.horizontal)
+    }
+}
+
+/// Email sign-up, posting to the same list as the website.
+struct Newsletter: View {
+    let title: String; let text: String
+    @State private var email = ""
+    @State private var done = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.display(18))
+            if !text.isEmpty { Text(text).font(.subheadline).foregroundStyle(.secondary) }
+            if done { Label("You're on the list.", systemImage: "checkmark.circle.fill").foregroundStyle(Color.greenShip) }
+            else {
+                HStack {
+                    TextField("Email", text: $email).textInputAutocapitalization(.never).keyboardType(.emailAddress).textFieldStyle(.roundedBorder)
+                    Button("Join") { Task { if (try? await API.send("/api/newsletter/", body: ["email": email]))?.0 == 200 { done = true } } }
+                        .buttonStyle(.borderedProminent).tint(Color.brand).disabled(!email.contains("@"))
+                }
+            }
+        }.padding().frame(maxWidth: .infinity, alignment: .leading).background(Color.paper, in: RoundedRectangle(cornerRadius: 22)).padding(.horizontal)
+    }
+}
+
+extension ISO8601DateFormatter {
+    /// Reads "2026-11-30T23:59", with or without seconds or a time zone.
+    static func loose(_ s: String) -> Date? {
+        let f = ISO8601DateFormatter()
+        for opts: ISO8601DateFormatter.Options in [[.withInternetDateTime, .withFractionalSeconds], [.withInternetDateTime]] { f.formatOptions = opts; if let d = f.date(from: s) { return d } }
+        let df = DateFormatter(); df.locale = Locale(identifier: "en_US_POSIX"); df.timeZone = TimeZone(identifier: "Asia/Beirut")
+        for fmt in ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd"] { df.dateFormat = fmt; if let d = df.date(from: s) { return d } }
+        return nil
+    }
 }
 
 struct ProductLink: Identifiable, Hashable { var id: String { slug }; let slug: String }
