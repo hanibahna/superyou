@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (denied) return denied;
   const calls = Math.min(40, Math.max(1, Number(req.nextUrl.searchParams.get("calls") ?? 10)));
   const { buildLifespans } = await import("@/lib/lifespan");
-  return NextResponse.json(await buildLifespans(calls, 8));
+  return NextResponse.json(await buildLifespans(calls, 10));
 }
 
 export async function PUT(req: NextRequest) {
@@ -20,6 +20,6 @@ export async function PUT(req: NextRequest) {
   const p = z.object({ slug: z.string().max(200), days: z.number().int().min(1).max(3650), sub: z.boolean(), basis: z.string().max(80).optional() }).safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: "Invalid" }, { status: 400 });
   const { setLife } = await import("@/lib/lifespan");
-  await setLife(p.data.slug, { days: p.data.days, every: p.data.sub ? everyForDays(p.data.days) : 0, basis: p.data.basis ?? "Set by admin", by: "admin", v: 1 });
+  await setLife(p.data.slug, { days: p.data.days, every: p.data.sub ? everyForDays(p.data.days) : 0, basis: p.data.basis ?? "Set by admin", by: "admin", v: 2 });
   return NextResponse.json({ ok: true, every: p.data.sub ? everyForDays(p.data.days) : 0 });
 }
