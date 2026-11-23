@@ -112,7 +112,7 @@ struct OwnerView: View {
     private func tile(_ t: String, _ v: String, _ sub: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(t).font(.caption).foregroundStyle(.secondary)
-            Text(v).font(.title2.bold())
+            Text(v).font(.display(22))
             Text(sub).font(.caption2).foregroundStyle(.secondary)
         }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Color.white, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "#eee5ea")))
     }

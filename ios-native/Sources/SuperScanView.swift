@@ -32,7 +32,7 @@ struct SuperScanView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("SuperScan").font(.largeTitle.bold())
+                        Text("SuperScan").font(.display(34))
                         Text("3D AI skin scan").font(.headline).foregroundStyle(Color.rose)
                         Text("Like setting up Face ID: look at the screen, slowly move your head in a circle, and the AI reads your skin from five angles. You get your skin type, a zone-by-zone reading and a routine from products in stock. Photos are analysed once and never stored.")
                             .font(.subheadline).foregroundStyle(.secondary).padding(.top, 4)
@@ -56,7 +56,7 @@ struct SuperScanView: View {
                     } label: {
                         Label(result == nil ? "Start SuperScan" : "Scan again", systemImage: "faceid").font(.headline).frame(maxWidth: .infinity).padding()
                     }
-                    .buttonStyle(.borderedProminent).tint(Color.rose).disabled(busy)
+                    .buttonStyle(.borderedProminent).tint(Color.brand).disabled(busy)
                     if !faceID { Text("This iPhone has no Face ID camera, so SuperScan takes one front-camera photo instead.").font(.caption).foregroundStyle(.secondary) }
                     if let e = error { Text(e).font(.footnote).foregroundStyle(Color.rose) }
 
@@ -139,7 +139,7 @@ struct ResultsView: View {
         let a = result.analysis
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("\(a.skinType ?? "Your") skin\(a.sensitive ? ", easily irritated" : "")").font(.title2.bold())
+                Text("\(a.skinType ?? "Your") skin\(a.sensitive ? ", easily irritated" : "")").font(.display(22))
                 if !a.concerns.isEmpty { Text("Focus: " + a.concerns.joined(separator: " · ")).font(.subheadline).foregroundStyle(Color.rose) }
                 if let c = a.confidence { Text("Confidence: \(c)").font(.caption).foregroundStyle(.secondary) }
                 ForEach(a.observations, id: \.self) { Text("• \($0)").font(.footnote) }
@@ -155,7 +155,7 @@ struct ResultsView: View {
                 if !a.advice.isEmpty { Text(a.advice).font(.footnote).italic() }
             }.padding().background(Color.white, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(Color(hex: "#eee5ea")))
 
-            Text("Your routine").font(.title3.bold())
+            Text("Your routine").font(.display(20))
             ForEach(Array(result.steps.enumerated()), id: \.element.id) { i, s in
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(i + 1). \(s.name)  ·  \(s.time == "both" ? "AM + PM" : s.time.uppercased())").font(.headline)
@@ -183,7 +183,7 @@ struct ResultsView: View {
             if let img = shareImage {
                 ShareLink(item: img, preview: SharePreview("My SuperScan", image: img)) {
                     Label("Share to Instagram / Facebook", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity).padding(12)
-                }.buttonStyle(.bordered).tint(Color.rose)
+                }.buttonStyle(.bordered).tint(Color.brand)
             }
         }
         .navigationDestination(for: Card.self) { ProductView(slug: $0.slug) }

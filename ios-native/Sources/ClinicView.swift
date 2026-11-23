@@ -129,7 +129,7 @@ struct AfterRoutineSection: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 Text("STEP 2 OF YOUR SUPERROUTINE").font(.caption2.bold()).foregroundStyle(Color.rose)
-                Text("After your routine: clinic treatments").font(.title3.bold())
+                Text("After your routine: clinic treatments").font(.display(20))
                 Text("Use your home routine for 4–6 weeks first: it prepares your skin. Then these treatments go further than creams can. Our partner dermatologist confirms what suits you.").font(.footnote).foregroundStyle(.secondary)
                 PartnerTag(partner: partner, mock: mock)
                 ForEach(Array(items.enumerated()), id: \.element.id) { i, t in

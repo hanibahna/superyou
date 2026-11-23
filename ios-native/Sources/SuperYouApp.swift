@@ -19,12 +19,25 @@ enum OrderUpdates {
 struct SuperYouApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var bag = Bag()
+    @State private var themeVersion = 0
+
+    init() {
+        SiteTheme.registerFonts()
+        SiteTheme.styleNavigationBars()
+    }
     @StateObject private var wishlist = Wishlist()
     @StateObject private var router = Router.shared
 
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(bag).environmentObject(wishlist).environmentObject(router).tint(.rose)
+            RootView().environmentObject(bag).environmentObject(wishlist).environmentObject(router)
+                .tint(.brand)
+                .buttonBorderShape(SiteTheme.pill ? .capsule : .roundedRectangle)
+                .id(themeVersion)
+                .task {
+                    // Match the website's current look; redraw once if it changed since last launch.
+                    if SiteTheme.apply(await API.sharedConfig()?.theme) { SiteTheme.styleNavigationBars(); themeVersion += 1 }
+                }
         }
     }
 }

@@ -15,7 +15,7 @@ struct HomeView: View {
                     Promise()
                     HStack(spacing: 10) {
                         Button { router.tab = 2 } label: { Label("SuperScan", systemImage: "faceid").frame(maxWidth: .infinity).padding(.vertical, 12) }
-                            .buttonStyle(.borderedProminent).tint(Color.rose)
+                            .buttonStyle(.borderedProminent).tint(Color.brand)
                         NavigationLink { AdvisorView() } label: { Label("Ask AI", systemImage: "sparkles").frame(maxWidth: .infinity).padding(.vertical, 12) }
                             .buttonStyle(.bordered)
                         NavigationLink { ServicesView() } label: { Label("Video call", systemImage: "video").frame(maxWidth: .infinity).padding(.vertical, 12) }
@@ -24,7 +24,7 @@ struct HomeView: View {
                     if let h = home {
                         if !h.banners.isEmpty { Banners(banners: h.banners) { b in open(b.href, b.title) } }
                         if !h.categories.isEmpty {
-                            Text("Shop by category").font(.title3.bold()).padding(.horizontal)
+                            Text("Shop by category").font(.display(20)).padding(.horizontal)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 14) {
                                     ForEach(h.categories, id: \.self) { c in
@@ -40,7 +40,7 @@ struct HomeView: View {
                         }
                         ForEach(h.rows, id: \.title) { r in
                             HStack {
-                                Text(r.title).font(.title3.bold())
+                                Text(r.title).font(.display(20))
                                 Spacer()
                                 Button("See all") { link = Link(title: r.title, query: r.query) }.font(.subheadline.weight(.semibold))
                             }.padding(.horizontal)
@@ -102,7 +102,7 @@ struct Banners: View {
                         RemoteImage(url: b.image, fit: .fill).frame(maxWidth: .infinity).frame(height: 230).clipped()
                         VStack(alignment: .leading, spacing: 4) {
                             Text(b.eyebrow.uppercased()).font(.caption2.weight(.bold)).kerning(1.5).foregroundStyle(Color.rose)
-                            Text(b.title).font(.title3.bold()).foregroundStyle(Color.ink)
+                            Text(b.title).font(.display(20)).foregroundStyle(Color.ink)
                             Text(b.cta).font(.caption.weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 6).background(Color.ink, in: Capsule()).foregroundStyle(.white)
                         }.padding(14).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding(10)
                     }.clipShape(RoundedRectangle(cornerRadius: 18)).padding(.horizontal)
@@ -119,7 +119,7 @@ struct ContentUnavailable: View {
     let text: String; let retry: () -> Void
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "wifi.slash").font(.largeTitle).foregroundStyle(.secondary)
+            Image(systemName: "wifi.slash").font(.display(34)).foregroundStyle(.secondary)
             Text(text).multilineTextAlignment(.center).foregroundStyle(.secondary)
             Button("Try again", action: retry).buttonStyle(.borderedProminent)
         }.frame(maxWidth: .infinity).padding(40)

@@ -39,7 +39,7 @@ struct ProductView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(p.brand.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                         HStack(alignment: .top) {
-                            Text(p.name).font(.title3.bold())
+                            Text(p.name).font(.display(20))
                             Spacer()
                             Button { wishlist.toggle(card(p, v)) } label: {
                                 Image(systemName: wishlist.has(p.slug) ? "heart.fill" : "heart").font(.title3).foregroundStyle(Color.rose)
@@ -47,7 +47,7 @@ struct ProductView: View {
                         }
                         if let r = p.rating, p.reviewCount >= 3 { Label(String(format: "%.1f · %d reviews", r, p.reviewCount), systemImage: "star.fill").font(.footnote).foregroundStyle(Color.rose) }
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(money(v.price)).font(.title2.bold()).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
+                            Text(money(v.price)).font(.display(22)).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
                             if let c = v.compareAt, c > v.price { Text(money(c)).strikethrough().foregroundStyle(.secondary) }
                         }
                         ShipBadge(origin: v.origin, shipFrom: v.shipFrom, daysMin: v.daysMin, daysMax: v.daysMax)
@@ -241,7 +241,7 @@ struct HowToBox: View {
                                     VStack(alignment: .leading, spacing: 3) {
                                         ZStack(alignment: .topLeading) {
                                             RemoteImage(url: "https://i.ytimg.com/vi/\(v.id)/mqdefault.jpg").frame(width: 180, height: 101).clipShape(RoundedRectangle(cornerRadius: 10))
-                                            Image(systemName: "play.circle.fill").font(.largeTitle).foregroundStyle(.white).frame(width: 180, height: 101)
+                                            Image(systemName: "play.circle.fill").font(.display(34)).foregroundStyle(.white).frame(width: 180, height: 101)
                                             if !v.langName.isEmpty { Text(v.langName).font(.caption2.bold()).padding(.horizontal, 6).padding(.vertical, 2).background(.white, in: Capsule()).padding(6) }
                                         }
                                         Text(v.title).font(.caption2).lineLimit(2).frame(width: 180, alignment: .leading)

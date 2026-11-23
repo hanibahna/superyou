@@ -56,8 +56,10 @@ struct Config: Codable {
     struct Subscribe: Codable { let monthly: Double; let quarterly: Double; let note: String; var unlockMonthly: Int? = nil; var unlockQuarterly: Int? = nil }
     struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe? }
     struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
+    struct Theme: Codable { var primary: String?; var ink: String?; var sale: String?; var background: String?; var headingFont: String?; var buttons: String?; var cards: String?; var preset: String? }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double
     let features: Features?; let services: [Service]?
+    var theme: Theme? = nil
 }
 
 struct Quote: Codable {

@@ -24,7 +24,7 @@ struct WishlistView: View {
         Group {
             if wishlist.items.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "heart").font(.largeTitle).foregroundStyle(Color.rose)
+                    Image(systemName: "heart").font(.display(34)).foregroundStyle(Color.rose)
                     Text("Tap the heart on any product to save it here.").foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(40)
             } else {
