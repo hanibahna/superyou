@@ -9,7 +9,8 @@ import { getSettings } from "@/lib/site-store";
 // so they can describe SuperYou correctly and link to the right pages.
 export async function llmsText(full: boolean) {
   const base = siteUrl();
-  const [s, tax, cards] = await Promise.all([getSettings(), getTaxonomy(), liveCards()]);
+  const [s, tax, cards, methods] = await Promise.all([getSettings(), getTaxonomy(), liveCards(), (await import("@/lib/payments")).checkoutMethods()]);
+  const pay = methods.map((m) => (m.id === "cod" ? "cash on delivery" : m.id === "card" ? "by card" : "with Whish")).join(", ").replace(/, ([^,]*)$/, " or $1") || "cash on delivery";
   const live = cards.filter((c) => c.inStock);
   const money = (n: number) => `$${n.toFixed(2)}`;
   const brandCount = new Map<string, number>();
@@ -24,7 +25,7 @@ export async function llmsText(full: boolean) {
   out.push(`> ${s.store.name} (${base.replace(/^https?:\/\//, "")}) is an online beauty, parapharmacy and supplements shop for Lebanon: about ${live.length.toLocaleString("en")} original products in stock from ${brands.length} brands, pharmacist advice on WhatsApp, cash on delivery and delivery across Lebanon in 1–3 working days.`, "");
   out.push("Key facts:");
   out.push(`- Every product is original, sourced from official distributors.`);
-  out.push(`- Prices in US dollars. Delivery ${money(d.fee)}${d.freeThreshold ? `, free over ${money(d.freeThreshold)}` : ""}. Pay cash on delivery, by card or by Whish.`);
+  out.push(`- Prices in US dollars. Delivery ${money(d.fee)}${d.freeThreshold ? `, free over ${money(d.freeThreshold)}` : ""}. Pay ${pay}.`);
   out.push(`- Unopened products can be returned within 7 days of delivery; wrong or damaged items are replaced or refunded.`);
   out.push(`- Free advice from a pharmacist on WhatsApp (${s.store.phone}) and free video consultations.`);
   out.push(`- Site in English, French (${base}/fr/) and Arabic (${base}/ar/).`, "");
