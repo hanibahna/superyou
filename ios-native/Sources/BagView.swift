@@ -163,6 +163,7 @@ struct CheckoutView: View {
             let r = try await API.post("/api/app/v1/checkout", body: body, as: CheckoutReply.self)
             if let id = r.orderId, let u = r.confirmUrl {
                 done = (id, u); lastOrder = id; note = r.message; bag.clear()
+                OrderUpdates.ask() // first order: now people see why notifications help
                 // Card or Whish: open the secure payment page (Whish's page, or our card page on the site).
                 if let next = r.next?.redirect, next != u, method != "cod" {
                     let url = next.hasPrefix("http") ? URL(string: next) : URL(string: API.base.absoluteString + next)

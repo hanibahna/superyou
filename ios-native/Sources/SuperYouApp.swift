@@ -6,6 +6,15 @@ import FirebaseCore
 import FirebaseMessaging
 #endif
 
+/// Order-update notifications are asked for right after the first order, when the reason is obvious.
+enum OrderUpdates {
+    static func ask() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+            if granted { DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() } }
+        }
+    }
+}
+
 @main
 struct SuperYouApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
@@ -36,8 +45,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
-            if granted { DispatchQueue.main.async { application.registerForRemoteNotifications() } }
+        // Don't ask at first launch: ask after the first order (OrderUpdates.ask). Re-register if already allowed.
+        UNUserNotificationCenter.current().getNotificationSettings { st in
+            if st.authorizationStatus == .authorized { DispatchQueue.main.async { application.registerForRemoteNotifications() } }
         }
         return true
     }

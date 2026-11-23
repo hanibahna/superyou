@@ -7,6 +7,8 @@ struct AccountView: View {
     @State private var error: String?
     @State private var busy = false
     @State private var confirmDelete = false
+    @AppStorage("sy.ownerMode") private var ownerMode = false
+    @State private var ownerTaps = 0
     @AppStorage("sy.myref") private var referral: String?
 
     var body: some View {
@@ -50,13 +52,21 @@ struct AccountView: View {
                         ShareLink(item: URL(string: "https://www.shopsuperyou.com/?ref=\(r)")!, message: Text("Shop original beauty and pharmacy at SuperYou with my link:")) { Label("Invite friends (your code \(r))", systemImage: "gift") }
                     }
                 }
-                Section("Business") {
-                    NavigationLink { OwnerView() } label: { Label("Owner sign-in", systemImage: "lock.shield") }
+                if ownerMode {
+                    Section("Business") {
+                        NavigationLink { OwnerView() } label: { Label("Owner sign-in", systemImage: "lock.shield") }
+                    }
                 }
-                Section("Help") {
+                Section {
                     Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("Ask a pharmacist on WhatsApp", systemImage: "message") }
                     Link(destination: URL(string: "https://www.shopsuperyou.com/club/")!) { Label("Join SuperYou Club", systemImage: "star") }
                     Link(destination: URL(string: "https://www.shopsuperyou.com/pages/privacy-policy/")!) { Label("Privacy policy", systemImage: "lock") }
+                } header: { Text("Help") } footer: {
+                    // Owner sign-in stays out of customers' way: tap the version line 7 times to show it.
+                    Text("SuperYou \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture { ownerTaps += 1; if ownerTaps >= 7 { ownerMode = true } }
                 }
             }
             .navigationTitle("Account")
