@@ -8,17 +8,17 @@ import { getExtras } from "@/lib/extras";
 // search uses 100 of the 10,000 free daily quota units. Admin pins or hides per product.
 export type YtVideo = { id: string; title: string; channel: string };
 
-export async function videosForProduct(p: { slug: string; brand: string; name: string }): Promise<YtVideo[]> {
+export async function videosForProduct(p: { slug: string; brand: string; name: string }, trace?: string[]): Promise<YtVideo[]> {
   const cfg = (await getExtras()).youtube;
-  if (!cfg.enabled) return [];
+  if (!cfg.enabled) { trace?.push("youtube switched off in admin"); return []; }
   const pin = cfg.pins[p.slug];
   if (pin === "none") return [];
   if (pin) return [{ id: pin, title: `${p.brand} ${p.name}`, channel: "" }];
   const key = cfg.key || process.env.YOUTUBE_API_KEY;
-  if (!key) return [];
+  if (!key) { trace?.push("no key"); return []; }
   const ck = `yt:v4:${p.slug}`;
   const hit = await db.cmd<string | null>(["GET", ck]).catch(() => null);
-  if (hit) return JSON.parse(hit) as YtVideo[];
+  if (hit && !trace) return JSON.parse(hit) as YtVideo[];
   const out: YtVideo[] = [];
   const cands: (YtVideo & { desc: string })[] = [];
   const words = (x: string) => x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
@@ -44,18 +44,22 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&videoEmbeddable=true&safeSearch=strict&q=${encodeURIComponent(q)}&key=${encodeURIComponent(key)}`;
     const r = await fetch(url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
     if (!r?.ok) {
-      if (r) console.error("[youtube]", r.status, (await r.text().catch(() => "")).slice(0, 300));
+      const e = r ? `${r.status} ${(await r.text().catch(() => "")).slice(0, 300)}` : "no response";
+      console.error("[youtube]", e); trace?.push(`search failed: ${e}`);
       return out; // don't cache failures (quota, key problems): try again later
     }
     const j = (await r.json()) as { items?: { id: { videoId: string }; snippet: { title: string; channelTitle: string; description?: string } }[] };
     for (const i of j.items ?? []) {
       const v = { id: i.id.videoId, title: decode(i.snippet.title), channel: decode(i.snippet.channelTitle), desc: decode(i.snippet.description ?? "") };
-      if (fits(v.title, v.channel) && !cands.some((x) => x.id === v.id)) cands.push(v);
+      const f = fits(v.title, v.channel);
+      trace?.push(`${f ? "PASS" : "drop"}: ${v.title} — ${v.channel}`);
+      if (f && !cands.some((x) => x.id === v.id)) cands.push(v);
     }
     if (cands.length >= 3) break;
   }
   // Second check: Claude reads each candidate and keeps it only if it is about exactly this product.
   const ok = await confirmSameProduct(p, cands.slice(0, 5));
+  trace?.push(`words: ${nameWords.join(",")} | claude kept: ${[...ok].join(",") || "none"}`);
   for (const v of cands) if (ok.has(v.id) && out.length < 3) out.push({ id: v.id, title: v.title, channel: v.channel });
   await db.cmd(["SET", ck, JSON.stringify(out), "EX", String(out.length ? 30 * 86400 : 7 * 86400)]).catch(() => {});
   return out;
