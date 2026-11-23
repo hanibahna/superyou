@@ -6,7 +6,8 @@ import { Suspense, useEffect, useState } from "react";
 import { track } from "@/lib/track";
 import { ShipmentTimeline } from "@/components/ShipmentTimeline";
 import { money } from "@/lib/format";
-import { useSettings, useT } from "@/lib/site-context";
+import { useGrowth, useSettings, useT } from "@/lib/site-context";
+import { celebrate } from "@/components/Celebrate";
 
 type PublicOrder = {
   id: string;
@@ -40,6 +41,7 @@ function OrderView() {
   const tx = useT();
   const sp = useSearchParams();
   const settings = useSettings();
+  const club = useGrowth().club;
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [missing, setMissing] = useState(false);
 
@@ -71,9 +73,17 @@ function OrderView() {
     track({ type: "purchase", orderId: order.id, value: order.total, items: order.lines.filter((l) => l.lineTotal > 0).map((l) => ({ id: l.productId, name: l.name, brand: l.brand, price: +(l.lineTotal / l.qty).toFixed(2), qty: l.qty })) });
   }, [order, sp]);
 
+  // A small celebration the first time a confirmed order is shown on this device.
+  useEffect(() => {
+    if (!order || !["pending_cod", "paid", "confirmed"].includes(order.status)) return;
+    const k = `celebrated:${order.id}`;
+    try { if (sessionStorage.getItem(k) || localStorage.getItem(k)) return; localStorage.setItem(k, "1"); } catch {}
+    setTimeout(() => celebrate({ count: 90 }), 300);
+  }, [order]);
   if (missing) return <p className="text-muted">We couldn't find that order.</p>;
   if (!order) return <p className="text-muted">{tx("Loading your order…")}</p>;
   const s = statusCopy[order.status] ?? statusCopy.awaiting_payment;
+  const points = club?.enabled ? Math.floor(order.subtotal * (club.pointsPerDollar || 0)) : 0;
 
   return (
     <div className="mx-auto max-w-xl text-left">
@@ -82,6 +92,17 @@ function OrderView() {
         <p className="mt-2 text-muted">{tx(s.text)}</p>
         <p className="mt-4 text-sm">Order number <b>{order.id}</b></p>
       </div>
+      {club?.enabled && points > 0 && !["payment_failed", "cancelled", "returned"].includes(order.status) && (
+        <div className="mt-6 rounded-2xl bg-brand-50 p-5 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600">{club.name || "SuperYou Club"}</p>
+          <p className="mt-1 text-lg font-semibold">{tx("This order is worth")} +{points} {tx("points")}</p>
+          <div className="mx-auto mt-3 h-2 max-w-xs overflow-hidden rounded-full bg-white">
+            <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-sale" style={{ width: `${Math.min(100, (points / Math.max(1, club.rewardPoints)) * 100)}%` }} />
+          </div>
+          <p className="mt-2 text-xs text-muted">{tx("Every")} {club.rewardPoints} {tx("points becomes a")} {money(club.rewardValue)} {tx("voucher. Club members get them when the order is delivered.")}</p>
+          <Link href="/club/" className="mt-3 inline-block text-sm font-semibold underline">{tx("Join free or see my points")}</Link>
+        </div>
+      )}
       <div className="mt-8 rounded-2xl border border-line p-6">
         <ul className="space-y-2 text-sm">
           {order.lines.map((l) => (
