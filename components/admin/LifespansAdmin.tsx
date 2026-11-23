@@ -25,6 +25,12 @@ export function LifespansAdmin({ rows, stats, totalProducts, q, plan }: { rows: 
     }
     setBusy(false);
   }
+  async function redo() {
+    setBusy(true);
+    const r = await fetch(`/api/admin/lifespans/?calls=40&q=${encodeURIComponent(q)}`, { method: "POST" }).then((x) => x.json()).catch(() => null);
+    setBusy(false);
+    setMsg(r ? `Re-estimated ${r.saved} products matching "${q}". Reload to see them.` : "Try again.");
+  }
   async function save(slug: string) {
     const e = edit[slug];
     const r = await fetch("/api/admin/lifespans/", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug, days: e.days, sub: e.sub }) }).then((x) => x.json());
@@ -50,6 +56,7 @@ export function LifespansAdmin({ rows, stats, totalProducts, q, plan }: { rows: 
           <option value="">All plans</option>{["1", "2", "3", "4", "6"].map((e) => <option key={e} value={e}>{planLabel(+e)}</option>)}<option value="no">No subscription</option><option value="none">Not estimated yet</option>
         </select>
         <button className="rounded-lg border border-line px-3 py-2 text-sm">Filter</button>
+        {q && <button type="button" onClick={redo} disabled={busy} className="rounded-lg border border-line px-3 py-2 text-sm">Re-estimate matching products with AI</button>}
       </form>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[860px] text-sm">
