@@ -34,7 +34,10 @@ struct Product: Codable {
     let description: String; let howToUse: String; let ingredients: String
     let rating: Double?; let reviewCount: Int; let variants: [Variant]
     let category: String?; let tips: [String]?; let subscribable: Bool?; let url: String?
+    var guide: Guide? = nil
 }
+/// "How to use" written once per product by SuperYou AI from the product's own details.
+struct Guide: Codable { let steps: [String]; let when: String; let goodFor: String; let cautions: [String] }
 
 struct Video: Codable, Identifiable, Hashable { let id: String; let title: String; let channel: String? }
 struct VideoList: Codable { let videos: [Video] }

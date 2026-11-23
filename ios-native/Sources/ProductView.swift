@@ -73,12 +73,6 @@ struct ProductView: View {
                         }
                     }
 
-                    if let tips = p.tips, !tips.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("Pharmacist tip", systemImage: "lightbulb").font(.caption.weight(.bold)).foregroundStyle(Color.rose)
-                            ForEach(tips, id: \.self) { Text("• \($0)").font(.footnote) }
-                        }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Color.blush.opacity(0.6), in: RoundedRectangle(cornerRadius: 12)).padding(.horizontal)
-                    }
                     if p.subscribable == true, let s = subscribe {
                         VStack(alignment: .leading, spacing: 8) {
                             Picker("Buy", selection: $every) {
@@ -89,15 +83,13 @@ struct ProductView: View {
                             if every != nil { Text(s.note).font(.caption).foregroundStyle(.secondary) }
                         }.padding(.horizontal)
                     }
-                    Button { howTo = true } label: {
-                        Label("How to use", systemImage: "sparkles").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(12)
-                    }.buttonStyle(.bordered).tint(Color.rose).padding(.horizontal)
                     Button {
                         bag.add(p, v, every: every); added = true
                     } label: {
                         Text(v.inStock ? (added ? "Added ✓  ·  Add another" : "Add to bag") : "Out of stock").font(.headline).frame(maxWidth: .infinity).padding()
                     }
                     .buttonStyle(.borderedProminent).tint(Color.ink).disabled(!v.inStock).padding(.horizontal)
+                    HowToBox(product: p, videos: videos) { playing = $0 }.padding(.horizontal)
                     if added { Button("Go to bag") { router.tab = 3 }.frame(maxWidth: .infinity) }
 
                     HStack(spacing: 18) {
@@ -193,6 +185,62 @@ struct HowToSheet: View {
             }
             .navigationTitle("How to use").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+
+/// "How to use", always shown and highlighted: the AI guide for this product (or the maker's
+/// directions), tips for this kind of product, and videos of this exact product.
+struct HowToBox: View {
+    let product: Product
+    let videos: [Video]
+    let play: (Video) -> Void
+    var body: some View {
+        let g = product.guide
+        let steps = g?.steps ?? []
+        if !steps.isEmpty || !product.howToUse.isEmpty || !(product.tips ?? []).isEmpty || !videos.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.rose)
+                    Text("How to use").font(.headline)
+                    if let w = g?.when, !w.isEmpty { Text(w).font(.caption.bold()).foregroundStyle(Color.rose).padding(.horizontal, 8).padding(.vertical, 3).background(Color.white, in: Capsule()) }
+                }
+                if let gf = g?.goodFor, !gf.isEmpty { Text(gf).font(.footnote).foregroundStyle(.secondary) }
+                if !steps.isEmpty {
+                    ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text("\(i + 1)").font(.caption.bold()).foregroundStyle(.white).frame(width: 22, height: 22).background(Color.ink, in: Circle())
+                            Text(s).font(.subheadline)
+                        }
+                    }
+                } else if !product.howToUse.isEmpty {
+                    Text(product.howToUse).font(.subheadline)
+                }
+                let notes = (product.tips ?? []) + (g?.cautions ?? [])
+                if !notes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) { ForEach(notes, id: \.self) { Text("✦ \($0)").font(.footnote) } }
+                        .padding(10).frame(maxWidth: .infinity, alignment: .leading).background(Color.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 12))
+                }
+                if !videos.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(videos) { v in
+                                Button { play(v) } label: {
+                                    ZStack {
+                                        RemoteImage(url: "https://i.ytimg.com/vi/\(v.id)/mqdefault.jpg").frame(width: 180, height: 101).clipShape(RoundedRectangle(cornerRadius: 10))
+                                        Image(systemName: "play.circle.fill").font(.largeTitle).foregroundStyle(.white)
+                                    }
+                                }.buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                Text(steps.isEmpty ? "Always read the label; ask our pharmacist if unsure." : "Written by SuperYou AI from this product's details. Always read the label.").font(.caption2).foregroundStyle(.secondary)
+            }
+            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(LinearGradient(colors: [Color(hex: "#fdeef3"), .white], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.rose.opacity(0.4), lineWidth: 2))
         }
     }
 }

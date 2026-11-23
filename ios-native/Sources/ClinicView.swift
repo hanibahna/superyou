@@ -75,14 +75,22 @@ struct TreatmentBookingView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var done = false
+    @State private var store: Config.Store?
 
     var body: some View {
         Form {
             SwiftUI.Section { TreatmentRow(t: treatment); PartnerTag(partner: partner, mock: true) }
+            if let s = store, !done {
+                SwiftUI.Section("Book now") {
+                    let text = "Hello SuperYou, I'd like to book \(treatment.name) at \(partner).".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    if !s.whatsapp.isEmpty, let u = URL(string: "https://wa.me/\(s.whatsapp)?text=\(text)") { Link(destination: u) { Label("Book on WhatsApp", systemImage: "message.fill") } }
+                    if !s.phone.isEmpty, let u = URL(string: "tel:\(s.phone.replacingOccurrences(of: " ", with: ""))") { Link(destination: u) { Label("Call us", systemImage: "phone.fill") } }
+                }
+            }
             if done {
                 SwiftUI.Section { Label("Request received. Our team will message you on WhatsApp to confirm the date and time. Nothing to pay now.", systemImage: "checkmark.circle.fill").foregroundStyle(Color.greenShip) }
             } else {
-                SwiftUI.Section("Preferred date") {
+                SwiftUI.Section("Or pick a date") {
                     DatePicker("Day", selection: $date, in: Date().addingTimeInterval(86400)..., displayedComponents: .date)
                     TextField("Notes: preferred time, questions", text: $notes, axis: .vertical)
                 }
@@ -97,6 +105,7 @@ struct TreatmentBookingView: View {
             }
         }
         .navigationTitle("Book treatment")
+        .task { store = await API.sharedConfig()?.store }
     }
 
     private func send() async {

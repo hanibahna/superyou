@@ -124,11 +124,11 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
 
         <BuyBox underImage={<ImageVideos slug={slug} brand={initial.brand} name={initial.name} />} subOk={subOk} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
-          <HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} />
+          <HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />
           <div className="mt-8 divide-y divide-line border-y border-line">
             {detail.description && <Section title={tx("Description")} open>{L(detail.description)}</Section>}
             {(detail.howToUse || how) && (
-              <Section title="How to use" open={!!how}>
+              <Section title={tx("Directions on the pack")} open={!!how}>
                 {how && (
                   <div className={`mb-4 overflow-hidden rounded-xl bg-black ${isVertical(how) ? "mx-auto aspect-[9/16] max-w-xs" : "aspect-video"}`}>
                     <VideoPlayer url={how} title={`How to use ${initial.name}`} />

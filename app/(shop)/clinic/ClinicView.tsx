@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useT } from "@/lib/site-context";
+import { useSettings, useT } from "@/lib/site-context";
 import { money } from "@/lib/format";
 
 export type ClinicItem = { id: string; name: string; category: string; what: string; routine: string; sessions: string; downtime: string; minutes: number; priceFrom: number };
@@ -57,6 +57,8 @@ export function ClinicView({ partner, mock, note, items }: { partner: string; mo
 /** A booking request: preferred date + contact; our team confirms the date on WhatsApp. */
 export function BookTreatment({ item, partner, onClose }: { item: ClinicItem; partner: string; onClose: () => void }) {
   const t = useT();
+  const store = useSettings().store;
+  const waText = encodeURIComponent(`Hello SuperYou, I'd like to book ${item.name} at ${partner}.`);
   const [f, setF] = useState({ name: "", phone: "", date: "", notes: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -81,13 +83,18 @@ export function BookTreatment({ item, partner, onClose }: { item: ClinicItem; pa
           <p className="mt-5 rounded-2xl bg-green-50 p-4 text-sm">{t("Request received ✓ Our team will message you on WhatsApp to confirm the date and time. Nothing to pay now.")}</p>
         ) : (
           <div className="mt-5 grid gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              {store.whatsapp && <a href={`https://wa.me/${store.whatsapp}?text=${waText}`} target="_blank" rel="noreferrer" className="flex min-h-[48px] items-center justify-center rounded-full bg-[#25D366] text-sm font-semibold text-white">{t("Book on WhatsApp")}</a>}
+              {store.phone && <a href={`tel:${store.phone.replace(/\s/g, "")}`} className="flex min-h-[48px] items-center justify-center rounded-full border border-line text-sm font-semibold">{t("Call us")}</a>}
+            </div>
+            <p className="mt-1 text-center text-xs text-muted">{t("or pick a date here")}</p>
             <input aria-label={t("Your name")} placeholder={t("Your name")} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={box} />
             <input aria-label={t("WhatsApp number")} inputMode="tel" placeholder={t("WhatsApp number")} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} className={box} />
             <label className="text-xs text-muted">{t("Preferred date")}<input type="date" min={min} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} className={box} /></label>
             <textarea aria-label={t("Notes (optional)")} placeholder={t("Notes (optional): preferred time, questions")} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} className="min-h-[80px] w-full rounded-xl border border-line p-3 text-base outline-none focus:border-ink md:text-sm" />
             {msg && <p className="text-sm text-sale">{msg}</p>}
             <button onClick={send} disabled={busy || f.name.length < 2 || f.phone.length < 6 || !f.date} className="min-h-[48px] rounded-full bg-ink font-semibold text-white disabled:opacity-40">{busy ? t("Sending…") : t("Request this date")}</button>
-            <p className="text-[11px] text-muted">{t("Your date is confirmed by our team on WhatsApp. Prices are indicative and confirmed by the clinic after your consultation.")}</p>
+            <p className="text-[11px] text-muted">{t("Our team confirms your date on WhatsApp. Prices are estimates, confirmed by the clinic after your consultation.")}</p>
           </div>
         )}
       </div>
