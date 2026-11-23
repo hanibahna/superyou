@@ -54,7 +54,7 @@ Rules:
 - "summary": two short sentences on the routine's logic. "notes": 0 to 3 short practical notes (introduce actives one at a time, patch test, SPF daily, see a doctor for anything medical).
 
 Reply with JSON only: {"summary": "...", "notes": ["..."], "steps": [{"id": "step id", "pick": "slug", "alts": ["slug"], "why": "..."}]}`;
-  const out = json<AiPlan>(await ask(prompt, 1500));
+  const out = json<AiPlan>(await ask(prompt, 4000));
   if (!out?.steps) return null;
   const valid = new Map(steps.map((s) => [s.id, new Set(s.cands.map((c) => c.slug))]));
   return {
@@ -78,7 +78,7 @@ Goals (label, up to 2): ${cfg.goals.map((g) => g.label).join(" | ")}
 
 Reply with JSON only: {"skinType": "id or empty", "concerns": ["label"], "goals": ["label"], "sensitive": true/false, "pregnant": true/false, "budget": "any|low|mid|high"}
 Only set pregnant true if they say they are pregnant or breastfeeding.`;
-  const o = json<{ skinType?: string; concerns?: string[]; goals?: string[]; sensitive?: boolean; pregnant?: boolean; budget?: string }>(await ask(prompt, 300));
+  const o = json<{ skinType?: string; concerns?: string[]; goals?: string[]; sensitive?: boolean; pregnant?: boolean; budget?: string }>(await ask(prompt, 1200));
   if (!o) return null;
   const types = new Set(cfg.skinTypes.map((s) => s.id)), cons = new Set(cfg.concernOptions.map((c) => c.label)), gls = new Set(cfg.goals.map((g) => g.label));
   return {

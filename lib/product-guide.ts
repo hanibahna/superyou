@@ -38,7 +38,7 @@ If the details are too thin to write accurate steps, reply {"none": true}.`;
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_GUIDE_MODEL || "claude-sonnet-5-5", max_tokens: 600, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_GUIDE_MODEL || "claude-sonnet-5-5", max_tokens: 1500, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(40_000),
   }).catch(() => null);
   if (!r?.ok) return null; // try again another time
