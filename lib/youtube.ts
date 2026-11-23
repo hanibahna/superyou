@@ -77,7 +77,7 @@ async function confirmSameProduct(p: { brand: string; name: string }, vids: { id
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-5-5", max_tokens: 800, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-5-5", max_tokens: 3000, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(20_000),
   }).catch(() => null);
   if (!r?.ok) { lastCheck = r ? `error ${r.status}` : "no response"; return new Set(); }
