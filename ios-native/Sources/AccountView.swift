@@ -44,6 +44,7 @@ struct AccountView: View {
                     NavigationLink { WishlistView() } label: { Label("Wishlist", systemImage: "heart") }
                     NavigationLink { AdvisorView() } label: { Label("Ask our AI advisor", systemImage: "sparkles") }
                     NavigationLink { ServicesView() } label: { Label("Book a pharmacist video call", systemImage: "video") }
+                    NavigationLink { ClinicView() } label: { Label("Clinic treatments", systemImage: "cross.case") }
                     if account != nil { NavigationLink { MyScansView(phone: phone, order: order) } label: { Label("My SuperScans", systemImage: "faceid") } }
                     if let r = referral, !r.isEmpty {
                         ShareLink(item: URL(string: "https://www.shopsuperyou.com/?ref=\(r)")!, message: Text("Shop original beauty and pharmacy at SuperYou with my link:")) { Label("Invite friends (your code \(r))", systemImage: "gift") }

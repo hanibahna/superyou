@@ -6,7 +6,7 @@ import { getServices, listBookings, saveBooking } from "@/lib/site-store";
 import { freeSlots } from "@/lib/booking";
 
 const schema = z.object({
-  kind: z.enum(["service", "event"]),
+  kind: z.enum(["service", "event", "clinic"]),
   refId: z.string().max(60),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -27,10 +27,16 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Please fill in your name and phone number" }, { status: 400 });
   const d = parsed.data;
   const cfg = await getServices();
-  if (!cfg.enabled) return NextResponse.json({ error: "Bookings are closed" }, { status: 400 });
+  if (!cfg.enabled && d.kind !== "clinic") return NextResponse.json({ error: "Bookings are closed" }, { status: 400 });
   const base = { id: `BK-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`, name: d.name.trim(), phone: d.phone.trim(), email: d.email ?? "", notes: d.notes ?? "", status: "pending" as const, createdAt: new Date().toISOString() };
   let b: Booking;
-  if (d.kind === "service") {
+  if (d.kind === "clinic") {
+    // Partner-clinic treatment: a request for a preferred date; our team confirms the date on WhatsApp.
+    const { CLINIC, getProcedure } = await import("@/lib/clinic");
+    const p = getProcedure(d.refId);
+    if (!p || !d.date) return NextResponse.json({ error: "Choose a treatment and a preferred date" }, { status: 400 });
+    b = { ...base, kind: "clinic", refId: p.id, title: `${p.name} at ${CLINIC.partner}`, date: d.date, time: d.time ?? "", duration: p.minutes, guests: 1, mode: "store", notes: [d.notes ?? "", `From $${p.priceFrom} (indicative)`, "Date to be confirmed"].filter(Boolean).join(" · ") };
+  } else if (d.kind === "service") {
     const s = cfg.services.find((x) => x.id === d.refId && x.enabled);
     if (!s || !d.date || !d.time) return NextResponse.json({ error: "Choose a service, date and time" }, { status: 400 });
     if (!(await freeSlots(s.id, d.date)).includes(d.time)) return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });

@@ -38,6 +38,7 @@ export function ServicesView(p: Props) {
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/70">{tx("In store")}</p>
           <h1 className="mt-2 text-4xl font-black uppercase tracking-tight md:text-6xl">Services &amp; Events</h1>
           <p className="mt-3 max-w-xl text-white/80">{p.intro}</p>
+          <Link href="/clinic/" className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black">{tx("Clinic treatments with our dermatologist")} →</Link>
           <p className="mt-4 text-sm text-white/60">📍 {p.location}{open.length === 1 && ` · ${p.hours.map((h) => dayNames[h.day]).join(", ")} ${open[0]}`}</p>
         </div>
       </section>

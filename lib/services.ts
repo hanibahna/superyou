@@ -111,7 +111,7 @@ export const overlaps = (aStart: string, aDur: number, bStart: string, bDur: num
 
 export type Booking = {
   id: string;
-  kind: "service" | "event";
+  kind: "service" | "event" | "clinic"; // clinic = a partner-clinic treatment request; the date is confirmed by the team
   refId: string; // service or event id
   title: string;
   date: string;

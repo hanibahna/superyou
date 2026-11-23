@@ -59,7 +59,7 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
             {list.map((b) => (
               <tr key={b.id}>
                 <td className="whitespace-nowrap p-3"><b>{new Date(`${b.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</b><br />{b.time}</td>
-                <td className="p-3">{b.title}<br /><span className="text-xs text-muted">{b.kind === "event" ? `Event · ${b.guests} guest(s)` : `Service · ${b.duration} min`}</span></td>
+                <td className="p-3">{b.title}<br /><span className="text-xs text-muted">{b.kind === "event" ? `Event · ${b.guests} guest(s)` : b.kind === "clinic" ? `Clinic request · date to confirm` : `Service · ${b.duration} min`}</span></td>
                 <td className="p-3">{b.name}<br /><a href={`tel:${b.phone}`} className="text-xs text-brand-600">{b.phone}</a>{b.notes && <p className="mt-1 max-w-xs text-xs text-muted">“{b.notes}”</p>}</td>
                 <td className="p-3">
                   <select value={b.status} onChange={(e) => setStatus(b.id, e.target.value as Booking["status"])} className={`rounded-full px-2 py-1 text-xs font-semibold ${color[b.status]}`}>

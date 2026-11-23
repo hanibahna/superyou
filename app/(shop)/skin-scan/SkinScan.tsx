@@ -1,5 +1,7 @@
 "use client";
 
+import { AfterRoutine } from "../clinic/AfterRoutine";
+import type { ClinicItem } from "../clinic/ClinicView";
 import { useT } from "@/lib/site-context";
 
 import Link from "next/link";
@@ -114,7 +116,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const consentRef = useRef<HTMLLabelElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [res, setRes] = useState<{ analysis: Analysis; steps: Step[] } | null>(null);
+  const [res, setRes] = useState<{ analysis: Analysis; steps: Step[]; treatments?: ClinicItem[]; clinic?: { partner: string; mock: boolean } } | null>(null);
   const [consent, setConsent] = useState(false);
   const { addMany, setDrawerOpen } = useShop();
   const [camera, setCamera] = useState(false);
@@ -270,6 +272,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
                   </div>
                 ))}
               </div>
+              <AfterRoutine items={res.treatments ?? []} partner={res.clinic?.partner} mock={res.clinic?.mock} />
               <SendRoutine analysis={res.analysis} steps={res.steps} />
               <ShareScan analysis={res.analysis} steps={res.steps} />
               <PharmacistButton product="my SuperScan results" className="mt-6" />

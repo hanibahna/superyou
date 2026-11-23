@@ -87,5 +87,7 @@ Return only JSON:
   };
   const live = await liveProducts();
   const steps = buildRoutine(cfg, answers, toCards(live.list)).map(({ step, picks }) => ({ id: step.id, name: step.name, time: step.time, tip: step.tip, picks }));
-  return NextResponse.json({ analysis: { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), advice: a.advice ?? "", zones: (a.zones ?? []).slice(0, 5), confidence: ["high", "medium", "low"].includes(a.confidence ?? "") ? a.confidence : "medium", photoTips: a.photoTips ?? "", redFlags: (a.redFlags ?? []).slice(0, 4) }, steps });
+  const { CLINIC, publicProcedure, treatmentsFor } = await import("@/lib/clinic");
+  const treatments = a.redFlags?.length ? [] : treatmentsFor({ concerns: answers.concerns, observations: a.observations, zones: a.zones, sensitive: answers.sensitive }).map(publicProcedure);
+  return NextResponse.json({ clinic: { partner: CLINIC.partner, mock: CLINIC.mock, note: CLINIC.note }, treatments, analysis: { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), advice: a.advice ?? "", zones: (a.zones ?? []).slice(0, 5), confidence: ["high", "medium", "low"].includes(a.confidence ?? "") ? a.confidence : "medium", photoTips: a.photoTips ?? "", redFlags: (a.redFlags ?? []).slice(0, 4) }, steps });
 }

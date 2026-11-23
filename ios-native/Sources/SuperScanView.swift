@@ -9,7 +9,7 @@ struct ScanAnalysis: Codable, Hashable {
     let zones: [ScanZone]?; let confidence: String?; let photoTips: String?; let redFlags: [String]?
 }
 struct ScanStep: Codable, Hashable, Identifiable { let id: String; let name: String; let time: String; let tip: String; let picks: [Card] }
-struct ScanResult: Codable { let analysis: ScanAnalysis; let steps: [ScanStep] }
+struct ScanResult: Codable { let analysis: ScanAnalysis; let steps: [ScanStep]; var treatments: [Treatment]? = nil; var clinic: ClinicInfo? = nil }
 private struct ScanError: Codable { let error: String? }
 
 // MARK: - Screen
@@ -178,6 +178,7 @@ struct ResultsView: View {
                     Text("Add the whole routine to my bag").font(.headline).frame(maxWidth: .infinity).padding()
                 }.buttonStyle(.borderedProminent).tint(Color.ink)
             }
+            AfterRoutineSection(items: result.treatments ?? [], partner: result.clinic?.partner ?? "DermaPro", mock: result.clinic?.mock ?? true)
             Button { sendOpen = true } label: { Label("Send me my routine (WhatsApp / email)", systemImage: "paperplane").frame(maxWidth: .infinity).padding(12) }.buttonStyle(.bordered)
             if let img = shareImage {
                 ShareLink(item: img, preview: SharePreview("My SuperScan", image: img)) {
