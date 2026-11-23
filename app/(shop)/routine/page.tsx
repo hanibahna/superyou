@@ -22,6 +22,7 @@ export default async function RoutinePage() {
       concerns={cfg0.concernOptions.map((c) => c.label)}
       goals={cfg0.goals.map((g) => g.label)}
       labels={Object.fromEntries(labels)}
+      aiReady={!!(await (await import("@/lib/extras")).anthropicKey())}
     />
   );
 }
