@@ -17,11 +17,11 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   if (pin) return [{ id: pin, title: `${p.brand} ${p.name}`, channel: "" }];
   const key = cfg.key || process.env.YOUTUBE_API_KEY;
   if (!key) { trace?.push("no key"); return []; }
-  const ck = `yt:v5:${p.slug}`;
+  const ck = `yt:v6:${p.slug}`;
   const hit = await db.cmd<string | null>(["GET", ck]).catch(() => null);
   if (hit && !trace) return JSON.parse(hit) as YtVideo[];
   const out: YtVideo[] = [];
-  const cands: (YtVideo & { desc: string; hint: string })[] = [];
+  const cands: (YtVideo & { desc: string; hint: string; from: string })[] = [];
   const words = (x: string) => x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
   const clean = p.name.replace(/\b\d+([.,]\d+)?\s?(ml|g|gr|oz|pcs|mcg|mg|caps?|tabs?|x|iu|kg|l)\b/gi, "").replace(/[()|,+]/g, " ").replace(/\s+/g, " ").trim();
   const brandWords = words(p.brand).filter((w) => w.length > 1);
@@ -55,7 +55,7 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
     }
     const j = (await r.json()) as { items?: { id: { videoId: string }; snippet: { title: string; channelTitle: string; description?: string } }[] };
     for (const i of j.items ?? []) {
-      const v = { id: i.id.videoId, title: decode(i.snippet.title), channel: decode(i.snippet.channelTitle), desc: decode(i.snippet.description ?? ""), hint: lang as string };
+      const v = { id: i.id.videoId, title: decode(i.snippet.title), channel: decode(i.snippet.channelTitle), desc: decode(i.snippet.description ?? ""), hint: lang as string, from: lang as string };
       const f = fits(v.title, v.channel) || (lang !== "en" && loose(v.title, v.desc));
       trace?.push(`[${lang}] ${f ? "PASS" : "drop"}: ${v.title} — ${v.channel}`);
       if (f && !cands.some((x) => x.id === v.id)) cands.push(v);
@@ -68,7 +68,9 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
     for (const it of j.items ?? []) { const c = cands.find((x) => x.id === it.id); const l = (it.snippet.defaultAudioLanguage || it.snippet.defaultLanguage || "").slice(0, 2).toLowerCase(); if (c && l) c.hint = `${l} (YouTube)`; }
   }
   // Second check: Claude keeps only videos about exactly this product, spoken in English, French or Arabic.
-  const ok = await confirmSameProduct(p, cands.slice(0, 10));
+  // Up to 4 candidates from each language's search, so English results don't crowd out the others.
+  const pick = ["en", "fr", "ar"].flatMap((l) => cands.filter((c) => c.from === l).slice(0, 4));
+  const ok = await confirmSameProduct(p, pick);
   trace?.push(`words: ${nameWords.join(",")} | claude kept: ${[...ok].map(([id, l]) => `${id}:${l}`).join(",") || "none"} | ${lastCheck}`);
   const per: Record<string, number> = {};
   for (const v of cands) {
@@ -133,7 +135,7 @@ export async function prefillVideos(limit = 40) {
   for (const p of list) {
     if (done >= limit) break;
     if (cfg.pins[p.slug]) continue;
-    if (await db.cmd<number>(["EXISTS", `yt:v5:${p.slug}`]).catch(() => 1)) continue;
+    if (await db.cmd<number>(["EXISTS", `yt:v6:${p.slug}`]).catch(() => 1)) continue;
     await videosForProduct({ slug: p.slug, brand: p.brand, name: p.name });
     done++;
   }
