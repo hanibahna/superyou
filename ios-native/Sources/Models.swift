@@ -39,7 +39,9 @@ struct Product: Codable {
 /// "How to use" written once per product by SuperYou AI from the product's own details.
 struct Guide: Codable { let steps: [String]; let when: String; let goodFor: String; let cautions: [String] }
 
-struct Video: Codable, Identifiable, Hashable { let id: String; let title: String; let channel: String? }
+struct Video: Codable, Identifiable, Hashable { let id: String; let title: String; let channel: String?; var lang: String? = nil
+    var langName: String { switch lang { case "fr": return "Français"; case "ar": return "العربية"; case "en": return "English"; default: return "" } }
+}
 struct VideoList: Codable { let videos: [Video] }
 
 struct Zone: Codable, Hashable { let name: String; let fee: Double? }

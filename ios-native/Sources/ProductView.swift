@@ -233,16 +233,21 @@ struct HowToBox: View {
                         HStack(spacing: 8) {
                             ForEach(videos) { v in
                                 Button { play(v) } label: {
-                                    ZStack {
-                                        RemoteImage(url: "https://i.ytimg.com/vi/\(v.id)/mqdefault.jpg").frame(width: 180, height: 101).clipShape(RoundedRectangle(cornerRadius: 10))
-                                        Image(systemName: "play.circle.fill").font(.largeTitle).foregroundStyle(.white)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        ZStack(alignment: .topLeading) {
+                                            RemoteImage(url: "https://i.ytimg.com/vi/\(v.id)/mqdefault.jpg").frame(width: 180, height: 101).clipShape(RoundedRectangle(cornerRadius: 10))
+                                            Image(systemName: "play.circle.fill").font(.largeTitle).foregroundStyle(.white).frame(width: 180, height: 101)
+                                            if !v.langName.isEmpty { Text(v.langName).font(.caption2.bold()).padding(.horizontal, 6).padding(.vertical, 2).background(.white, in: Capsule()).padding(6) }
+                                        }
+                                        Text(v.title).font(.caption2).lineLimit(2).frame(width: 180, alignment: .leading)
                                     }
                                 }.buttonStyle(.plain)
                             }
                         }
                     }
                 }
-                Text(steps.isEmpty ? "Always read the label; ask our pharmacist if unsure." : "Written by SuperYou AI from this product's details. Always read the label.").font(.caption2).foregroundStyle(.secondary)
+                if !videos.isEmpty { Text("Videos are made by independent creators on YouTube, not by SuperYou or the brand, for information only. Opinions and results are the creators' own. Always follow the label and ask our pharmacist if unsure.").font(.caption2).foregroundStyle(.secondary) }
+                Text(steps.isEmpty ? "Always read the label; ask our pharmacist if unsure." : "Written by SuperYou AI from the manufacturer's directions. Always read the label.").font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
