@@ -195,7 +195,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <p className="self-center text-xs text-muted">{tx("3D scan: front and both sides")}</p>
             </div>
           )}
-          <label ref={consentRef} key={nudge} className={`mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 text-sm transition-colors ${consent ? "border-green-500 bg-green-50" : "consent-pulse border-brand-500 bg-brand-50"} ${nudge ? "consent-shake" : ""}`}>
+          <label ref={consentRef} key={nudge} className={`mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 text-sm transition-colors ${consent ? "border-green-500 bg-green-50" : "consent-pulse border-[#d13f74] bg-[#fdeef3]"} ${nudge ? "consent-shake" : ""}`}>
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-7 w-7 shrink-0 cursor-pointer accent-[#d13f74]" />
             <span>
               <b className="block text-base">{consent ? tx("Thank you, you're ready ✓") : tx("Tick to agree, then start")}</b>
