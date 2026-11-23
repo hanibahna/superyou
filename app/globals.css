@@ -414,3 +414,12 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 /* SHOP and .COM in the brand colour next to the logo, whatever the look */
 .site-header .sy-accent { color: #d13f74 !important; }
 [data-header="dark"] .site-header .sy-accent { color: #ff8fb6 !important; }
+
+/* SuperScan head-turn guide */
+@keyframes sy-swivel { 0%,100% { transform: translate(5px,0) } 25% { transform: translate(0,4px) } 50% { transform: translate(-5px,0) } 75% { transform: translate(0,-4px) } }
+@keyframes sy-look-right { 0%,15% { transform: translate(0,0) } 55%,80% { transform: translate(7px,0) } 100% { transform: translate(0,0) } }
+@keyframes sy-look-left { 0%,15% { transform: translate(0,0) } 55%,80% { transform: translate(-7px,0) } 100% { transform: translate(0,0) } }
+@keyframes sy-look-up { 0%,15% { transform: translate(0,0) } 55%,80% { transform: translate(0,-6px) } 100% { transform: translate(0,0) } }
+@keyframes sy-look-down { 0%,15% { transform: translate(0,0) } 55%,80% { transform: translate(0,6px) } 100% { transform: translate(0,0) } }
+@keyframes sy-nudge { 0%,100% { opacity: .65; scale: .92 } 50% { opacity: 1; scale: 1.08 } }
+@media (prefers-reduced-motion: reduce) { [style*="sy-"] { animation: none !important; } }

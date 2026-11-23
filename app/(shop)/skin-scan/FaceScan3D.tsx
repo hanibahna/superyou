@@ -11,6 +11,7 @@ const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/f
 const TICKS = 60;
 
 type P = { x: number; y: number; z: number };
+type Dir = "right" | "left" | "up" | "down";
 
 export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: string[]) => void; onFallback: () => void; onClose: () => void }) {
   const t = useT();
@@ -19,6 +20,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
   const [stage, setStage] = useState<"loading" | "front" | "circle" | "done" | "error">("loading");
   const [msg, setMsg] = useState("");
   const [pct, setPct] = useState(0);
+  const [guide, setGuide] = useState<Dir | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null, raf = 0, stopped = false;
@@ -26,7 +28,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
     const lit = new Array<number>(TICKS).fill(0);
     const shots: { front?: string; a?: string; b?: string } = {};
     let base: { x: number; y: number } | null = null, calib: { x: number; y: number }[] = [];
-    let startedCircle = 0, doneAt = 0, lastLit = 0;
+    let startedCircle = 0, doneAt = 0, lastLit = 0, lastGuide: Dir | null = null;
     let tess: { start: number; end: number }[] = [];
 
     const capture = (v: HTMLVideoElement) => {
@@ -106,6 +108,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
               startedCircle = now;
               setStage("circle");
               setMsg(t("Now slowly move your head in a circle"));
+              lastGuide = null;
             } else setMsg(t("Hold still…"));
           }
         } else if (!doneAt) {
@@ -120,8 +123,29 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
           if (dx < -0.13 && !shots.b) shots.b = capture(v);
           const n = lit.reduce((s, x) => s + x, 0);
           if (n !== lastLit) { lastLit = n; setPct(Math.round((n / TICKS) * 100)); }
+          // Tell them which way to turn next: one side, the other side, then whatever part of the ring is still empty.
+          let next: Dir;
+          if (!shots.a && !shots.b) next = "right";
+          else if (!shots.a) next = "right";
+          else if (!shots.b) next = "left";
+          else {
+            let best = -1, bestLen = 0;
+            for (let i = 0; i < TICKS; i++) {
+              if (lit[i]) continue;
+              let len = 0;
+              while (len < TICKS && !lit[(i + len) % TICKS]) len++;
+              if (len > bestLen) { bestLen = len; best = i + len / 2; }
+            }
+            const ang = ((best < 0 ? 0 : best) / TICKS) * 360;
+            next = ang < 45 || ang >= 315 ? "right" : ang < 135 ? "down" : ang < 225 ? "left" : "up";
+          }
+          if (next !== lastGuide) {
+            lastGuide = next;
+            setGuide(next);
+            setMsg(next === "right" ? t("Slowly turn your head this way →") : next === "left" ? t("Now slowly turn the other way ←") : next === "up" ? t("Now tilt your chin up ↑") : t("Now tilt your chin down ↓"));
+          }
           const enough = n / TICKS >= 0.7 && shots.a && shots.b;
-          if (enough || now - startedCircle > 25000) { doneAt = now; lit.fill(1); setPct(100); setStage("done"); setMsg(t("Scan complete")); }
+          if (enough || now - startedCircle > 30000) { doneAt = now; lit.fill(1); setPct(100); setStage("done"); setGuide(null); setMsg(t("Scan complete")); }
         }
       } else if (!doneAt) setMsg(t("Fit your face in the circle"));
       // ring
@@ -159,6 +183,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
           <div className="relative aspect-[3/4] w-full max-w-sm overflow-hidden rounded-3xl bg-black">
             <canvas ref={canvas} className="h-full w-full" />
             {stage === "loading" && <p className="absolute inset-0 grid place-items-center text-sm text-white/80">{t("Starting SuperScan…")}</p>}
+            {(stage === "front" || stage === "circle") && <SwivelGuide dir={stage === "circle" ? guide : null} />}
             {stage === "done" && <span className="absolute inset-0 grid place-items-center"><span className="grid h-20 w-20 place-items-center rounded-full bg-green-500 text-4xl text-white">✓</span></span>}
           </div>
           <p className="mt-4 min-h-[1.5em] text-center text-lg font-semibold text-white" aria-live="polite">{msg}</p>
@@ -168,5 +193,33 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         </>
       )}
     </div>
+  );
+}
+
+/** Animated "how to turn your head" guide: a small head that shows the movement, and a pulsing arrow on the side to turn to. */
+function SwivelGuide({ dir }: { dir: Dir | null }) {
+  const anim = dir ? `sy-look-${dir}` : "sy-swivel";
+  const arrow: Record<Dir, string> = { right: "right-2 top-1/2 -translate-y-1/2", left: "left-2 top-1/2 -translate-y-1/2", up: "top-2 left-1/2 -translate-x-1/2", down: "bottom-16 left-1/2 -translate-x-1/2" };
+  const rot: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
+  return (
+    <>
+      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-2xl bg-black/55 p-2 backdrop-blur" aria-hidden>
+        <svg width="56" height="56" viewBox="0 0 56 56">
+          <ellipse cx="28" cy="29" rx="17" ry="21" fill="none" stroke="white" strokeWidth="2" />
+          <g style={{ animation: `${anim} ${dir ? "1.4s" : "2.6s"} ease-in-out infinite` }}>
+            <circle cx="22" cy="25" r="2" fill="white" />
+            <circle cx="34" cy="25" r="2" fill="white" />
+            <path d="M28 27 L26 33 L29 33" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+            <path d="M23 39 Q28 42 33 39" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+          </g>
+          {!dir && <circle r="2.5" fill="#ff8fb6"><animateMotion dur="2.6s" repeatCount="indefinite" path="M28 4 A24 24 0 1 1 27.9 4" /></circle>}
+        </svg>
+      </div>
+      {dir && (
+        <span className={`pointer-events-none absolute ${arrow[dir]} grid h-14 w-14 place-items-center rounded-full bg-white/90 text-ink shadow-lg`} style={{ animation: "sy-nudge 1s ease-in-out infinite" }} aria-hidden>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ transform: `rotate(${rot[dir]}deg)` }}><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+        </span>
+      )}
+    </>
   );
 }
