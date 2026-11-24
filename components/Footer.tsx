@@ -75,6 +75,11 @@ export function Footer({ categories }: { categories: Category[] }) {
       </div>
       <div className="border-t border-white/10 py-5 text-center text-xs text-white/50">
         © {new Date().getFullYear()} {store.name}. All rights reserved.
+        <span className="mx-2" aria-hidden>·</span>
+        Made by{" "}
+        <a href="https://apostrophe.agency" target="_blank" rel="noopener" className="font-semibold tracking-wide text-white/70 underline-offset-2 hover:text-white hover:underline">
+          APOSTROPHE&rsquo;
+        </a>
       </div>
     </footer>
   );
