@@ -2,7 +2,7 @@ import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { everyText, tierOf, type Every } from "@/lib/every";
+import { everyText, startOk, tierOf, type Every } from "@/lib/every";
 import { db } from "@/lib/db";
 import type { CheckoutInput, Order } from "@/lib/orders";
 import { siteUrl } from "@/lib/site-url";
@@ -14,7 +14,7 @@ export type Subscription = {
   id: string;
   token: string;
   status: "active" | "paused" | "cancelled";
-  every: Every; // months (1, 2, 3, 4 or 6), set per product from how long it lasts
+  every: Every; // months apart (1 to 12), chosen per product
   items: { productId: string; qty: number; name: string }[];
   customer: CheckoutInput["customer"];
   nextAt: string; // YYYY-MM-DD (Beirut)
@@ -79,17 +79,21 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
   const lastCancel = Number(await db.cmd<string | null>(["GET", CANCELLED(phone)]).catch(() => null)) || 0;
   const cooling = g.cooldownDays > 0 && Date.now() - lastCancel < g.cooldownDays * 864e5;
   const made: string[] = [];
-  for (const every of [...new Set(order.lines.map((l) => l.every).filter((e): e is Every => !!e))]) {
-    const lines = order.lines.filter((l) => l.every === every && !l.gift && !already.has(l.productId));
+  // One subscription per plan: same frequency and same next date chosen on the calendar.
+  const keyOf = (l: Order["lines"][number]) => `${l.every}|${startOk(l.start) ? l.start : ""}`;
+  for (const key of [...new Set(order.lines.filter((l) => l.every).map(keyOf))]) {
+    const [e, start] = key.split("|");
+    const every = Number(e) as Every;
+    const lines = order.lines.filter((l) => l.every && keyOf(l) === key && !l.gift && !already.has(l.productId));
     if (!lines.length) continue;
     const s: Subscription = {
-      id: `SUB-${Date.now().toString(36).toUpperCase()}${every}`,
+      id: `SUB-${Date.now().toString(36).toUpperCase()}${every}${made.length || ""}`,
       token: randomBytes(16).toString("hex"),
       status: "active",
       every,
       items: lines.map((l) => ({ productId: l.productId, qty: l.qty, name: `${fullName(l.brand, l.name)}` })),
       customer: input.customer,
-      nextAt: addMonths(today(), every),
+      nextAt: start || addMonths(today(), every),
       createdAt: new Date().toISOString(),
       orders: [order.id],
       rules: 2,

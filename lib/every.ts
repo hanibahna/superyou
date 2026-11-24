@@ -3,9 +3,23 @@
 // two tiers: monthly plans get the "monthly" %, longer ones the "every 3 months" %.
 import { z } from "zod";
 
-export const EVERY = [1, 2, 3, 4, 6] as const;
+export const EVERY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 export type Every = (typeof EVERY)[number];
-export const everySchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(6)]);
+export const everySchema = z.number().int().min(1).max(12).transform((n) => n as Every);
+/** Date of the next delivery the customer picked on a calendar (YYYY-MM-DD). */
+export const startSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/** Today + n months, as YYYY-MM-DD (same day of the month, or the last day). */
+export function monthsFrom(n: number, from = new Date()) {
+  const d = new Date(Date.UTC(from.getFullYear(), from.getMonth(), from.getDate(), 12));
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d.toISOString().slice(0, 10);
+}
+/** A picked date is accepted from tomorrow up to 13 months ahead. */
+export const startOk = (d?: string) => !!d && d > monthsFrom(0) && d <= monthsFrom(13);
 export const isEvery = (n: unknown): n is Every => EVERY.includes(n as Every);
 export const everyLabel = (e: number) => (e === 1 ? "Every month" : `Every ${e} months`);
 export const everyText = (e: number) => (e === 1 ? "every month" : `every ${e} months`);

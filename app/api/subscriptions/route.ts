@@ -1,6 +1,6 @@
 import { limited } from "@/lib/ratelimit";
 import { NextResponse, type NextRequest } from "next/server";
-import { everySchema } from "@/lib/every";
+import { everySchema, startOk, startSchema } from "@/lib/every";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { addMonths, cancelSubscription, getSubscription, progress, saveSubscription, today, type Subscription } from "@/lib/subscriptions";
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const tooMany = await limited(req, "subs", 60);
   if (tooMany) return tooMany;
-  const p = z.object({ id: z.string().max(40), t: z.string().max(64), action: z.enum(["skip", "pause", "resume", "cancel", "every", "qty", "remove"]), every: everySchema.optional(), productId: z.string().max(60).optional(), qty: z.number().int().min(1).max(20).optional() }).safeParse(await req.json().catch(() => null));
+  const p = z.object({ id: z.string().max(40), t: z.string().max(64), action: z.enum(["skip", "pause", "resume", "cancel", "every", "date", "qty", "remove"]), every: everySchema.optional(), date: startSchema.optional(), productId: z.string().max(60).optional(), qty: z.number().int().min(1).max(20).optional() }).safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: "Invalid" }, { status: 400 });
   const s = await load(p.data.id, p.data.t);
   if (!s) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   if (d.action === "cancel" && s.status !== "cancelled") await cancelSubscription(s, "customer");
   if (d.action === "resume") { s.status = "active"; if (s.nextAt <= today()) s.nextAt = addDays(today(), 2); }
   if (d.action === "every" && d.every) s.every = d.every;
+  if (d.action === "date" && d.date && startOk(d.date)) s.nextAt = d.date;
   if (d.action === "qty" && d.productId && d.qty) s.items = s.items.map((i) => (i.productId === d.productId ? { ...i, qty: d.qty! } : i));
   if (d.action === "remove" && d.productId) { s.items = s.items.filter((i) => i.productId !== d.productId); if (!s.items.length) await cancelSubscription(s, "customer"); }
   await saveSubscription(s);

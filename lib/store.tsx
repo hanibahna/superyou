@@ -30,7 +30,7 @@ export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
 });
 
 /** every: subscription interval in months (1, 2, 3, 4 or 6, per product); none = one-time purchase. */
-export type CartLine = { productId: string; qty: number; product: ProductSnap; every?: Every };
+export type CartLine = { productId: string; qty: number; product: ProductSnap; every?: Every; start?: string };
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
@@ -54,7 +54,7 @@ export type ServerQuote = {
 type ShopState = {
   lines: CartLine[];
   wishlist: ProductSnap[];
-  add: (product: AnyProduct | ProductSnap, qty?: number, every?: Every | null) => void;
+  add: (product: AnyProduct | ProductSnap, qty?: number, every?: Every | null, start?: string) => void;
   /** The item just added (for the SuperPrice reveal in the bag). */
   lastAdded: { id: string; at: number } | null;
   /** SuperPrime at checkout: the phone typed (to recognise members) and the shopper's choice. */
@@ -62,7 +62,7 @@ type ShopState = {
   setPrimePhone: (v: string) => void;
   primeChoice: "" | "trial" | "join";
   setPrimeChoice: (v: "" | "trial" | "join") => void;
-  setEvery: (productId: string, every?: Every) => void;
+  setEvery: (productId: string, every?: Every, start?: string) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
@@ -186,14 +186,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const discountTotal = fresh ? quote.discountTotal : 0;
     const delivery = fresh ? quote.delivery : deliveryFor(settings, subtotal, zone);
     const giftCardAmount = fresh && quote.giftCard ? quote.giftCard.amount : 0;
-    const add = (product: AnyProduct | ProductSnap, qty = 1, every?: Every | null) => {
+    const add = (product: AnyProduct | ProductSnap, qty = 1, every?: Every | null, start?: string) => {
       const s = snap(product);
       setLines((prev) => {
         const found = prev.find((l) => l.productId === s.id);
         // Adding from the product page sets the delivery plan; a plain "add" keeps whatever was chosen.
         return found
-          ? prev.map((l) => (l.productId === s.id ? { ...l, qty: l.qty + qty, product: s, ...(every !== undefined ? { every: every ?? undefined } : {}) } : l))
-          : [...prev, { productId: s.id, qty, product: s, ...(every ? { every } : {}) }];
+          ? prev.map((l) => (l.productId === s.id ? { ...l, qty: l.qty + qty, product: s, ...(every !== undefined ? { every: every ?? undefined, start: every ? start : undefined } : {}) } : l))
+          : [...prev, { productId: s.id, qty, product: s, ...(every ? { every, ...(start ? { start } : {}) } : {}) }];
       });
     };
     return {
@@ -204,9 +204,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       primeChoice,
       setPrimeChoice,
       wishlist,
-      setEvery: (productId, every) => setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, every } : l))),
-      add: (product, qty = 1, every) => {
-        add(product, qty, every);
+      setEvery: (productId, every, start) => setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, every, start: every ? (start ?? l.start) : undefined } : l))),
+      add: (product, qty = 1, every, start) => {
+        add(product, qty, every, start);
         setLastAdded({ id: product.id, at: Date.now() });
         track({ type: "add_to_cart", item: { id: product.id, name: product.name, brand: product.brand, price: product.price, qty } });
         setDrawerOpen(true);
