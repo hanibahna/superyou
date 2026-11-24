@@ -72,10 +72,11 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
     setStage(0);
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return setStage(2);
+    // Shops appear one by one, then each shows its verdict.
     const a = setTimeout(() => setStage(1), 900);
-    const b = setTimeout(() => setStage(2), 1700);
+    const b = setTimeout(() => setStage(2), 1300 + Math.min(p.shops?.length ?? 1, 8) * 280);
     return () => (clearTimeout(a), clearTimeout(b));
-  }, [p.price]);
+  }, [p.price, p.shops?.length]);
   if (!on || !p.price) return null;
   const lowered = !!p.matchWas && p.match !== undefined;
   const vs = lowered ? p.matchVs : p.cmpVs;
@@ -96,13 +97,29 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
         <ul className="sp-in mt-1.5 space-y-0.5 text-xs">
           {p.shops.map(([name, price], i) => {
             const d = price - (p.price ?? 0);
+            const before = p.matchWas ?? p.price ?? 0;
+            // Already cheaper than them at our normal price, or we took a little off to get below them.
+            const tookOff = lowered && price <= before * 1.005;
             return (
-              <li key={i} className="flex items-baseline justify-between gap-3 text-muted">
-                <span>{name || t("Another shop")}</span>
-                <span className="tabular-nums">
-                  {stage >= 2 && d > 0.009 && <span className="sp-pop me-2 font-semibold text-[#046c4e]">−{money(d)} · {fmtPct(d / price)}</span>}
-                  <span className={d > 0.009 ? "line-through decoration-[#c0587a]/60" : ""}>{money(price)}</span>
-                </span>
+              <li key={i} className="sp-in rounded-lg px-1.5 py-1 text-muted odd:bg-[#fff0f4]/60" style={{ animationDelay: `${i * 0.28}s` }}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium text-ink">{name || t("Another shop")}</span>
+                  <span className="tabular-nums">
+                    <span className={stage >= 2 && d > 0.009 ? "line-through decoration-[#c0587a]/60" : ""}>{money(price)}</span>
+                  </span>
+                </div>
+                {stage < 2 ? (
+                  <span className="sp-scan relative mt-1 block h-0.5 w-full overflow-hidden rounded-full bg-[#f3c4d2]" aria-hidden />
+                ) : d > 0.009 ? (
+                  <div className="sp-pop mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[11px]" style={{ animationDelay: `${i * 0.15}s` }}>
+                    <span className={`rounded-full px-1.5 py-px font-semibold ${tookOff ? "bg-[#9b2c50] text-white" : "bg-[#e6f4ee] text-[#046c4e]"}`}>
+                      {tookOff ? (Math.abs(price - before) < 0.01 * price ? t("Same price → we took extra off") : t("Cheaper there → we took extra off")) : t("Already cheaper here")}
+                    </span>
+                    <span className="font-bold text-[#046c4e]">{t("Beaten by")} {money(d)} · {fmtPct(d / price)}</span>
+                  </div>
+                ) : (
+                  <div className="sp-pop mt-0.5 text-[11px] font-semibold text-ink">{t("Same price")}</div>
+                )}
               </li>
             );
           })}
