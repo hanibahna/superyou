@@ -133,8 +133,7 @@ export async function startRun(): Promise<State> {
 }
 
 /** Does as much of the current run as fits in one call. Returns true when there is more to do. */
-export async function step(): Promise<{ more: boolean; state: State | null }> {
-  const t0 = Date.now();
+export async function step(t0 = Date.now()): Promise<{ more: boolean; state: State | null }> {
   const g = (await getGrowth()).priceMatch;
   const sites = g.sites.filter((x) => x.enabled);
   let st = await readState();
@@ -192,6 +191,8 @@ export async function step(): Promise<{ more: boolean; state: State | null }> {
       st = { ...st, site: st.site + 1, page: 1 };
     }
     await writeState(st);
+    // Time left in this call: go on with the next shop (or the final step) right here.
+    if (st.page === 1 && Date.now() - t0 < BUDGET_MS - 90_000) return step(t0);
     return { more: true, state: st };
   }
 
@@ -285,4 +286,71 @@ export async function priceMatches(): Promise<{ ver: string; map: Map<string, Ma
     g.__pm = { ver: "0", at: now, map: new Map() };
   }
   return g.__pm;
+}
+
+// ── Margin analysis (admin) ─────────────────────────────────
+
+type Bucket = { n: number; marginNow: number; marginAtMatch: number; marginAtBeat: number; marginFinal: number };
+/** What matching (or beating by beatPct) would do to our margins, from the last check's offers. */
+export async function analyse(beatPct = 5, marginPct = 10) {
+  const idx = await getIndex();
+  const sourcing = await getSourcing();
+  const sites = (await getGrowth()).priceMatch.sites.filter((x) => x.enabled);
+  const best = new Map<string, { t: number; site: string; how: string }>();
+  for (const site of sites) {
+    let cursor = "0";
+    do {
+      const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", OFFERS(site.domain), cursor, "COUNT", 2000])) ?? ["0", []];
+      for (let i = 0; i < flat.length; i += 2) {
+        const [p, , how] = flat[i + 1].split("|");
+        const t = Number(p);
+        const prev = best.get(flat[i]);
+        if (!prev || t < prev.t) best.set(flat[i], { t, site: site.label, how });
+      }
+      cursor = String(next);
+    } while (cursor !== "0");
+  }
+  const out = {
+    found: best.size, cheaperThere: 0, noCost: 0, suspicious: 0,
+    full: { n: 0 } as Record<string, number>, floorOnly: 0, stillDearer: 0,
+    bySite: {} as Record<string, number>, bySource: {} as Record<string, { cheaper: number; withCost: number }>,
+    gapPct: [] as number[], all: { n: 0, marginNow: 0, marginAtMatch: 0, marginAtBeat: 0, marginFinal: 0 } as Bucket,
+    priceDrop: 0, examples: [] as { name: string; ours: number; theirs: number; cost: number; final: number; marginFinal: number; site: string }[],
+  };
+  for (const [id, b] of best) {
+    const p = idx.byId.get(id);
+    if (!p || p.status !== "active" || b.t >= p.price - 0.005) continue;
+    out.cheaperThere++;
+    out.bySite[b.site] = (out.bySite[b.site] ?? 0) + 1;
+    const src = (p.source || "manual").toLowerCase();
+    const bs = (out.bySource[src] ??= { cheaper: 0, withCost: 0 });
+    bs.cheaper++;
+    if (b.how === "name" && b.t < p.price * 0.5) { out.suspicious++; continue; }
+    if (!p.cost || p.cost <= 0) { out.noCost++; continue; }
+    bs.withCost++;
+    const rule = sourcing.sources.find((x) => x.source.toLowerCase() === src);
+    const c = rule?.origin === "international" && rule.pricing ? landed(p.cost, rule.pricing).landed : p.cost;
+    const floor = c * (1 + marginPct / 100);
+    const beat = b.t * (1 - beatPct / 100);
+    const final = Math.min(p.price, Math.max(beat, floor));
+    if (final >= b.t - 0.005) out.stillDearer++;
+    else if (final > beat + 0.005) out.floorOnly++;
+    else out.full.n++;
+    out.gapPct.push(((p.price - b.t) / p.price) * 100);
+    const m = (x: number) => (x - c) / x;
+    out.all.n++;
+    out.all.marginNow += m(p.price); out.all.marginAtMatch += m(b.t); out.all.marginAtBeat += m(beat); out.all.marginFinal += m(final);
+    out.priceDrop += p.price - final;
+    if (out.examples.length < 15) out.examples.push({ name: `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`, ours: p.price, theirs: b.t, cost: r2(c), final: r2(final), marginFinal: Math.round(m(final) * 1000) / 10, site: b.site });
+  }
+  const n = out.all.n || 1;
+  const pct = (x: number) => Math.round((x / n) * 1000) / 10;
+  const gaps = out.gapPct.sort((a, b) => a - b);
+  return {
+    found: out.found, cheaperThere: out.cheaperThere, noCost: out.noCost, suspicious: out.suspicious, withCost: out.all.n,
+    beatFully: out.full.n, onlyToFloor: out.floorOnly, stillDearer: out.stillDearer,
+    avgMargin: { now: pct(out.all.marginNow), atMatch: pct(out.all.marginAtMatch), atBeat: pct(out.all.marginAtBeat), final: pct(out.all.marginFinal) },
+    medianGapPct: gaps.length ? Math.round(gaps[Math.floor(gaps.length / 2)] * 10) / 10 : 0,
+    avgPriceDrop: r2(out.priceDrop / n), bySite: out.bySite, bySource: out.bySource, examples: out.examples,
+  };
 }

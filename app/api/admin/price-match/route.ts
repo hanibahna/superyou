@@ -5,9 +5,12 @@ import { siteUrl } from "@/lib/site-url";
 export const maxDuration = 300;
 
 /** Last price check: shops read, products matched, prices matched and items flagged. */
-export async function GET() {
+export async function GET(req: Request) {
   const denied = await adminGuard();
   if (denied) return denied;
+  const u = new URL(req.url);
+  if (u.searchParams.has("analyse"))
+    return NextResponse.json(await (await import("@/lib/price-match")).analyse(Number(u.searchParams.get("beat") ?? 5), Number(u.searchParams.get("margin") ?? 10)));
   return NextResponse.json(await (await import("@/lib/price-match")).getReport());
 }
 
