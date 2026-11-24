@@ -86,7 +86,15 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const subOk = (life ? life.every > 0 : isSubscribable(initial)) && (!growth.subscribe.collection || (await (await import("@/lib/listing")).collectionMembers(growth.subscribe.collection)).some((p) => variants.some((v) => v.id === p.id)));
   const sec0 = await sectionFor(initial.category);
   const ptips = (await import("@/lib/tips")).productTips({ name: `${initial.name} ${initial.brand}`, category: initial.category, concerns: [...initial.concerns, ...initial.concerns.map((c) => concerns.find((x) => x.slug === c)?.name ?? "")], text: `${detail.ingredients ?? ""}` });
-  const sec = sec0 ? { ...sec0, tips: ptips } : null; // only tips about this exact kind of product
+  // Tips on every product page, most specific first: this kind of product (from its name), the
+  // pharmacist guide's cautions for this product, then its category and concerns, then the section's own tips.
+  const g0 = await (await import("@/lib/product-guide")).getGuide(slug).catch(() => null);
+  const tipsAll = [...ptips];
+  for (const c of g0?.cautions ?? []) if (tipsAll.length < 4 && c.length < 180 && !tipsAll.includes(c)) tipsAll.push(c);
+  const { tipsFor } = await import("@/lib/tips");
+  for (const c of tipsFor([initial.category, ...initial.concerns.map((c) => concerns.find((x) => x.slug === c)?.name ?? c)])) if (tipsAll.length < 4 && !tipsAll.includes(c)) tipsAll.push(c);
+  for (const c of sec0?.tips ?? []) if (tipsAll.length < 3 && !tipsAll.includes(c)) tipsAll.push(c);
+  const sec = { banner: sec0?.banner ?? { title: "", cta: "", href: "", bg: "" }, tips: tipsAll };
   const how = detail.video;
   const videos = lib.show.product
     ? lib.items.filter((v) => v.enabled && (v.products.includes(initial.slug) || v.brands.some((b) => b.toLowerCase() === initial.brand.toLowerCase()) && v.categories.includes(initial.category))).slice(0, 10)
@@ -140,7 +148,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         {/* Shortcuts and tips sit above the product on desktop; on phones they move below it so name and price come first. */}
         <div className="hidden md:block">
           <QuickHelp className="mb-3" />
-          {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
+          {sec.tips.length > 0 && <TipLine tips={sec.tips} banner={sec.banner} />}
         </div>
 
         <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} life={life && life.every ? { days: life.days, every: life.every, basis: life.basis } : null} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
@@ -164,7 +172,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         </BuyBox>
         <div className="mt-8 md:hidden">
           <QuickHelp className="mb-3" />
-          {sec && <TipLine tips={sec.tips} banner={sec.banner} />}
+          {sec.tips.length > 0 && <TipLine tips={sec.tips} banner={sec.banner} />}
         </div>
       </div>
       {pairs.length > 0 && (
