@@ -70,7 +70,7 @@ export const defaultSettings: Settings = {
   pages: {
     delivery: {
       title: "Delivery & returns",
-      body: "We deliver across Lebanon in 1–3 working days. Delivery is $4, free on orders over $30.\n\nUnopened products can be returned within 7 days of delivery.",
+      body: "We deliver across Lebanon in 1–3 working days. Delivery is $4, free on orders over $100 (every order for SuperPrime members).\n\nUnopened products can be returned within 7 days of delivery.",
     },
     payment: { title: "Payment methods", body: "Cash on delivery\nVisa / Mastercard (secure card payment)\nWhish Money" },
     rewards: { title: "Rewards program", body: "Earn 1 point per $1 spent. 100 points = $5 off." },
