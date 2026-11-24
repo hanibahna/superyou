@@ -272,6 +272,7 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
               <Num label="No cost on file: assume a margin of (%)" hint="Trial setting until supplier costs are added. 0 = never SuperPrice items without a cost." value={g.priceMatch.assumeMarginPct} onChange={(assumeMarginPct) => up("priceMatch", { assumeMarginPct })} />
               <Num label="SuperPrice units per item per order" value={g.priceMatch.maxUnits} onChange={(maxUnits) => up("priceMatch", { maxUnits })} />
             </div>
+            <Toggle label="Don't compare a product with the shop we buy it from" hint="Products imported from NeoVitale, Skin Society or HOLDAL are not cut below that same shop's price (we'd be selling under our own buying price)." checked={g.priceMatch.skipOwnSource} onChange={(skipOwnSource) => up("priceMatch", { skipOwnSource })} />
             <Toggle label="One SuperPrice order per customer a day" hint="By phone number. A second order the same day pays the regular price (the customer is told first). Coupons, wheel prizes and member prices never apply on top of a SuperPrice." checked={g.priceMatch.oncePerDay} onChange={(oncePerDay) => up("priceMatch", { oncePerDay })} />
           </Card>
           <Card title="Shops we compare with" sub="Shopify shops with a public product feed, priced in US dollars. Turn off “Show name” to say “cheaper than other shops” without naming the shop.">

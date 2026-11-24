@@ -239,6 +239,9 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
       for (let i = 0; i < flat.length; i += 2) {
         const [p, u, how] = flat[i + 1].split("|");
         const t = Number(p);
+        // The shop a product is bought from is not a competitor for it (we'd be undercutting our own supplier).
+        const own = cfg.skipOwnSource && (idx.byId.get(flat[i])?.source ?? "").toLowerCase() === site.domain;
+        if (own) continue;
         const prev = best.get(flat[i]);
         if (!prev || t < prev.t) best.set(flat[i], { t, site, u, how });
         (shops.get(flat[i]) ?? shops.set(flat[i], []).get(flat[i])!).push([site.label, r2(t), site.showName]);

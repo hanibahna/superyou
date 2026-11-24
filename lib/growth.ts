@@ -138,6 +138,7 @@ export type PriceMatch = {
   maxOffPct: number; // never more than this % below our own price
   maxUnits: number; // SuperPrice units per item per order
   oncePerDay: boolean; // one SuperPrice order per phone number per day
+  skipOwnSource: boolean; // never compare a product with the shop we buy it from
   sites: PriceMatchSite[];
 };
 export const defaultPriceMatch: PriceMatch = {
@@ -150,6 +151,7 @@ export const defaultPriceMatch: PriceMatch = {
   maxOffPct: 25,
   maxUnits: 2,
   oncePerDay: true,
+  skipOwnSource: true,
   sites: [
     { domain: "feel22.com", label: "Feel22", enabled: true, showName: true },
     { domain: "neovitale.com", label: "NeoVitale", enabled: true, showName: true },
@@ -298,7 +300,7 @@ export const growthSchema = z.object({
   priceMatch: z.object({
     enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
     beatPct: z.number().min(0).max(30).default(5), tieBeatPct: z.number().min(0).max(30).default(2), assumeMarginPct: z.number().min(0).max(80).default(30), maxOffPct: z.number().min(1).max(60).default(25),
-    maxUnits: z.number().int().min(1).max(20).default(2), oncePerDay: z.boolean().default(true),
+    maxUnits: z.number().int().min(1).max(20).default(2), oncePerDay: z.boolean().default(true), skipOwnSource: z.boolean().default(true),
     sites: z.preprocess((a) => (Array.isArray(a) ? a.filter((x) => x && String(x.domain ?? "").trim()) : a), z.array(z.object({ domain: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9.-]+\.[a-z]{2,}$/), label: z.string().trim().min(1).max(40), enabled: z.boolean(), showName: z.boolean() })).max(12)),
   }).default(defaultPriceMatch),
 });
