@@ -67,26 +67,33 @@ async function currencyOf(domain: string): Promise<string> {
 // ── Matching ────────────────────────────────────────────────
 
 type Ours = { p: ProductLite; tokens: Set<string>; sizes: Set<string> };
-type Book = { byBarcode: Map<string, ProductLite[]>; byBrand: Map<string, Ours[]> };
+type Book = { byBarcode: Map<string, ProductLite[]>; byBrand: Map<string, Ours[]>; byVariant: Map<string, ProductLite[]> };
 
-function bookOf(all: ProductLite[]): Book {
+function bookOf(all: ProductLite[], domain: string): Book {
   const byBarcode = new Map<string, ProductLite[]>();
+  // Items we imported from this very shop carry its variant id in their SKU ("NEO-4567…").
+  const byVariant = new Map<string, ProductLite[]>();
   const byBrand = new Map<string, Ours[]>();
   for (const p of all) {
     if (p.status !== "active" || p.brand === "SuperYou Clinic") continue;
     const b = digits(p.barcode);
     if (b.length >= 8) (byBarcode.get(b) ?? byBarcode.set(b, []).get(b)!).push(p);
+    const vid = (p.source ?? "").toLowerCase() === domain ? p.sku.match(/-(\d{6,})$/)?.[1] : undefined;
+    if (vid) (byVariant.get(vid) ?? byVariant.set(vid, []).get(vid)!).push(p);
     const sizes = sizesOf([p.name, p.variant ?? "", p.size ?? ""].join(" "));
     if (!sizes.size) continue; // shades and sets without a size: barcode only
     const k = brandKey(p.brand);
     (byBrand.get(k) ?? byBrand.set(k, []).get(k)!).push({ p, tokens: tokensOf(p.name, p.brand), sizes });
   }
-  return { byBarcode, byBrand };
+  return { byBarcode, byBrand, byVariant };
 }
 
 /** Our products that are the same item as this competitor variant. */
 function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["variants"][number]): { ids: string[]; how: "barcode" | "name" } | null {
-  const b = digits(v.barcode);
+  const same = book.byVariant.get(String(v.id));
+  if (same?.length) return { ids: same.map((p) => p.id), how: "barcode" };
+  // Public feeds hide the barcode field; many shops put the barcode in the SKU instead.
+  const b = digits(v.barcode || (v.sku && /^\d{8,14}$/.test(v.sku.trim()) ? v.sku : ""));
   if (b.length >= 8) {
     const hit = book.byBarcode.get(b);
     if (hit?.length) return { ids: hit.map((p) => p.id), how: "barcode" };
@@ -144,7 +151,7 @@ export async function step(): Promise<{ more: boolean; state: State | null }> {
         const cur = await currencyOf(site.domain);
         if (cur !== "USD") throw new Error(`prices are in ${cur}, not US dollars`);
       }
-      const book = bookOf((await getIndex()).all);
+      const book = bookOf((await getIndex()).all, site.domain);
       while (Date.now() - t0 < BUDGET_MS) {
         const page = await fetchPage(site.domain, st.page);
         const best = new Map<string, [number, string, string]>();

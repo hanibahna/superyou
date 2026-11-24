@@ -40,7 +40,7 @@ export function PriceMatchReport() {
             <Stat n={r.matchedNow} label="price matched now" />
           </div>
           <table className="w-full text-left">
-            <thead className="text-xs uppercase text-muted"><tr><th className="py-1">Shop</th><th>Products read</th><th>Matched to ours</th><th>By barcode</th><th>Status</th></tr></thead>
+            <thead className="text-xs uppercase text-muted"><tr><th className="py-1">Shop</th><th>Products read</th><th>Matched to ours</th><th>Exact (barcode or same item)</th><th>Status</th></tr></thead>
             <tbody>
               {r.sites.map((s) => (
                 <tr key={s.domain} className="border-t border-line">
