@@ -292,7 +292,7 @@ export async function priceMatches(): Promise<{ ver: string; map: Map<string, Ma
 
 type Bucket = { n: number; marginNow: number; marginAtMatch: number; marginAtBeat: number; marginFinal: number };
 /** What matching (or beating by beatPct) would do to our margins, from the last check's offers. */
-export async function analyse(beatPct = 5, marginPct = 10) {
+export async function analyse(beatPct = 5, marginPct = 10, assumeMarginPct = 0) {
   const idx = await getIndex();
   const sourcing = await getSourcing();
   const sites = (await getGrowth()).priceMatch.sites.filter((x) => x.enabled);
@@ -314,7 +314,7 @@ export async function analyse(beatPct = 5, marginPct = 10) {
     found: best.size, cheaperThere: 0, noCost: 0, suspicious: 0,
     full: { n: 0 } as Record<string, number>, floorOnly: 0, stillDearer: 0,
     bySite: {} as Record<string, number>, bySource: {} as Record<string, { cheaper: number; withCost: number }>,
-    gapPct: [] as number[], all: { n: 0, marginNow: 0, marginAtMatch: 0, marginAtBeat: 0, marginFinal: 0 } as Bucket,
+    gapPct: [] as number[], dropPct: [] as number[], revenueNow: 0, revenueFinal: 0, profitNow: 0, profitFinal: 0, all: { n: 0, marginNow: 0, marginAtMatch: 0, marginAtBeat: 0, marginFinal: 0 } as Bucket,
     priceDrop: 0, examples: [] as { name: string; ours: number; theirs: number; cost: number; final: number; marginFinal: number; site: string }[],
   };
   for (const [id, b] of best) {
@@ -326,10 +326,13 @@ export async function analyse(beatPct = 5, marginPct = 10) {
     const bs = (out.bySource[src] ??= { cheaper: 0, withCost: 0 });
     bs.cheaper++;
     if (b.how === "name" && b.t < p.price * 0.5) { out.suspicious++; continue; }
-    if (!p.cost || p.cost <= 0) { out.noCost++; continue; }
-    bs.withCost++;
+    const known = !!p.cost && p.cost > 0;
+    if (!known) out.noCost++;
+    if (!known && !assumeMarginPct) continue;
+    if (known) bs.withCost++;
     const rule = sourcing.sources.find((x) => x.source.toLowerCase() === src);
-    const c = rule?.origin === "international" && rule.pricing ? landed(p.cost, rule.pricing).landed : p.cost;
+    // No cost on file: estimate it from our price and an assumed margin (planning only).
+    const c = !known ? p.price * (1 - assumeMarginPct / 100) : rule?.origin === "international" && rule.pricing ? landed(p.cost!, rule.pricing).landed : p.cost!;
     const floor = c * (1 + marginPct / 100);
     const beat = b.t * (1 - beatPct / 100);
     const final = Math.min(p.price, Math.max(beat, floor));
@@ -337,10 +340,12 @@ export async function analyse(beatPct = 5, marginPct = 10) {
     else if (final > beat + 0.005) out.floorOnly++;
     else out.full.n++;
     out.gapPct.push(((p.price - b.t) / p.price) * 100);
+    out.dropPct.push(((p.price - final) / p.price) * 100);
     const m = (x: number) => (x - c) / x;
     out.all.n++;
     out.all.marginNow += m(p.price); out.all.marginAtMatch += m(b.t); out.all.marginAtBeat += m(beat); out.all.marginFinal += m(final);
     out.priceDrop += p.price - final;
+    out.revenueNow += p.price; out.revenueFinal += final; out.profitNow += p.price - c; out.profitFinal += final - c;
     if (out.examples.length < 15) out.examples.push({ name: `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`, ours: p.price, theirs: b.t, cost: r2(c), final: r2(final), marginFinal: Math.round(m(final) * 1000) / 10, site: b.site });
   }
   const n = out.all.n || 1;
@@ -350,6 +355,8 @@ export async function analyse(beatPct = 5, marginPct = 10) {
     found: out.found, cheaperThere: out.cheaperThere, noCost: out.noCost, suspicious: out.suspicious, withCost: out.all.n,
     beatFully: out.full.n, onlyToFloor: out.floorOnly, stillDearer: out.stillDearer,
     avgMargin: { now: pct(out.all.marginNow), atMatch: pct(out.all.marginAtMatch), atBeat: pct(out.all.marginAtBeat), final: pct(out.all.marginFinal) },
+    gapBands: [5, 10, 20, 30, 100].map((hi, i, a) => ({ upTo: hi, n: gaps.filter((x) => x > (i ? a[i - 1] : 0) && x <= hi).length })),
+    profitPerUnitSoldNow: r2(out.profitNow / n), profitPerUnitSoldFinal: r2(out.profitFinal / n),
     medianGapPct: gaps.length ? Math.round(gaps[Math.floor(gaps.length / 2)] * 10) / 10 : 0,
     avgPriceDrop: r2(out.priceDrop / n), bySite: out.bySite, bySource: out.bySource, examples: out.examples,
   };
