@@ -352,7 +352,7 @@ export const growthSchema = z.object({
     enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
     beatPct: z.number().min(0).max(30).default(2), tieBeatPct: z.number().min(0).max(30).default(2), directoryV: z.number().optional(), assumeMarginPct: z.number().min(0).max(80).default(30), maxOffPct: z.number().min(1).max(60).default(25),
     maxUnits: z.number().int().min(1).max(20).default(2), oncePerDay: z.boolean().default(true), skipOwnSource: z.boolean().default(true),
-    sites: z.preprocess((a) => (Array.isArray(a) ? a.filter((x) => x && String(x.domain ?? "").trim()) : a), z.array(z.object({ domain: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9.-]+\.[a-z]{2,}$/), label: z.string().trim().min(1).max(40), enabled: z.boolean(), showName: z.boolean() })).max(12)),
+    sites: z.preprocess((a) => (Array.isArray(a) ? a.filter((x) => x && String(x.domain ?? "").trim()) : a), z.array(z.object({ domain: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9.-]+\.[a-z]{2,}$/), label: z.string().trim().min(1).max(40), enabled: z.boolean(), showName: z.boolean() })).max(150)),
   }).default(defaultPriceMatch),
 });
 
