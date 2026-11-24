@@ -245,7 +245,8 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
             <Toggle label="SuperPrice on" checked={g.priceMatch.enabled} onChange={(enabled) => up("priceMatch", { enabled })} />
             <Toggle label="Show SuperPrice to shoppers" hint="Badge and comparison on the product page, the reveal in the bag and the guarantee at checkout. Off: prices still drop, quietly." checked={g.priceMatch.badge} onChange={(badge) => up("priceMatch", { badge })} />
             <div className="grid gap-4 md:grid-cols-3">
-              <Num label="Below the cheapest shop by (%)" hint="0 = match their price" value={g.priceMatch.beatPct} onChange={(beatPct) => up("priceMatch", { beatPct })} />
+              <Num label="Shop is cheaper: go below them by (%)" hint="0 = match their price" value={g.priceMatch.beatPct} onChange={(beatPct) => up("priceMatch", { beatPct })} />
+              <Num label="Shop has the same price: go below them by (%)" hint="0 = leave it" value={g.priceMatch.tieBeatPct} onChange={(tieBeatPct) => up("priceMatch", { tieBeatPct })} />
               <Num label="Never under cost + (%)" hint="Imported items use the landed cost (freight, duty and VAT)." value={g.priceMatch.marginPct} onChange={(marginPct) => up("priceMatch", { marginPct })} />
               <Num label="Never more than (%) off our price" value={g.priceMatch.maxOffPct} onChange={(maxOffPct) => up("priceMatch", { maxOffPct })} />
               <Num label="No cost on file: assume a margin of (%)" hint="Trial setting until supplier costs are added. 0 = never SuperPrice items without a cost." value={g.priceMatch.assumeMarginPct} onChange={(assumeMarginPct) => up("priceMatch", { assumeMarginPct })} />

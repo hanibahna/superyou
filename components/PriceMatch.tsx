@@ -79,12 +79,18 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
       )}
       {stage >= 1 && (p.shops?.length ? (
         <ul className="sp-in mt-1.5 space-y-0.5 text-xs">
-          {p.shops.map(([name, price], i) => (
-            <li key={i} className="flex justify-between gap-3 text-muted">
-              <span>{name || t("Another shop")}</span>
-              <span className="tabular-nums line-through decoration-[#c0587a]/60">{money(price)}</span>
-            </li>
-          ))}
+          {p.shops.map(([name, price], i) => {
+            const d = price - (p.price ?? 0);
+            return (
+              <li key={i} className="flex items-baseline justify-between gap-3 text-muted">
+                <span>{name || t("Another shop")}</span>
+                <span className="tabular-nums">
+                  {stage >= 2 && d > 0.009 && <span className="sp-pop me-2 font-semibold text-[#046c4e]">−{money(d)} · {fmtPct(d / price)}</span>}
+                  <span className={d > 0.009 ? "line-through decoration-[#c0587a]/60" : ""}>{money(price)}</span>
+                </span>
+              </li>
+            );
+          })}
           {stage >= 2 && (
             <li className="sp-in flex justify-between gap-3 border-t border-[#f3c4d2] pt-1 font-bold text-ink">
               <span>SuperYou</span><span className="sp-pop tabular-nums">{money(p.price)}</span>
@@ -102,23 +108,28 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
   );
 }
 
-/** Which shops we beat, and whether the extra discount below them was applied. */
+const fmtPct = (x: number) => `${Math.round(x * 1000) / 10}%`;
+
+/** Who we beat, by how much ($ and %), and whether the extra discount below them was applied. */
 function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) {
   const t = useT();
   if (vs === undefined || !p.price) return <p className="sp-in mt-1.5 text-[11px] text-muted">{t("No lower price found in tonight's check. Checked every night.")}</p>;
-  const named = [...new Set((p.shops ?? []).map(([n]) => n).filter(Boolean))];
-  const beaten = named.length ? named.join(", ") : t("other shops in Lebanon");
-  const pct = Math.max(0, Math.round(((vs - p.price) / vs) * 1000) / 10);
-  const msg = lowered
+  const price = p.price;
+  const shops = (p.shops?.length ? p.shops : [[lowered ? p.match ?? "" : p.cmpShop ?? "", vs] as [string, number]]).filter(([, x]) => x - price > 0.009);
+  const who = shops.map(([n, x]) => `${n || t("another shop")} ${t("by")} ${money(x - price)} (${fmtPct((x - price) / x)})`);
+  const list = who.length > 1 ? `${who.slice(0, -1).join(", ")} ${t("and")} ${who[who.length - 1]}` : who[0];
+  const wasTie = lowered && Math.abs(vs - (p.matchWas ?? 0)) < 0.01 * vs;
+  const status = lowered
     ? p.beat === "partial"
-      ? `${t("Extra discount applied, partly:")} ${pct}% ${t("below the lowest price (we can't go lower on this item).")}`
-      : `${t("Extra discount applied:")} ${pct}% ${t("below the lowest price.")}`
-    : pct > 0
-      ? `${t("No extra discount needed: already")} ${pct}% ${t("below the lowest price.")}`
-      : t("No extra discount needed: same as the lowest price.");
+      ? t("Extra discount applied, as far as this item allows.")
+      : wasTie
+        ? t("Same price elsewhere, so we went lower.")
+        : t("Cheaper elsewhere, so we went lower.")
+    : "";
   return (
     <p className="sp-in mt-1.5 text-[11px] leading-relaxed">
-      <b className="text-[#046c4e]">✓ {pct > 0 ? t("Beats") : t("Matches")} {beaten}.</b> <span className="text-muted">{msg} {t("Checked every night.")}</span>
+      {list ? <b className="text-[#046c4e]">✓ {lowered ? t("Beats") : t("Cheaper than")} {list}.</b> : <b className="text-[#046c4e]">✓ {t("Same as the lowest price.")}</b>}{" "}
+      <span className="text-muted">{status} {t("Checked every night.")}</span>
     </p>
   );
 }

@@ -247,7 +247,9 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
   for (const [id, b] of best) {
     const p = idx.byId.get(id);
     if (!p || p.status !== "active") continue;
-    if (b.t >= p.price - 0.005) {
+    // Same price as a shop (within 0.5%): go tieBeatPct below them. Cheaper there: beatPct below.
+    const tie = b.t >= p.price - 0.005 && b.t <= p.price * 1.005;
+    if (b.t > p.price * 1.005 || (tie && !cfg.tieBeatPct)) {
       cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
       continue;
     }
@@ -262,11 +264,15 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     // No cost on file: estimated from our price and the assumed margin (a trial setting).
     const cost = !known ? p.price * (1 - cfg.assumeMarginPct / 100) : rule?.origin === "international" && rule.pricing ? landed(p.cost!, rule.pricing).landed : p.cost!;
     const floor = r2(cost * (1 + cfg.marginPct / 100));
-    const target = r2(b.t * (1 - cfg.beatPct / 100));
+    const target = r2(b.t * (1 - (tie ? cfg.tieBeatPct : cfg.beatPct) / 100));
     const cap = r2(p.price * (1 - cfg.maxOffPct / 100));
     const sp = Math.max(target, floor, cap);
     // Only when we end up truly cheaper than the competitor (and cheaper than today).
-    if (sp >= b.t - 0.005 || sp >= p.price - 0.005) { flag("below floor", Math.max(floor, cap)); continue; }
+    if (sp >= b.t - 0.005 || sp >= p.price - 0.005) {
+      if (tie) cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
+      else flag("below floor", Math.max(floor, cap));
+      continue;
+    }
     matchedNow++;
     if (!known) estimated++;
     mBefore += (p.price - cost) / p.price;
