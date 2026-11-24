@@ -38,13 +38,14 @@ export function SuperPrimeBox() {
         <span className="text-xs text-muted">{money(pr.monthlyPrice)}/{t("month")}</span>
       </div>
       <p className="mt-2 font-semibold">{t("Free delivery on every order")}{pr.freeMin > 0 ? ` ${t("from")} ${money(pr.freeMin)}` : ""}{pr.unlimitedSuperPrice ? `, ${t("SuperPrice with no daily limit")}` : ""}.</p>
+      {trialAvail && q?.trialOk && pr.promoLive && <p className="mt-2 inline-block rounded-full bg-[#c0587a] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{t("Limited time: 3 months free, no minimum")}</p>}
       {trialAvail && q?.trialOk && (
         <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg bg-[#fff5f8] p-3">
           <input type="checkbox" checked={primeChoice === "trial"} onChange={(e) => setPrimeChoice(e.target.checked ? "trial" : "")} className="mt-0.5" />
           <span><b>{t("Start")} {pr.trialMonths} {t("months free")}</b> {t("with this order. Nothing to pay later unless you choose to renew.")}</span>
         </label>
       )}
-      {trialAvail && !q?.trialOk && needed > 0 && (
+      {trialAvail && !q?.trialOk && !pr.promoLive && needed > 0 && (
         <p className="mt-2 rounded-lg bg-[#fff5f8] p-2 text-xs">{t("Add")} <b>{money(needed)}</b> {t("more to get")} <b>{pr.trialMonths} {t("months free")}</b> {t("(first order of")} {money(pr.trialMinOrder)}+).</p>
       )}
       <label className="mt-2 flex cursor-pointer items-start gap-2 p-1">
@@ -52,6 +53,26 @@ export function SuperPrimeBox() {
         <span>{q?.status === "lapsed" ? t("Renew for") : t("Join for")} <b>{money(pr.monthlyPrice)}</b> {t("and get free delivery on this order and every order for 30 days. Paid with this order; it never renews by itself.")}</span>
       </label>
       {!q?.known && <p className="mt-1 text-[11px] text-muted">{t("Already a member? Enter your mobile number above.")}</p>}
+    </div>
+  );
+}
+
+/** Bag and cart page: a short SuperPrime offer; the choice itself is made at checkout. */
+export function SuperPrimeTeaser({ className = "" }: { className?: string }) {
+  const t = useT();
+  const pr = useGrowth().prime;
+  const { quote, subtotal } = useShop();
+  if (!pr?.enabled || quote?.prime?.status === "trial" || quote?.prime?.status === "active") return null;
+  const after = subtotal - (quote?.discountTotal ?? 0);
+  const free = pr.trialMonths > 0 && (pr.promoLive || after >= pr.trialMinOrder);
+  return (
+    <div className={`sp-in flex items-center gap-3 rounded-xl bg-ink px-3 py-2 text-xs text-white ${className}`}>
+      <SuperPrimeBadge className="shrink-0 bg-white !text-ink" />
+      <span>
+        {t("Free delivery on every order.")}{" "}
+        {free ? <b className="text-[#e8b4c4]">{pr.trialMonths} {t("months free")}</b> : <b>{money(pr.monthlyPrice)}/{t("month")}</b>}
+        {!free && pr.trialMonths > 0 && <> {t("or")} {pr.trialMonths} {t("months free from")} {money(pr.trialMinOrder)}</>}. {t("Tick it at checkout.")}
+      </span>
     </div>
   );
 }

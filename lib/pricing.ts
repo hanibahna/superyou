@@ -198,7 +198,8 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     const st = primeState(input.phone ? await getPrime(input.phone).catch(() => null) : null);
     const after = q.subtotal - q.discountTotal;
     const member = st.status === "trial" || st.status === "active";
-    const trialOk = !st.trialUsed && pr.trialMonths > 0 && after >= pr.trialMinOrder;
+    const { primePromoLive } = await import("@/lib/growth");
+    const trialOk = !st.trialUsed && pr.trialMonths > 0 && (primePromoLive(pr) || after >= pr.trialMinOrder);
     const choice = member ? undefined : input.prime === "trial" ? (trialOk ? "trial" : undefined) : input.prime;
     const fee = choice === "join" ? pr.monthlyPrice : 0;
     const free = (member || !!choice) && after >= pr.freeMin;

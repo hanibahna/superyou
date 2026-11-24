@@ -13,6 +13,7 @@ import { ProductCarousel } from "@/components/ProductCarousel";
 import { ProductImage } from "@/components/ProductImage";
 import { DeliverySplit, ShipBadge } from "@/components/ShipBadge";
 import { PriceMatchBadge } from "@/components/PriceMatch";
+import { SuperPrimeTeaser } from "@/components/SuperPrime";
 import type { CardItem } from "@/lib/listing";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
@@ -79,7 +80,8 @@ export default function CartPage() {
       </div>
       <aside className="summary-box h-fit rounded-2xl border border-line p-6 lg:sticky lg:top-32">
         <h2 className="text-lg font-semibold">{tx("Order summary")}</h2>
-        <div className="mt-4"><CouponBox /></div>
+        <div className="mt-4"><SuperPrimeTeaser className="mb-3" />
+          <CouponBox /></div>
         <div className="mt-4"><Totals /></div>
         <Link href="/checkout/" className="mt-5 block rounded-lg bg-brand-500 py-3 text-center font-semibold text-white hover:bg-brand-600">{tx("Checkout")}</Link>
       </aside>

@@ -118,8 +118,12 @@ export const DEFAULT_TIPS = [
 // SuperPrime: a monthly membership. Free delivery on every order (from freeMin), no daily limit on
 // SuperPrice orders. Free for trialMonths with a first order of at least trialMinOrder. Paid with an
 // order (cash on delivery works): each payment covers 30 days, renewed at checkout, never charged by itself.
-export type Prime = { enabled: boolean; name: string; monthlyPrice: number; trialMonths: number; trialMinOrder: number; freeMin: number; unlimitedSuperPrice: boolean };
-export const defaultPrime: Prime = { enabled: true, name: "SuperPrime", monthlyPrice: 3.99, trialMonths: 3, trialMinOrder: 100, freeMin: 10, unlimitedSuperPrice: true };
+export type Prime = { enabled: boolean; name: string; monthlyPrice: number; trialMonths: number; trialMinOrder: number; freeMin: number; unlimitedSuperPrice: boolean;
+  /** Campaign: the free trial for everyone, with no minimum order, until endsAt ("" = until switched off). */
+  promo: { enabled: boolean; endsAt: string } };
+export const defaultPrime: Prime = { enabled: true, name: "SuperPrime", monthlyPrice: 3.99, trialMonths: 3, trialMinOrder: 100, freeMin: 10, unlimitedSuperPrice: true, promo: { enabled: false, endsAt: "" } };
+/** Is the free-trial campaign running now (no minimum order)? */
+export const primePromoLive = (p: Prime, now = Date.now()) => !!p.promo?.enabled && (!p.promo.endsAt || Date.parse(p.promo.endsAt) > now);
 
 // Price guarantee: competitor shops checked nightly; when one sells the same item for less,
 // SuperYou matches it, never below cost + marginPct. Server-only (not in publicGrowth).
@@ -289,6 +293,7 @@ export const growthSchema = z.object({
   prime: z.object({
     enabled: z.boolean(), name: z.string().trim().min(1).max(30), monthlyPrice: z.number().min(0).max(100), trialMonths: z.number().int().min(0).max(12),
     trialMinOrder: z.number().min(0).max(10000), freeMin: z.number().min(0).max(1000), unlimitedSuperPrice: z.boolean(),
+    promo: z.object({ enabled: z.boolean(), endsAt: z.string().max(40) }).default({ enabled: false, endsAt: "" }),
   }).default(defaultPrime),
   priceMatch: z.object({
     enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
@@ -307,7 +312,7 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     reviews: { ...d.reviews, ...v.reviews }, club: { ...d.club, ...v.club, bonus: { ...d.club.bonus, ...v.club?.bonus }, referral: { ...d.club.referral, ...v.club?.referral }, memberPrice: { ...d.club.memberPrice, ...v.club?.memberPrice } }, pharmacist: { ...d.pharmacist, ...v.pharmacist },
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
     skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
-    prime: { ...defaultPrime, ...v.prime },
+    prime: { ...defaultPrime, ...v.prime, promo: { ...defaultPrime.promo, ...v.prime?.promo } },
     priceMatch: { ...defaultPriceMatch, ...v.priceMatch, sites: v.priceMatch?.sites ?? defaultPriceMatch.sites },
     game: { ...defaultGame, ...v.game, badges: { ...defaultGame.badges, ...v.game?.badges, points: { ...defaultGame.badges.points, ...v.game?.badges?.points } }, ladder: { ...defaultGame.ladder, ...v.game?.ladder }, streak: { ...defaultGame.streak, ...v.game?.streak }, checkin: { ...defaultGame.checkin, ...v.game?.checkin }, quest: { ...defaultGame.quest, ...v.game?.quest }, race: { ...defaultGame.race, ...v.game?.race } },
   };
@@ -320,7 +325,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     popup: { ...popup, wheel: wheel.map((w) => w.label) },
     freeDeliveryBar: g.freeDeliveryBar,
     superPrice: g.priceMatch.enabled && g.priceMatch.badge,
-    prime: g.prime,
+    prime: { ...g.prime, promoLive: primePromoLive(g.prime) },
     reviews: { enabled: g.reviews.enabled, showOnCards: g.reviews.showOnCards },
     club: { enabled: g.club.enabled, name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue, tiers: g.club.tiers, bonus: g.club.bonus, referral: g.club.referral, expiryMonths: g.club.expiryMonths, memberPrice: g.club.memberPrice, birthdayPercent: g.club.birthdayPercent },
     pharmacist: g.pharmacist,

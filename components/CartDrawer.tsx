@@ -12,6 +12,7 @@ import { CloseIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
 import { DeliverySplit, ShipBadge } from "./ShipBadge";
 import { PriceMatchBadge, SuperPriceReveal } from "./PriceMatch";
+import { SuperPrimeTeaser } from "./SuperPrime";
 
 export function CartDrawer() {
   const tx = useT();
@@ -71,6 +72,7 @@ export function CartDrawer() {
 
         {detailed.length > 0 && (
           <div className="border-t border-line p-5">
+            <SuperPrimeTeaser className="mb-3" />
             <CouponBox />
             <div className="my-3"><Totals /></div>
             <Link

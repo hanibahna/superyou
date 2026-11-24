@@ -252,6 +252,10 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
             </div>
             <Toggle label="Members get SuperPrice with no daily limit" checked={g.prime.unlimitedSuperPrice} onChange={(unlimitedSuperPrice) => up("prime", { unlimitedSuperPrice })} />
           </Card>
+          <Card title="Free-trial campaign" sub="Switch on to give the free trial to everyone, with no minimum order (for example during Black Friday). Still one trial per phone number.">
+            <Toggle label="Campaign on: free trial with any order" checked={g.prime.promo.enabled} onChange={(enabled) => up("prime", { promo: { ...g.prime.promo, enabled } })} />
+            <Text label="Ends on (optional)" type="date" value={g.prime.promo.endsAt.slice(0, 10)} onChange={(d) => up("prime", { promo: { ...g.prime.promo, endsAt: d ? `${d}T23:59:59+02:00` : "" } })} />
+          </Card>
         </div>
       )}
 
