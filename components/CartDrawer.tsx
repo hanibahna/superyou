@@ -11,11 +11,12 @@ import { useShop } from "@/lib/store";
 import { CloseIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
 import { DeliverySplit, ShipBadge } from "./ShipBadge";
-import { PriceMatchBadge } from "./PriceMatch";
+import { PriceMatchBadge, SuperPriceReveal } from "./PriceMatch";
 
 export function CartDrawer() {
   const tx = useT();
-  const { drawerOpen, setDrawerOpen, detailed, subtotal, setQty, remove } = useShop();
+  const { drawerOpen, setDrawerOpen, detailed, subtotal, setQty, remove, lastAdded } = useShop();
+  const just = lastAdded && Date.now() - lastAdded.at < 15_000 ? detailed.find((l) => l.productId === lastAdded.id) : undefined;
   if (!drawerOpen) return null;
 
   return (
@@ -30,6 +31,7 @@ export function CartDrawer() {
         </div>
 
         <RewardLadder />
+        {just && <SuperPriceReveal key={lastAdded!.at} p={{ ...just.product }} />}
 
         <div className="flex-1 overflow-y-auto p-5">
           {detailed.length === 0 ? (

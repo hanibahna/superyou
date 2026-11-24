@@ -241,12 +241,19 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
 
       {tab === "Price match" && (
         <div className="space-y-5">
-          <Card title="Price guarantee" sub="Every night we read the shops below and find our products there (by barcode, or by brand, name and size). When a shop sells an item for less, the website and app sell it at their price too, with a “Price matched” badge, but never below cost + your margin. When they go back up, our price comes back by itself.">
-            <Toggle label="Price match on" checked={g.priceMatch.enabled} onChange={(enabled) => up("priceMatch", { enabled })} />
-            <Toggle label="Show the “Price matched” badge" hint="On the product page, in the bag and at checkout." checked={g.priceMatch.badge} onChange={(badge) => up("priceMatch", { badge })} />
-            <Num label="Minimum margin over cost (%)" hint="Imported items use the landed cost (freight, duty and VAT included). Items with no cost are never matched; they are listed in the report." value={g.priceMatch.marginPct} onChange={(marginPct) => up("priceMatch", { marginPct })} />
+          <Card title="SuperPrice Guaranteed" sub="Every night at 3 am we read the shops below and find our products there (same item, or brand + name + size). When a shop sells an item for less, the website and app sell it below their price, never under cost + your margin. When they go back up, our own price comes back by itself.">
+            <Toggle label="SuperPrice on" checked={g.priceMatch.enabled} onChange={(enabled) => up("priceMatch", { enabled })} />
+            <Toggle label="Show SuperPrice to shoppers" hint="Badge and comparison on the product page, the reveal in the bag and the guarantee at checkout. Off: prices still drop, quietly." checked={g.priceMatch.badge} onChange={(badge) => up("priceMatch", { badge })} />
+            <div className="grid gap-4 md:grid-cols-3">
+              <Num label="Below the cheapest shop by (%)" hint="0 = match their price" value={g.priceMatch.beatPct} onChange={(beatPct) => up("priceMatch", { beatPct })} />
+              <Num label="Never under cost + (%)" hint="Imported items use the landed cost (freight, duty and VAT)." value={g.priceMatch.marginPct} onChange={(marginPct) => up("priceMatch", { marginPct })} />
+              <Num label="Never more than (%) off our price" value={g.priceMatch.maxOffPct} onChange={(maxOffPct) => up("priceMatch", { maxOffPct })} />
+              <Num label="No cost on file: assume a margin of (%)" hint="Trial setting until supplier costs are added. 0 = never SuperPrice items without a cost." value={g.priceMatch.assumeMarginPct} onChange={(assumeMarginPct) => up("priceMatch", { assumeMarginPct })} />
+              <Num label="SuperPrice units per item per order" value={g.priceMatch.maxUnits} onChange={(maxUnits) => up("priceMatch", { maxUnits })} />
+            </div>
+            <Toggle label="One SuperPrice order per customer a day" hint="By phone number. A second order the same day pays the regular price (the customer is told first). Coupons, wheel prizes and member prices never apply on top of a SuperPrice." checked={g.priceMatch.oncePerDay} onChange={(oncePerDay) => up("priceMatch", { oncePerDay })} />
           </Card>
-          <Card title="Shops we compare with" sub="Shopify shops with a public product feed, priced in US dollars. Turn off “Show name” to say “Price matched” without naming the shop.">
+          <Card title="Shops we compare with" sub="Shopify shops with a public product feed, priced in US dollars. Turn off “Show name” to say “cheaper than other shops” without naming the shop.">
             <div className="space-y-3">
               {g.priceMatch.sites.map((s, i) => {
                 const set = (patch: Partial<typeof s>) => up("priceMatch", { sites: g.priceMatch.sites.map((x, j) => (j === i ? { ...x, ...patch } : x)) });

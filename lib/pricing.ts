@@ -76,7 +76,7 @@ export async function liveProducts() {
     const sold = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
     // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
     const m = pmOn ? pm.map.get(p.id) : undefined;
-    if (m && m.t < sold.price - 0.005 && m.t >= m.f) return { ...sold, price: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "" } : {}) };
+    if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "" } : {}) };
     return sold;
   });
   let dupOf = new Map<string, string>();
@@ -87,11 +87,11 @@ export async function liveProducts() {
 
 const snapOf = (p: ProductLite): ProductSnap => ({
   id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, compareAt: p.compareAt, size: p.size,
-  variant: p.variant, image: shopImg(p.image), match: p.match, shape: p.shape, color: p.color, inStock: p.inStock,
+  variant: p.variant, image: shopImg(p.image), match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, shape: p.shape, color: p.color, inStock: p.inStock,
   origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
-export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string };
+export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string; noSuperPrice?: boolean };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);
@@ -116,11 +116,15 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   // Free samples: an always-on gift choice.
   if (growth.samples.enabled && growth.samples.skus.length)
     promos.gifts.push({ id: "samples", name: growth.samples.title, enabled: true, minSubtotal: Math.max(0.01, growth.samples.minSubtotal), scope: { kind: "all", values: [] }, choices: growth.samples.skus, pick: growth.samples.pick, startsAt: "", endsAt: "", showProgress: growth.samples.minSubtotal > 0 });
+  const pmCfg = growth.priceMatch;
   const lines = input.items.map(({ productId, qty }) => {
-    const p = live.byId.get(productId);
+    const live0 = live.byId.get(productId);
+    // SuperPrice: limited units per item, and off when the customer already used it today.
+    const spOff = !!live0?.matchWas && (input.noSuperPrice || !!input.subscriptionId || qty > pmCfg.maxUnits);
+    const p = live0 && spOff ? { ...live0, price: live0.matchWas!, match: undefined, matchWas: undefined, matchVs: undefined } : live0;
     const base = idx.byId.get(productId);
     return p && base
-      ? { productId, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt }
+      ? { productId, superPrice: !!p.matchWas, spLimit: spOff && !input.noSuperPrice && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt }
       : null;
   });
   const ok = lines.filter((l): l is NonNullable<typeof l> => !!l && l.available);
@@ -187,7 +191,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   return {
     giftCard: gc && "amount" in gc ? gc : undefined,
     giftCardError: gc && "error" in gc ? gc.error : undefined,
-    lines: lines.filter((l): l is NonNullable<typeof l> => !!l).map((l) => ({ productId: l.productId, price: l.price, compareAt: l.compareAt, available: l.available, ...(live.byId.get(l.productId)?.match !== undefined ? { match: live.byId.get(l.productId)!.match } : {}) })),
+    lines: lines.filter((l): l is NonNullable<typeof l> => !!l).map((l) => ({ productId: l.productId, price: l.price, compareAt: l.compareAt, available: l.available, ...(l.match !== undefined ? { match: l.match } : {}), ...(l.matchWas ? { matchWas: l.matchWas, matchVs: l.matchVs } : {}), ...(l.spLimit ? { spLimit: l.spLimit } : {}) })),
     subtotal: q.subtotal,
     discounts: q.discounts,
     discountTotal: q.discountTotal,

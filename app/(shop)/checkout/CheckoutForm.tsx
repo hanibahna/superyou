@@ -205,7 +205,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
             </ul>
           )}
           <DeliverySplit items={detailed.map((l) => l.product)} className="mt-4" />
-          <PriceGuaranteeNote items={detailed.map((l) => l.product)} className="mt-3" />
+          <PriceGuaranteeNote items={detailed.map((l) => ({ ...l.product, qty: l.qty }))} className="mt-3" />
           <div className="mt-4 border-t border-line pt-4"><CouponBox /></div>
           <div className="mt-4"><Totals /></div>
           {error && <p className="mt-4 rounded-lg bg-sale/10 p-3 text-sm text-sale">{error}</p>}

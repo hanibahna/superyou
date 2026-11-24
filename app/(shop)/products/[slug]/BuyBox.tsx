@@ -19,7 +19,7 @@ import { localeOf } from "@/lib/i18n";
 import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
 import { ShipBadge } from "@/components/ShipBadge";
-import { PriceMatchBadge } from "@/components/PriceMatch";
+import { PriceMatchBadge, SuperPriceCard } from "@/components/PriceMatch";
 
 export function BuyBox({
   variants,
@@ -156,6 +156,7 @@ export function BuyBox({
           <PriceMatchBadge p={v} size="md" />
           {v.inStock && <p className="text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
         </div>
+        <SuperPriceCard key={v.id} p={v} className="mt-3" />
         {v.origin === "international" && (
           <p className="mt-2 rounded-lg border border-[#c7d2fe] bg-[#eef2ff] p-3 text-xs leading-relaxed text-[#312e81]">
             {t("Imported for you from")} {v.shipFrom || t("abroad")}. {t("The price already includes international shipping, customs duty and VAT, with nothing more to pay at the door. Original product, ordered from an authorised supplier when you place your order.")}

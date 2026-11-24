@@ -15,7 +15,10 @@ export type ProductSnap = {
   id: string; slug: string; name: string; brand: string; price: number; compareAt?: number;
   size: string; variant?: string; image?: string; shape: AnyProduct["shape"]; color: string; inStock: boolean;
   origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;
-  match?: string; // price guarantee: matched this shop's lower price ("" = name not shown)
+  match?: string; // SuperPrice: cheaper than this shop ("" = name not shown)
+  matchWas?: number; // our price before the SuperPrice
+  matchVs?: number; // the competitor's price
+  spLimit?: number; // SuperPrice is limited to this many per order (line is over it)
 };
 
 export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
@@ -23,6 +26,7 @@ export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
   size: p.size, variant: p.variant, image: firstImage(p as { image?: string; images?: string[] }), shape: p.shape, color: p.color, inStock: p.inStock,
   ...("origin" in p && p.origin ? { origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax } : {}),
   ...("match" in p && p.match !== undefined ? { match: p.match } : {}),
+  ...("matchWas" in p && p.matchWas ? { matchWas: p.matchWas, matchVs: p.matchVs } : {}),
 });
 
 /** every: subscription interval in months (1, 2, 3, 4 or 6, per product); none = one-time purchase. */
@@ -30,7 +34,7 @@ export type CartLine = { productId: string; qty: number; product: ProductSnap; e
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
-  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string }[];
+  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string; matchWas?: number; matchVs?: number; spLimit?: number }[];
   subtotal: number;
   discounts: { name: string; code?: string; amount: number }[];
   discountTotal: number;
@@ -49,6 +53,8 @@ type ShopState = {
   lines: CartLine[];
   wishlist: ProductSnap[];
   add: (product: AnyProduct | ProductSnap, qty?: number, every?: Every | null) => void;
+  /** The item just added (for the SuperPrice reveal in the bag). */
+  lastAdded: { id: string; at: number } | null;
   setEvery: (productId: string, every?: Every) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
@@ -105,6 +111,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [zone, setZone] = useState("");
   const [giftPicks, setGiftPicks] = useState<Record<string, string[]>>({});
   const [quote, setQuote] = useState<ServerQuote | null>(null);
+  const [lastAdded, setLastAdded] = useState<{ id: string; at: number } | null>(null);
   const settings = useSettings();
 
   useEffect(() => {
@@ -144,9 +151,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             let changed = false;
             const next = prev.map((l) => {
               const s = q.lines.find((x) => x.productId === l.productId);
-              if (!s || (s.price === l.product.price && s.compareAt === l.product.compareAt && s.match === l.product.match)) return l;
+              if (!s || (s.price === l.product.price && s.compareAt === l.product.compareAt && s.match === l.product.match && s.spLimit === l.product.spLimit)) return l;
               changed = true;
-              return { ...l, product: { ...l.product, price: s.price, compareAt: s.compareAt, match: s.match } };
+              return { ...l, product: { ...l.product, price: s.price, compareAt: s.compareAt, match: s.match, matchWas: s.matchWas, matchVs: s.matchVs, spLimit: s.spLimit } };
             });
             return changed ? next : prev;
           });
@@ -182,10 +189,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     };
     return {
       lines,
+      lastAdded,
       wishlist,
       setEvery: (productId, every) => setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, every } : l))),
       add: (product, qty = 1, every) => {
         add(product, qty, every);
+        setLastAdded({ id: product.id, at: Date.now() });
         track({ type: "add_to_cart", item: { id: product.id, name: product.name, brand: product.brand, price: product.price, qty } });
         setDrawerOpen(true);
       },
@@ -226,7 +235,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       drawerOpen,
       setDrawerOpen,
     };
-  }, [lines, wishlist, drawerOpen, code, giftCard, zone, giftPicks, quote, settings]);
+  }, [lines, wishlist, drawerOpen, code, giftCard, zone, giftPicks, quote, settings, lastAdded]);
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }

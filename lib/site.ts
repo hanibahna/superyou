@@ -530,7 +530,7 @@ export function salePrice<T extends ScopedItem & { price: number; compareAt?: nu
   return { price: +best.toFixed(2), compareAt: Math.max(p.compareAt ?? 0, p.price), rule };
 }
 
-export type QuoteLine = ScopedItem & { productId: string; name: string; price: number; basePrice: number; qty: number };
+export type QuoteLine = ScopedItem & { productId: string; name: string; price: number; basePrice: number; qty: number; superPrice?: boolean };
 
 export type Quote = {
   subtotal: number; // after automatic sale prices
@@ -561,7 +561,8 @@ export function quote(lines: QuoteLine[], promos: Promotions, settings: Settings
   }
   for (const d of cartRules) {
     // Coupons that don't stack skip items already on automatic sale.
-    const eligible = lines.filter((l) => inScope(l, d.scope) && !excluded(l, d.exclude) && (d.stack || l.price >= l.basePrice));
+    // SuperPrice items never take a coupon on top (the price is already at its floor or below the competition).
+    const eligible = lines.filter((l) => !l.superPrice && inScope(l, d.scope) && !excluded(l, d.exclude) && (d.stack || l.price >= l.basePrice));
     const spend = eligible.reduce((s, l) => s + l.price * l.qty, 0);
     if (d.minSubtotal > 0 && subtotal < d.minSubtotal) continue;
     if (!eligible.length) {

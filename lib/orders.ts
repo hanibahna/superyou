@@ -111,8 +111,25 @@ export const refunded = (o: Order) => +(o.refunds ?? []).reduce((s, r) => s + r.
 export const orderValue = (o: Order) => +(o.total + (o.giftCard?.amount ?? 0)).toFixed(2);
 
 /** Recompute every price, discount, gift and delivery fee on the server — never trust client totals. */
+const spDay = () => new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10); // Beirut date
+const spUsedKey = (phone: string) => `sp:used:${normPhone(phone)}:${spDay()}`;
+
 export async function priceOrder(input: CheckoutInput) {
-  const q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId });
+  let q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId });
+  // SuperPrice: one order per customer (phone number) per day. The first try explains it;
+  // placing the order again within 10 minutes buys those items at the regular price.
+  const { getGrowth: gg } = await import("@/lib/growth-store");
+  if (q._lines.some((l) => l.superPrice) && (await gg()).priceMatch.oncePerDay && normPhone(input.customer.phone)) {
+    const { db } = await import("@/lib/db");
+    if (await db.cmd(["EXISTS", spUsedKey(input.customer.phone)])) {
+      const warn = `sp:warned:${normPhone(input.customer.phone)}`;
+      if (!(await db.cmd(["EXISTS", warn]))) {
+        await db.cmd(["SET", warn, "1", "EX", 600]);
+        throw new Error("SuperPrice is one order per customer per day, and this number already used it today. Place the order again to buy these items at the regular price, or come back tomorrow.");
+      }
+      q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId, noSuperPrice: true });
+    }
+  }
   const { isSubscribable } = await import("@/lib/subscribable");
   // Only products that run out can be subscribed (AI lifespan database, else the name rules).
   const { getIndex: idx0 } = await import("@/lib/catalog");
@@ -156,7 +173,7 @@ export async function priceOrder(input: CheckoutInput) {
   const growth = await gs.getGrowth();
   if (growth.club.enabled && growth.club.memberPrice.enabled && growth.club.memberPrice.percent > 0 && (await gs.getMember(input.customer.phone))) {
     const mp = growth.club.memberPrice;
-    let eligible = q._lines;
+    let eligible = q._lines.filter((l) => !l.superPrice); // no member price on top of a SuperPrice
     if (mp.collection) {
       const { collectionMembers } = await import("@/lib/listing");
       const ids = new Set((await collectionMembers(mp.collection)).map((p) => p.id));
@@ -189,11 +206,13 @@ export async function priceOrder(input: CheckoutInput) {
     delivery: q.delivery,
     total: +(q.total - (giftCard?.amount ?? 0)).toFixed(2),
     _prefix: q._settings.store.name,
+    _superPrice: q._lines.some((l) => l.superPrice),
   };
 }
 
 export async function createOrder(input: CheckoutInput): Promise<Order> {
-  const { _prefix, ...priced } = await priceOrder(input);
+  const { _prefix, _superPrice, ...priced } = await priceOrder(input);
+  if (_superPrice && normPhone(input.customer.phone)) await (await import("@/lib/db")).db.cmd(["SET", spUsedKey(input.customer.phone), "1", "EX", 2 * 86400]).catch(() => {});
   if (priced.code) {
     await countCouponUse(priced.code).catch(() => {});
     await (await import("@/lib/growth-store")).useVoucher(priced.code).catch(() => {});

@@ -117,11 +117,26 @@ export const DEFAULT_TIPS = [
 // Price guarantee: competitor shops checked nightly; when one sells the same item for less,
 // SuperYou matches it, never below cost + marginPct. Server-only (not in publicGrowth).
 export type PriceMatchSite = { domain: string; label: string; enabled: boolean; showName: boolean };
-export type PriceMatch = { enabled: boolean; marginPct: number; badge: boolean; sites: PriceMatchSite[] };
+export type PriceMatch = {
+  enabled: boolean;
+  marginPct: number; // never below cost + this %
+  badge: boolean;
+  beatPct: number; // sell this % below the cheapest competitor (0 = match)
+  assumeMarginPct: number; // no cost on file: assume our price carries this margin (0 = never match those)
+  maxOffPct: number; // never more than this % below our own price
+  maxUnits: number; // SuperPrice units per item per order
+  oncePerDay: boolean; // one SuperPrice order per phone number per day
+  sites: PriceMatchSite[];
+};
 export const defaultPriceMatch: PriceMatch = {
   enabled: true,
   marginPct: 10,
   badge: true,
+  beatPct: 5,
+  assumeMarginPct: 30,
+  maxOffPct: 25,
+  maxUnits: 2,
+  oncePerDay: true,
   sites: [
     { domain: "feel22.com", label: "Feel22", enabled: true, showName: true },
     { domain: "neovitale.com", label: "NeoVitale", enabled: true, showName: true },
@@ -263,6 +278,8 @@ export const growthSchema = z.object({
   }).transform((g) => g as Game).default(defaultGame),
   priceMatch: z.object({
     enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
+    beatPct: z.number().min(0).max(30).default(5), assumeMarginPct: z.number().min(0).max(80).default(30), maxOffPct: z.number().min(1).max(60).default(25),
+    maxUnits: z.number().int().min(1).max(20).default(2), oncePerDay: z.boolean().default(true),
     sites: z.preprocess((a) => (Array.isArray(a) ? a.filter((x) => x && String(x.domain ?? "").trim()) : a), z.array(z.object({ domain: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9.-]+\.[a-z]{2,}$/), label: z.string().trim().min(1).max(40), enabled: z.boolean(), showName: z.boolean() })).max(12)),
   }).default(defaultPriceMatch),
 });

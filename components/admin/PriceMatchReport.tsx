@@ -41,8 +41,14 @@ export function PriceMatchReport() {
           <div className="grid gap-3 sm:grid-cols-3">
             <Stat n={r.matched} label="our products found at a competitor" />
             <Stat n={r.cheaper} label="cheaper there than here" />
-            <Stat n={r.matchedNow} label="price matched now" />
+            <Stat n={r.matchedNow} label="on SuperPrice now" />
           </div>
+          {r.avgMargin && r.matchedNow > 0 && (
+            <p className="rounded-lg bg-[#fff5f8] p-3">
+              Average margin on SuperPrice items: <b>{r.avgMargin.before}%</b> before → <b>{r.avgMargin.after}%</b> on SuperPrice.
+              {!!r.estimated && <> {r.estimated.toLocaleString()} of them use the assumed margin because no cost is on file, so these margins are estimates.</>}
+            </p>
+          )}
           <table className="w-full text-left">
             <thead className="text-xs uppercase text-muted"><tr><th className="py-1">Shop</th><th>Products read</th><th>Matched to ours</th><th>Exact (barcode or same item)</th><th>Status</th></tr></thead>
             <tbody>
@@ -54,10 +60,28 @@ export function PriceMatchReport() {
               ))}
             </tbody>
           </table>
+          {!!r.superPrices?.length && (
+            <div>
+              <p className="font-semibold">On SuperPrice now (biggest drops first)</p>
+              <div className="mt-2 max-h-96 overflow-auto rounded-lg border border-line">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-white uppercase text-muted"><tr><th className="p-2">Product</th><th>Was</th><th>Shop</th><th>SuperPrice</th><th>Cost</th><th>Margin</th></tr></thead>
+                  <tbody>
+                    {r.superPrices.map((m) => (
+                      <tr key={m.id} className="border-t border-line">
+                        <td className="p-2">{m.name}</td><td>{money(m.ours)}</td><td>{m.site} {money(m.theirs)}</td><td className="font-semibold">{money(m.superPrice)}</td>
+                        <td>{money(m.cost)}{m.est ? " (est.)" : ""}</td><td>{m.margin}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
           {r.flags.length > 0 && (
             <div>
               <p className="font-semibold">Cheaper elsewhere but not matched ({r.flags.length})</p>
-              <p className="text-xs text-muted">Below floor: matching would go under cost + margin. No cost: add the product's cost to allow matching. Check match: the price gap is so large it may be a different size.</p>
+              <p className="text-xs text-muted">Below floor: they sell under our cost + margin (or our maximum discount). No cost: add the product's cost to allow matching. Check match: the price gap is so large it may be a different size.</p>
               <div className="mt-2 max-h-96 overflow-auto rounded-lg border border-line">
                 <table className="w-full text-left text-xs">
                   <thead className="sticky top-0 bg-white uppercase text-muted"><tr><th className="p-2">Product</th><th>Ours</th><th>Theirs</th><th>Floor</th><th>Why</th></tr></thead>

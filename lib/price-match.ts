@@ -18,7 +18,7 @@ import { brandKey, score, sizesOf, tokensOf } from "@/lib/import/photo-match";
 import type { SourceProduct } from "@/lib/import/shopify-source";
 import { landed } from "@/lib/sourcing";
 import { getSourcing } from "@/lib/site-store";
-import type { PriceMatchSite } from "@/lib/growth";
+import type { PriceMatch, PriceMatchSite } from "@/lib/growth";
 
 const STATE = "pm:state";
 const OFFERS = (d: string) => `pm:o:${d}`; // productId → "price|url|how"
@@ -27,12 +27,13 @@ const VER = "pm:ver";
 const REPORT = "pm:report";
 const BUDGET_MS = 230_000;
 
-/** What the storefront needs for one product. t = competitor price, f = our floor. */
-export type Match = { t: number; f: number; s: string; show: boolean; u: string };
+/** What the storefront needs for one product: p = SuperPrice, t = competitor price, s = shop. */
+export type Match = { p: number; t: number; s: string; show: boolean; u: string; est?: boolean };
 
 export type SiteReport = { domain: string; label: string; products: number; matched: number; byBarcode: number; error?: string };
 export type Flag = { id: string; name: string; ours: number; theirs: number; floor: number; site: string; url: string; why: "below floor" | "no cost" | "check match" };
-export type Report = { at: string; sites: SiteReport[]; matched: number; cheaper: number; matchedNow: number; flags: Flag[] };
+export type Matched = { id: string; name: string; ours: number; theirs: number; superPrice: number; cost: number; margin: number; est: boolean; site: string };
+export type Report = { at: string; sites: SiteReport[]; matched: number; cheaper: number; matchedNow: number; flags: Flag[]; superPrices?: Matched[]; avgMargin?: { before: number; after: number }; estimated?: number };
 
 type State = { run: string; site: number; page: number; startedAt: string; sites: SiteReport[]; error?: string; tries?: number };
 
@@ -197,7 +198,7 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
   }
 
   try {
-    await apply(sites, g.marginPct, st.sites);
+    await apply(sites, g, st.sites);
   } catch (e) {
     // Keep the state so the next call retries the final step (at most 3 times).
     const tries = (st.tries ?? 0) + 1;
@@ -211,7 +212,7 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
 }
 
 /** Lowest competitor price per product → what the shop sells at. */
-async function apply(sites: PriceMatchSite[], marginPct: number, siteReports: SiteReport[]) {
+async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: SiteReport[]) {
   const idx = await getIndex();
   const sourcing = await getSourcing();
   const best = new Map<string, { t: number; site: PriceMatchSite; u: string; how: string }>();
@@ -232,28 +233,45 @@ async function apply(sites: PriceMatchSite[], marginPct: number, siteReports: Si
 
   const prices: string[] = [];
   const flags: Flag[] = [];
-  let cheaper = 0, matchedNow = 0;
+  const supers: Matched[] = [];
+  let cheaper = 0, matchedNow = 0, estimated = 0, mBefore = 0, mAfter = 0;
   for (const [id, b] of best) {
     const p = idx.byId.get(id);
-    if (!p || b.t >= p.price - 0.005) continue;
+    if (!p || p.status !== "active" || b.t >= p.price - 0.005) continue;
     cheaper++;
-    const flag = (why: Flag["why"], floor = 0) => flags.push({ id, name: `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`, ours: p.price, theirs: b.t, floor: r2(floor), site: b.site.label, url: b.u, why });
+    const name = `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`;
+    const flag = (why: Flag["why"], floor = 0) => flags.push({ id, name, ours: p.price, theirs: b.t, floor: r2(floor), site: b.site.label, url: b.u, why });
     // A name match far below our price is more likely a different size or a mistake.
     if (b.how === "name" && b.t < p.price * 0.5) { flag("check match"); continue; }
-    if (!p.cost || p.cost <= 0) { flag("no cost"); continue; }
+    const known = !!p.cost && p.cost > 0;
+    if (!known && !cfg.assumeMarginPct) { flag("no cost"); continue; }
     const rule = sourcing.sources.find((x) => x.source.toLowerCase() === (p.source ?? "").toLowerCase());
-    const base = rule?.origin === "international" && rule.pricing ? landed(p.cost, rule.pricing).landed : p.cost;
-    const floor = r2(base * (1 + marginPct / 100));
-    if (b.t < floor) { flag("below floor", floor); continue; }
+    // No cost on file: estimated from our price and the assumed margin (a trial setting).
+    const cost = !known ? p.price * (1 - cfg.assumeMarginPct / 100) : rule?.origin === "international" && rule.pricing ? landed(p.cost!, rule.pricing).landed : p.cost!;
+    const floor = r2(cost * (1 + cfg.marginPct / 100));
+    const target = r2(b.t * (1 - cfg.beatPct / 100));
+    const cap = r2(p.price * (1 - cfg.maxOffPct / 100));
+    const sp = Math.max(target, floor, cap);
+    // Only when we end up truly cheaper than the competitor (and cheaper than today).
+    if (sp >= b.t - 0.005 || sp >= p.price - 0.005) { flag("below floor", Math.max(floor, cap)); continue; }
     matchedNow++;
-    const m: Match = { t: r2(b.t), f: floor, s: b.site.label, show: b.site.showName, u: b.u };
+    if (!known) estimated++;
+    mBefore += (p.price - cost) / p.price;
+    mAfter += (sp - cost) / sp;
+    supers.push({ id, name, ours: p.price, theirs: b.t, superPrice: sp, cost: r2(cost), margin: Math.round(((sp - cost) / sp) * 1000) / 10, est: !known, site: b.site.label });
+    const m: Match = { p: sp, t: r2(b.t), s: b.site.label, show: b.site.showName, u: b.u, ...(known ? {} : { est: true }) };
     prices.push(id, JSON.stringify(m));
   }
   await db.cmd(["DEL", PRICES]);
   for (let i = 0; i < prices.length; i += 1000) await db.cmd(["HSET", PRICES, ...prices.slice(i, i + 1000)]);
   await db.cmd(["INCR", VER]);
   flags.sort((a, b) => b.ours - b.theirs - (a.ours - a.theirs));
-  const report: Report = { at: new Date().toISOString(), sites: siteReports, matched: best.size, cheaper, matchedNow, flags: flags.slice(0, 300) };
+  supers.sort((a, b) => b.ours - b.superPrice - (a.ours - a.superPrice));
+  const n = matchedNow || 1;
+  const report: Report = {
+    at: new Date().toISOString(), sites: siteReports, matched: best.size, cheaper, matchedNow, flags: flags.slice(0, 300),
+    superPrices: supers.slice(0, 500), avgMargin: { before: Math.round((mBefore / n) * 1000) / 10, after: Math.round((mAfter / n) * 1000) / 10 }, estimated,
+  };
   await db.cmd(["SET", REPORT, JSON.stringify(report)]);
   g.__pm = undefined;
 }

@@ -70,6 +70,9 @@ export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredient
   origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;
   /** Price guarantee: matched a lower competitor price. The shop's name, or "" when it is not shown. */
   match?: string;
+  /** SuperPrice: our price before it, and the competitor's price. */
+  matchWas?: number;
+  matchVs?: number;
 };
 
 export const toLite = (p: Product): ProductLite => {
