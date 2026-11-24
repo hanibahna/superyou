@@ -1,6 +1,6 @@
 import { siteUrl } from "@/lib/site-url";
 import { normPhone } from "@/lib/wa";
-import { everySchema, startSchema, type Every } from "@/lib/every";
+import { everySchema, forSchema, startSchema, type Every } from "@/lib/every";
 // Orders: server-side pricing + storage.
 //
 // Storage: uses Upstash Redis (free tier, one-click from the Vercel Marketplace)
@@ -16,7 +16,7 @@ import { countCouponUse } from "@/lib/site-store";
 import { attributionSchema, type Attribution } from "@/lib/marketing";
 
 export const checkoutSchema = z.object({
-  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20), every: everySchema.optional(), start: startSchema.optional() })).min(1),
+  items: z.array(z.object({ productId: z.string(), qty: z.number().int().min(1).max(20), every: everySchema.optional(), start: startSchema.optional(), forMonths: forSchema.optional() })).min(1),
   subscriptionId: z.string().max(40).optional(), // set when the order is placed by a subscription (server only)
   customer: z.object({
     firstName: z.string().min(1).max(60),
@@ -80,7 +80,7 @@ export type Order = {
   paymentMethod: CheckoutInput["paymentMethod"];
   paymentProvider?: string;
   paymentRef?: string; // gateway charge/session id
-  lines: Array<{ productId: string; name: string; brand: string; unitPrice: number; qty: number; lineTotal: number; gift?: boolean; every?: Every; start?: string }>;
+  lines: Array<{ productId: string; name: string; brand: string; unitPrice: number; qty: number; lineTotal: number; gift?: boolean; every?: Every; start?: string; forMonths?: number }>;
   subscriptionId?: string; // placed automatically by this subscription
   subtotal: number;
   discount?: number;
@@ -169,7 +169,7 @@ export async function priceOrder(input: CheckoutInput) {
     referral = input.code.trim().toUpperCase();
   }
   if (q._settings.checkout.minOrder > 0 && q.subtotal < q._settings.checkout.minOrder) throw new Error(`The minimum order is $${q._settings.checkout.minOrder}.`);
-  const lines: Order["lines"] = q._lines.map((l) => ({ productId: l.productId, name: l.name, brand: l.brand, unitPrice: l.price, qty: l.qty, lineTotal: +(l.price * l.qty).toFixed(2), ...(everyOf(l.productId) ? { every: everyOf(l.productId), ...(input.items.find((i) => i.productId === l.productId)?.start ? { start: input.items.find((i) => i.productId === l.productId)!.start } : {}) } : {}) }));
+  const lines: Order["lines"] = q._lines.map((l) => ({ productId: l.productId, name: l.name, brand: l.brand, unitPrice: l.price, qty: l.qty, lineTotal: +(l.price * l.qty).toFixed(2), ...(everyOf(l.productId) ? { every: everyOf(l.productId), ...(input.items.find((i) => i.productId === l.productId)?.start ? { start: input.items.find((i) => i.productId === l.productId)!.start } : {}), ...(input.items.find((i) => i.productId === l.productId)?.forMonths ? { forMonths: input.items.find((i) => i.productId === l.productId)!.forMonths } : {}) } : {}) }));
   for (const g of allowedGifts(q, input.gifts ?? []))
     lines.push({ productId: g.id, name: `FREE GIFT: ${g.name}`, brand: g.brand, unitPrice: 0, qty: 1, lineTotal: 0, gift: true });
   // Club members-only price: an extra % off (a collection or everything), recognised by phone number.

@@ -2,7 +2,7 @@ import { fullName } from "@/lib/data/catalog";
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { everyText, startOk, tierOf, type Every } from "@/lib/every";
+import { everyText, MAX_MONTHS, startOk, tierOf, type Every } from "@/lib/every";
 import { db } from "@/lib/db";
 import type { CheckoutInput, Order } from "@/lib/orders";
 import { siteUrl } from "@/lib/site-url";
@@ -14,7 +14,8 @@ export type Subscription = {
   id: string;
   token: string;
   status: "active" | "paused" | "cancelled";
-  every: Every; // months apart (1 to 12), chosen per product
+  every: Every; // months apart (1 to 6), chosen per product
+  endsAt?: string; // last day of the plan (the customer chooses up to 6 months); no orders after it
   items: { productId: string; qty: number; name: string }[];
   customer: CheckoutInput["customer"];
   nextAt: string; // YYYY-MM-DD (Beirut)
@@ -80,9 +81,9 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
   const cooling = g.cooldownDays > 0 && Date.now() - lastCancel < g.cooldownDays * 864e5;
   const made: string[] = [];
   // One subscription per plan: same frequency and same next date chosen on the calendar.
-  const keyOf = (l: Order["lines"][number]) => `${l.every}|${startOk(l.start) ? l.start : ""}`;
+  const keyOf = (l: Order["lines"][number]) => `${l.every}|${startOk(l.start) ? l.start : ""}|${Math.min(MAX_MONTHS, l.forMonths || MAX_MONTHS)}`;
   for (const key of [...new Set(order.lines.filter((l) => l.every).map(keyOf))]) {
-    const [e, start] = key.split("|");
+    const [e, start, months] = key.split("|");
     const every = Number(e) as Every;
     const lines = order.lines.filter((l) => l.every && keyOf(l) === key && !l.gift && !already.has(l.productId));
     if (!lines.length) continue;
@@ -94,6 +95,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
       items: lines.map((l) => ({ productId: l.productId, qty: l.qty, name: `${fullName(l.brand, l.name)}` })),
       customer: input.customer,
       nextAt: start || addMonths(today(), every),
+      endsAt: addMonths(today(), Number(months) || MAX_MONTHS),
       createdAt: new Date().toISOString(),
       orders: [order.id],
       rules: 2,
@@ -276,6 +278,11 @@ export async function runSubscriptions() {
         failed++;
       }
       s.nextAt = addMonths(s.nextAt, s.every);
+      // The plan the customer chose has run its course: stop, without losing anything earned.
+      if (s.endsAt && s.nextAt > s.endsAt) {
+        s.status = "cancelled";
+        s.log = [...(s.log ?? []), { at: new Date().toISOString(), text: `Finished: the plan ran until ${s.endsAt} as chosen` }];
+      }
       await saveSubscription(s);
     }
   }

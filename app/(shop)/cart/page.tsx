@@ -56,7 +56,7 @@ export default function CartPage() {
         <h1 className="mb-4 text-3xl font-semibold">{tx("Cart")}</h1>
         <div className="mb-6"><FreeDeliveryBar /></div>
         <ul className="divide-y divide-line border-y border-line">
-          {detailed.map(({ product, qty, lineTotal, every, start }) => (
+          {detailed.map(({ product, qty, lineTotal, every, start, forMonths }) => (
             <li key={product.id} className="flex gap-4 py-5">
               <ProductImage product={product} className="h-24 w-24 shrink-0 rounded-lg" />
               <div className="flex flex-1 flex-col">
@@ -65,7 +65,7 @@ export default function CartPage() {
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
                 <ShipBadge p={product} className="mt-1 self-start" />
                     <PriceMatchBadge p={product} className="mt-1 self-start" />
-                <LinePlan name={product.name} productId={product.id} every={every} start={start} />
+                <LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} />
                 <div className="mt-auto flex items-center gap-4">
                   <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                   <button onClick={() => remove(product.id)} className="text-sm text-muted hover:underline">{tx("Remove")}</button>

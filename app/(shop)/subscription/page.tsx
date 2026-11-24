@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
-type V = { id: string; status: "active" | "paused" | "cancelled"; every: number; items: { productId: string; qty: number; name: string }[]; nextAt: string; orders: number; name: string; city: string; progress?: { legacy: boolean; pct: number; need: number; done: number; unlocked: boolean; noRebate?: boolean; rebate: { pending: number; used: number } } };
+type V = { id: string; status: "active" | "paused" | "cancelled"; every: number; endsAt?: string; items: { productId: string; qty: number; name: string }[]; nextAt: string; orders: number; name: string; city: string; progress?: { legacy: boolean; pct: number; need: number; done: number; unlocked: boolean; noRebate?: boolean; rebate: { pending: number; used: number } } };
 const pretty = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
 
 export default function Page() {
@@ -44,13 +44,22 @@ function Manage() {
             <label className="block">
               <span className="text-sm font-semibold">Deliver every</span>
               <select value={s.every} disabled={busy} onChange={(e) => act({ action: "every", every: Number(e.target.value) })} className="mt-1 min-h-[48px] w-full rounded-2xl border border-line bg-white px-3 font-semibold">
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((e) => <option key={e} value={e}>{e === 1 ? "1 month" : `${e} months`}</option>)}
+                {Array.from({ length: 6 }, (_, i) => i + 1).map((e) => <option key={e} value={e}>{e === 1 ? "1 month" : `${e} months`}</option>)}
               </select>
             </label>
             {on && (
               <label className="block">
+                <span className="text-sm font-semibold">Plan runs until {s.endsAt ? pretty(s.endsAt) : "you stop it"}</span>
+                <select value="" disabled={busy} onChange={(e) => e.target.value && act({ action: "for", months: Number(e.target.value) })} className="mt-1 min-h-[48px] w-full rounded-2xl border border-line bg-white px-3 font-semibold">
+                  <option value="">Change: run for…</option>
+                  {Array.from({ length: 6 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n === 1 ? "1 more month" : `${n} more months`}</option>)}
+                </select>
+              </label>
+            )}
+            {on && (
+              <label className="block">
                 <span className="text-sm font-semibold">Next delivery on</span>
-                <input type="date" value={s.nextAt} disabled={busy} min={new Date(Date.now() + 864e5).toISOString().slice(0, 10)} max={new Date(Date.now() + 395 * 864e5).toISOString().slice(0, 10)} onChange={(e) => e.target.value && act({ action: "date", date: e.target.value })} className="mt-1 min-h-[48px] w-full rounded-2xl border border-line bg-white px-3 font-semibold" />
+                <input type="date" value={s.nextAt} disabled={busy} min={new Date(Date.now() + 864e5).toISOString().slice(0, 10)} max={new Date(Date.now() + 183 * 864e5).toISOString().slice(0, 10)} onChange={(e) => e.target.value && act({ action: "date", date: e.target.value })} className="mt-1 min-h-[48px] w-full rounded-2xl border border-line bg-white px-3 font-semibold" />
               </label>
             )}
           </div>

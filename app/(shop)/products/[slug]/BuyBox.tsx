@@ -48,6 +48,7 @@ export function BuyBox({
   const [qty, setQty] = useState(1);
   const [plan, setPlan] = useState<0 | Every>(0);
   const [start, setStart] = useState<string | undefined>();
+  const [forMonths, setFor] = useState<number | undefined>();
   const v = variants.find((x) => x.id === id) ?? variants[0];
   const [shown, setShown] = useState<string | undefined>(v.image ?? gallery[0]);
   const pct = discountPct(v);
@@ -137,13 +138,13 @@ export function BuyBox({
           </div>
         )}
 
-        {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} />}
+        {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} forMonths={forMonths} onFor={setFor} />}
         <div className="mt-6 flex items-center gap-3">
           {v.inStock ? (
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
               <span className="relative flex flex-1">
-                <button onClick={() => add(v, qty, plan || null, plan ? start : undefined)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
+                <button onClick={() => add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
                 {sp && <SuperPriceSticker p={v} />}
               </span>
             </>
@@ -180,7 +181,7 @@ export function BuyBox({
               <p className="truncate text-xs text-muted">{v.brand}</p>
               <p className={`font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</p>
             </div>
-            <button onClick={() => add(v, qty, plan || null, plan ? start : undefined)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
+            <button onClick={() => add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
           </div>
         )}
         </div>
