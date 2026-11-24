@@ -386,7 +386,7 @@ struct SpinWheel: View {
     @State private var busy = false
     @State private var error: String?
     @State private var party = 0
-    struct Reply: Codable { let code: String?; let percent: Int?; let index: Int?; let error: String? }
+    struct Reply: Codable { let code: String?; let percent: Int?; let index: Int?; let error: String?; let delivered: String? }
     var body: some View {
         VStack(spacing: 18) {
             Text(wheel.title).font(.display(26)).multilineTextAlignment(.center)
@@ -398,8 +398,12 @@ struct SpinWheel: View {
             if let r = result {
                 VStack(spacing: 6) {
                     Text("You won \(r.percent)% off 🎉").font(.display(22))
-                    Text(r.code).font(.system(.title3, design: .monospaced).bold()).padding(.horizontal, 16).padding(.vertical, 8).background(Color.paper, in: Capsule())
-                    Text("Use it at checkout. We've also sent it on WhatsApp.").font(.caption).foregroundStyle(.secondary)
+                    if r.code.hasPrefix("sent:") {
+                        Text(r.code == "sent:sms" ? "Your code was sent to you by text message." : "Your code was sent to you on WhatsApp.").font(.subheadline).multilineTextAlignment(.center)
+                    } else {
+                        Text(r.code).font(.system(.title3, design: .monospaced).bold()).padding(.horizontal, 16).padding(.vertical, 8).background(Color.paper, in: Capsule())
+                    }
+                    Text("Use it at checkout. One use, first order.").font(.caption).foregroundStyle(.secondary)
                     Button("Start shopping") { dismiss() }.buttonStyle(.borderedProminent).tint(Color.brand)
                 }
             } else {
@@ -417,8 +421,8 @@ struct SpinWheel: View {
     }
     func spin() async {
         busy = true; error = nil; defer { busy = false }
-        guard let res = try? await API.send("/api/signup/", body: ["phone": phone, "source": "popup"]), let r = try? JSONDecoder().decode(Reply.self, from: res.1) else { error = "We couldn't reach the shop."; return }
-        guard let code = r.code, let pct = r.percent else { error = r.error ?? "Please try again."; return }
+        guard let res = try? await API.send("/api/signup/", body: ["phone": phone, "via": "whatsapp", "source": "popup"]), let r = try? JSONDecoder().decode(Reply.self, from: res.1) else { error = "We couldn't reach the shop."; return }
+        guard let pct = r.percent, let code = r.code ?? r.delivered.map({ "sent:\($0)" }) else { error = r.error ?? "Please try again."; return }
         let n = max(1, wheel.slices.count), i = max(0, r.index ?? 0)
         let slice = 360.0 / Double(n)
         // Land the middle of slice i under the pointer at the top, after a few full turns.

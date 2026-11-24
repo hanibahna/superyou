@@ -142,7 +142,7 @@ export function MobileTabBar() {
 }
 
 // ── Sign-up pop-up: classic or spin-to-win; permanent tab; cart-exit offer ──
-type Result = { code: string; percent: number; expires: string; index?: number };
+type Result = { code?: string; percent: number; expires: string; index?: number; delivered?: "whatsapp" | "sms" | null };
 
 /** The offer's % counting up with a pop, inside a pulsing ring with floating sparkles. */
 function PercentBurst({ value, label }: { value: number; label: string }) {
@@ -182,7 +182,8 @@ export function SignupPopup() {
   const t = useT();
   const path = usePathname();
   const [open, setOpen] = useState<null | "popup" | "cart">(null);
-  const [channel, setChannel] = useState<"email" | "phone">("phone");
+  const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [email, setEmail] = useState("");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -231,7 +232,7 @@ export function SignupPopup() {
     e.preventDefault();
     setBusy(true);
     setErr("");
-    const r = await fetch("/api/signup/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [channel === "email" ? "email" : "phone"]: value, source: open === "cart" ? "cart" : "popup" }) }).catch(() => null);
+    const r = await fetch("/api/signup/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: value, via: channel, email: email.trim() || undefined, source: open === "cart" ? "cart" : "popup" }) }).catch(() => null);
     const data = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
     if (!r?.ok) return setErr(data.error ?? tx("Something went wrong, please try again"));
@@ -294,12 +295,16 @@ export function SignupPopup() {
             <div className="p-6 md:p-8">
               {res ? (
                 <div className="offer-reveal text-center md:text-start">
-                  <p className="text-xs font-bold uppercase tracking-widest text-sale">{t("Your code")}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-sale">{t("You won")}</p>
                   <p className="offer-pop mt-2 text-3xl font-black">{res.percent}% off</p>
-                  <button onClick={() => { navigator.clipboard?.writeText(res.code); setCopied(true); }} className="mt-4 w-full rounded-lg border-2 border-dashed border-ink py-3 font-mono text-xl font-bold tracking-widest">
-                    {res.code} <span className="ms-2 text-xs font-sans font-semibold text-muted">{copied ? t("Copied") : t("Copy")}</span>
-                  </button>
-                  <p className="mt-2 text-xs text-muted">{t("Valid until")} {res.expires.slice(0, 10)} · one use. {channel === "phone" ? tx("We've also sent it to you on WhatsApp.") : ""}</p>
+                  {res.delivered ? (
+                    <p className="mt-4 rounded-lg bg-[#ecfdf3] p-3 text-sm text-[#046c4e]">✓ {res.delivered === "whatsapp" ? t("Your code was sent to you on WhatsApp.") : t("Your code was sent to you by text message.")} {t("Use it at checkout.")}</p>
+                  ) : res.code ? (
+                    <button onClick={() => { navigator.clipboard?.writeText(res.code!); setCopied(true); }} className="mt-4 w-full rounded-lg border-2 border-dashed border-ink py-3 font-mono text-xl font-bold tracking-widest">
+                      {res.code} <span className="ms-2 text-xs font-sans font-semibold text-muted">{copied ? t("Copied") : t("Copy")}</span>
+                    </button>
+                  ) : null}
+                  <p className="mt-2 text-xs text-muted">{t("Valid until")} {res.expires.slice(0, 10)} · {t("one use, first order, for this phone number.")}</p>
                   <button onClick={close} className="mt-5 w-full rounded-full bg-ink py-3 font-semibold text-white">{t("Shop now")}</button>
                 </div>
               ) : (
@@ -307,21 +312,31 @@ export function SignupPopup() {
                   <h2 className="pe-8 text-2xl font-bold leading-tight">{open === "cart" ? g.cartExitText : g.title}</h2>
                   <p className="mt-2 text-sm text-muted">{g.text}</p>
                   <div className="mt-5 inline-flex rounded-full bg-[#f2f2f2] p-1 text-sm">
-                    <button type="button" onClick={() => setChannel("phone")} className={`rounded-full px-4 py-1.5 ${channel === "phone" ? "bg-white font-semibold shadow" : ""}`}>WhatsApp</button>
-                    <button type="button" onClick={() => setChannel("email")} className={`rounded-full px-4 py-1.5 ${channel === "email" ? "bg-white font-semibold shadow" : ""}`}>Email</button>
+                    <button type="button" onClick={() => setChannel("whatsapp")} className={`rounded-full px-4 py-1.5 ${channel === "whatsapp" ? "bg-white font-semibold shadow" : ""}`}>WhatsApp</button>
+                    <button type="button" onClick={() => setChannel("sms")} className={`rounded-full px-4 py-1.5 ${channel === "sms" ? "bg-white font-semibold shadow" : ""}`}>{t("Text message")}</button>
                   </div>
                   <form onSubmit={submit} className="mt-3 space-y-3">
                     <input
-                      key={channel}
                       required
                       autoFocus
-                      type={channel === "email" ? "email" : "tel"}
-                      inputMode={channel === "email" ? "email" : "tel"}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       value={value}
                       onChange={(e) => setValue(e.target.value)}
-                      placeholder={channel === "email" ? "you@example.com" : "70 123 456"}
-                      aria-label={channel === "email" ? t("Your email") : "WhatsApp number"}
+                      placeholder="70 123 456"
+                      aria-label={t("Mobile number (your code is sent here)")}
                       className="tap w-full rounded-lg border border-line px-4 py-3 outline-none focus:border-ink"
+                    />
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={t("Email (optional) for news and offers")}
+                      aria-label={t("Email (optional)")}
+                      className="tap w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-ink"
                     />
                     <button disabled={busy || spinning} className="tap w-full rounded-full bg-ink py-3 font-semibold text-white disabled:opacity-60">
                       {spinning ? "…" : g.mode === "wheel" && open === "popup" ? t("Spin the wheel") : t("Get my code")}
@@ -329,7 +344,7 @@ export function SignupPopup() {
                     {err && <p className="text-sm text-sale">{err}</p>}
                   </form>
                   {g.mode === "wheel" && open === "popup" && <p className="mt-3 text-xs text-muted md:hidden">Every spin wins: {g.wheel.join(" · ")}</p>}
-                  <p className="mt-4 text-[11px] text-muted">By signing up you agree to receive offers by {channel === "email" ? "email" : "WhatsApp"}. Unsubscribe anytime (reply STOP on WhatsApp).</p>
+                  <p className="mt-4 text-[11px] text-muted">By signing up you agree to receive offers by {channel === "whatsapp" ? "WhatsApp" : "text message"}{email.trim() ? " and email" : ""}. Unsubscribe anytime (reply STOP on WhatsApp).</p>
                   <button onClick={close} className="mt-2 text-xs text-muted underline">{t("No thanks")}</button>
                 </>
               )}
