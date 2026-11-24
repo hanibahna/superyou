@@ -108,15 +108,15 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
                   </div>
                 )}
                 {langs.length === 1 && <p className="mt-2 text-xs font-semibold text-muted" lang={langs[0][0]}>{langs[0][1]}</p>}
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-2 items-start gap-2 sm:grid-cols-3">
                   {shown.slice(0, 3).map((v) => (
-                    <button key={v.id} onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group text-start" dir={v.lang === "ar" ? "rtl" : undefined}>
+                    <button key={v.id} onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group flex flex-col items-stretch justify-start text-start" dir={v.lang === "ar" ? "rtl" : undefined}>
                       <span className="relative block aspect-video overflow-hidden rounded-xl bg-black">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100" />
                         <span className="absolute inset-0 grid place-items-center"><span className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow"><svg width="12" height="12" viewBox="0 0 24 24" fill="#2e2229" aria-hidden><path d="M8 5v14l11-7z" /></svg></span></span>
                       </span>
-                      <span className="mt-1 line-clamp-2 block text-[11px] font-medium leading-tight" lang={v.lang}>{v.title}</span>
+                      <span className="mt-1 line-clamp-2 block min-h-[2.5em] text-[11px] font-medium leading-tight" lang={v.lang}>{v.title}</span>
                       {v.channel && <span className="block truncate text-[10px] text-muted">{v.channel}</span>}
                     </button>
                   ))}
