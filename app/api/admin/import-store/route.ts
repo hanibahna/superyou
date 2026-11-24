@@ -59,6 +59,10 @@ export async function POST(req: NextRequest) {
       .filter((p) => p.variants.length);
   }
   const rows = products.flatMap((p) => mapSourceProduct(p, { adjustPct: o.adjustPct, round: o.round, asDraft: o.asDraft, skuPrefix: o.skuPrefix, sourceName, landed: landedPricing }));
+  // Brands in the spelling we already use ("ESTEE LAUDER" → "Estée Lauder"); new ones in Title Case when the store shouts.
+  const { brandName } = await import("@/lib/brand-names");
+  const known = brandName(idx.all);
+  for (const row of rows) row.brand = known(String(row.brand));
   // Products whose photos were replaced from another store keep those photos.
   for (const row of rows) {
     const id = idx.skuToId.get(String(row.sku).toLowerCase());
