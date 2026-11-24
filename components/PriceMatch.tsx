@@ -86,8 +86,8 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
             </li>
           ))}
           {stage >= 2 && (
-            <li className="sp-pop flex w-full justify-between gap-3 border-t border-[#f3c4d2] pt-1 font-bold text-ink">
-              <span>SuperYou</span><span className="tabular-nums">{money(p.price)}</span>
+            <li className="sp-in flex justify-between gap-3 border-t border-[#f3c4d2] pt-1 font-bold text-ink">
+              <span>SuperYou</span><span className="sp-pop tabular-nums">{money(p.price)}</span>
             </li>
           )}
         </ul>
