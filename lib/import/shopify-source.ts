@@ -135,6 +135,8 @@ export function categorize(p: SourceProduct, tags: Set<string>): string {
   if ((!t || /^(0|sets?|gifts?|kits?|full set|samples?|accessories)$/.test(t)) && !beautyTag && !BEAUTY_WORDS.test(title)) return "";
   // Clear beauty product types (as department stores name them).
   if (/parfum|toilette|cologne|fragrance|perfume|body (mist|splash|spray)|eau de soin/.test(t)) return "Fragrance";
+  // Gift sets and calendars from fragrance houses, or named after a scent, are fragrance.
+  if (/gift|sets?$|kits?$|calendar|collection/.test(t + " " + title) && (/jo malone|le labo|kilian|frederic malle|byredo|creed|diptyque|maison|tom ford beauty/i.test(p.vendor) || /cologne|parfum|perfume|fragrance|scent/.test(title))) return "Fragrance";
   if (/nail/.test(t)) return "Nails";
   if (/sun ?(care|screen)/.test(t)) return "Suncare";
   if (/lipstick|lip (gloss|liner|oil|balm|care)|^lips$|mascara|foundation|concealer|blush|bronzer|highlighter|eye ?(shadow|liner|pencil)|^eyes$|eyebrow|primer|powder|setting spray|fixer|bb cream|makeup|make up/.test(t)) return /remover/.test(t) ? "Skincare" : "Makeup";
@@ -234,7 +236,8 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
       // Abroad the supplier's "was" price is a US price, not a SuperYou one: no strike-through for imports.
       const compareAt = !opts.landed && srcCompare > price ? srcCompare : undefined;
       const discount = compareAt ? 1 - price / compareAt : 0;
-      const label = v.title && v.title !== "Default Title" ? v.title.trim().replace(/\s+/g, " ").slice(0, 80) : "";
+      // Gender options ("100ml / UNISEX", "WOMEN / Ruby Woo") are not a size or shade: dropped from the label.
+      const label = v.title && v.title !== "Default Title" ? v.title.split("/").map((x) => x.trim()).filter((x) => x && !/^(unisex|women|men|woman|man|kids?)$/i.test(x)).join(" / ").replace(/\s+/g, " ").slice(0, 80) : "";
       const barcode = (v.barcode || (v.sku && /^\d{8,14}$/.test(v.sku) ? v.sku : "")) ?? "";
       const vImg = v.featured_image?.src;
       return {
