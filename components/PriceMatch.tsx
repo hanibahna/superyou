@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 
-type SP = { match?: string; matchWas?: number; matchVs?: number; price?: number; spLimit?: number; cmpVs?: number; cmpShop?: string };
+type SP = { match?: string; matchWas?: number; matchVs?: number; price?: number; spLimit?: number; cmpVs?: number; cmpShop?: string; shops?: [string, number][]; beat?: "full" | "partial" | "none" };
 
 /** Next nightly price check: 01:00 UTC (3 am in Beirut). */
 function nextCheck(now = Date.now()) {
@@ -77,24 +77,49 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
           {t("Comparing prices with other shops in Lebanon…")}
         </p>
       )}
-      {stage >= 1 && vs !== undefined && (
+      {stage >= 1 && (p.shops?.length ? (
+        <ul className="sp-in mt-1.5 space-y-0.5 text-xs">
+          {p.shops.map(([name, price], i) => (
+            <li key={i} className="flex justify-between gap-3 text-muted">
+              <span>{name || t("Another shop")}</span>
+              <span className="tabular-nums line-through decoration-[#c0587a]/60">{money(price)}</span>
+            </li>
+          ))}
+          {stage >= 2 && (
+            <li className="sp-pop flex w-full justify-between gap-3 border-t border-[#f3c4d2] pt-1 font-bold text-ink">
+              <span>SuperYou</span><span className="tabular-nums">{money(p.price)}</span>
+            </li>
+          )}
+        </ul>
+      ) : vs !== undefined ? (
         <p className="sp-in mt-1 text-xs text-muted">
           {shop}: <span className={lowered ? "line-through" : ""}>{money(vs)}</span>
           {stage >= 2 && <span className="sp-pop ml-2 font-bold text-ink">SuperYou: {money(p.price)}</span>}
         </p>
-      )}
-      {stage >= 2 && (
-        <p className="sp-in mt-1 text-[11px] text-muted">
-          {lowered
-            ? t("We lowered our price below theirs. Checked every night; limited quantity per order, one SuperPrice order a day.")
-            : vs !== undefined
-              ? vs - p.price > 0.009
-                ? `${t("Already the best price:")} ${money(vs - p.price)} ${t("less here. Checked every night.")}`
-                : t("Same best price. Checked every night.")
-              : t("No lower price found in tonight's check. Checked every night.")}
-        </p>
-      )}
+      ) : null)}
+      {stage >= 2 && <BeatLine p={p} vs={vs} lowered={lowered} />}
     </div>
+  );
+}
+
+/** Which shops we beat, and whether the extra discount below them was applied. */
+function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) {
+  const t = useT();
+  if (vs === undefined || !p.price) return <p className="sp-in mt-1.5 text-[11px] text-muted">{t("No lower price found in tonight's check. Checked every night.")}</p>;
+  const named = [...new Set((p.shops ?? []).map(([n]) => n).filter(Boolean))];
+  const beaten = named.length ? named.join(", ") : t("other shops in Lebanon");
+  const pct = Math.max(0, Math.round(((vs - p.price) / vs) * 1000) / 10);
+  const msg = lowered
+    ? p.beat === "partial"
+      ? `${t("Extra discount applied, partly:")} ${pct}% ${t("below the lowest price (we can't go lower on this item).")}`
+      : `${t("Extra discount applied:")} ${pct}% ${t("below the lowest price.")}`
+    : pct > 0
+      ? `${t("No extra discount needed: already")} ${pct}% ${t("below the lowest price.")}`
+      : t("No extra discount needed: same as the lowest price.");
+  return (
+    <p className="sp-in mt-1.5 text-[11px] leading-relaxed">
+      <b className="text-[#046c4e]">✓ {pct > 0 ? t("Beats") : t("Matches")} {beaten}.</b> <span className="text-muted">{msg} {t("Checked every night.")}</span>
+    </p>
   );
 }
 

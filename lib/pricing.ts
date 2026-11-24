@@ -76,10 +76,11 @@ export async function liveProducts() {
     const sold = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
     // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
     const m = pmOn ? pm.map.get(p.id) : undefined;
-    if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "" } : {}) };
+    const named = (all?: [string, number, boolean][]) => all?.map(([s, t, show]) => [show ? s : "", t] as [string, number]);
+    if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
     // Already the best price: say which shop we compared with (shown as "price compared").
     const c = pmOn && growth.priceMatch.badge ? pm.cmp.get(p.id) : undefined;
-    if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: c.show ? c.s : "" };
+    if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: c.show ? c.s : "", shops: named(c.all), beat: "none" as const };
     return sold;
   });
   let dupOf = new Map<string, string>();

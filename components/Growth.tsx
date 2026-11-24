@@ -15,6 +15,7 @@ import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { useShop, type ProductSnap } from "@/lib/store";
 import { BagIcon, ChatIcon, CloseIcon, GridIcon, HomeIcon, SearchIcon, UserIcon } from "./Icons";
 import { ProductCard } from "./ProductCard";
+import { celebrate } from "./Celebrate";
 import { SearchBox } from "./SearchBox";
 
 // ── Storage helpers (never throw: private mode, blocked storage…) ──
@@ -143,6 +144,37 @@ export function MobileTabBar() {
 // ── Sign-up pop-up: classic or spin-to-win; permanent tab; cart-exit offer ──
 type Result = { code: string; percent: number; expires: string; index?: number };
 
+/** The offer's % counting up with a pop, inside a pulsing ring with floating sparkles. */
+function PercentBurst({ value, label }: { value: number; label: string }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "off";
+    if (reduce) return setN(value);
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 900);
+      setN(Math.round(value * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return (
+    <div className="relative grid place-items-center text-center text-white">
+      <span className="offer-ring absolute h-44 w-44 rounded-full border-2 border-[#c0587a] md:h-56 md:w-56" aria-hidden />
+      <span className="offer-ring absolute h-44 w-44 rounded-full border border-white/40 md:h-56 md:w-56" style={{ animationDelay: "0.8s" }} aria-hidden />
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className="offer-spark absolute text-[#e8b4c4]" style={{ left: `${50 + 42 * Math.cos(i * 1.05)}%`, top: `${50 + 42 * Math.sin(i * 1.05)}%`, animationDelay: `${i * 0.25}s` }} aria-hidden>✦</span>
+      ))}
+      <div className="relative">
+        <p className="offer-pop text-6xl font-black tabular-nums md:text-7xl">{n}%</p>
+        <p className="mt-2 text-xs uppercase tracking-[0.3em] md:text-sm">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export function SignupPopup() {
   const tx = useT();
   const g = useGrowth().popup;
@@ -211,6 +243,10 @@ export function SignupPopup() {
       (wheelTarget.current = data.index);
     } else setRes(data);
   }
+  // Celebrate the code the moment it appears (after the wheel stops).
+  useEffect(() => {
+    if (res) celebrate({ count: 90 });
+  }, [res]);
   const n = g.wheel.length;
   const close = () => setOpen(null);
   const colors = ["#111", "#c0587a", "#333", "#e8b4c4", "#555", "#f3d9e1", "#222", "#d98aa5", "#444", "#fbe9ef"];
@@ -218,7 +254,7 @@ export function SignupPopup() {
   return (
     <>
       {g.tab && !open && !res && (
-        <button onClick={() => setOpen("popup")} className="fixed bottom-5 start-5 z-30 hidden rounded-full bg-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg md:block">
+        <button onClick={() => setOpen("popup")} className="offer-tab sp-shine fixed bottom-5 start-5 z-30 hidden rounded-full bg-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg md:block">
           {g.tabLabel || t("Get 10% off")}
         </button>
       )}
@@ -227,10 +263,10 @@ export function SignupPopup() {
           <div className="absolute inset-0 bg-black/50" onClick={close} />
           <div className="sheet-up relative grid max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white md:max-w-3xl md:grid-cols-2 md:rounded-2xl">
             <button onClick={close} aria-label={tx("Close")} className="absolute end-3 top-3 z-10 rounded-full bg-white/90 p-2"><CloseIcon width={18} height={18} /></button>
-            <div className="relative hidden min-h-[380px] bg-ink md:block">
+            <div className="relative min-h-[230px] bg-ink md:min-h-[380px]">
               {g.mode === "wheel" && open === "popup" ? (
                 <div className="absolute inset-0 grid place-items-center">
-                  <div className="relative h-72 w-72">
+                  <div className="relative h-52 w-52 md:h-72 md:w-72">
                     <div className="absolute -top-2 left-1/2 z-10 h-0 w-0 -translate-x-1/2 border-x-[10px] border-t-[18px] border-x-transparent border-t-white" />
                     <svg viewBox="-100 -100 200 200" className={`h-full w-full ${spinning ? "wheel-spin" : ""}`} style={{ ["--wheel-to" as string]: `${360 * 5 - (wheelTarget.current + 0.5) * (360 / n)}deg` }}>
                       {g.wheel.map((label, i) => {
@@ -250,19 +286,16 @@ export function SignupPopup() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={g.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
               ) : (
-                <div className="absolute inset-0 grid place-items-center p-10 text-center text-white">
-                  <div>
-                    <p className="text-7xl font-black">{open === "cart" && g.cartExitPercent ? g.cartExitPercent : g.percent}%</p>
-                    <p className="mt-2 text-sm uppercase tracking-[0.3em]">off your first order</p>
-                  </div>
+                <div className="absolute inset-0 grid place-items-center p-10">
+                  <PercentBurst value={open === "cart" && g.cartExitPercent ? g.cartExitPercent : g.percent} label={t("off your first order")} />
                 </div>
               )}
             </div>
             <div className="p-6 md:p-8">
               {res ? (
-                <div className="text-center md:text-start">
+                <div className="offer-reveal text-center md:text-start">
                   <p className="text-xs font-bold uppercase tracking-widest text-sale">{t("Your code")}</p>
-                  <p className="mt-2 text-3xl font-black">{res.percent}% off</p>
+                  <p className="offer-pop mt-2 text-3xl font-black">{res.percent}% off</p>
                   <button onClick={() => { navigator.clipboard?.writeText(res.code); setCopied(true); }} className="mt-4 w-full rounded-lg border-2 border-dashed border-ink py-3 font-mono text-xl font-bold tracking-widest">
                     {res.code} <span className="ms-2 text-xs font-sans font-semibold text-muted">{copied ? t("Copied") : t("Copy")}</span>
                   </button>

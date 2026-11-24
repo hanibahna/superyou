@@ -29,9 +29,11 @@ const REPORT = "pm:report";
 const BUDGET_MS = 230_000;
 
 /** We are already the best price: t = the cheapest other shop, s = that shop. */
-export type Cmp = { t: number; s: string; show: boolean };
+/** Every shop that sells it: [name, price, show name]. */
+export type Shop = [string, number, boolean];
+export type Cmp = { t: number; s: string; show: boolean; all?: Shop[] };
 /** What the storefront needs for one product: p = SuperPrice, t = competitor price, s = shop. */
-export type Match = { p: number; t: number; s: string; show: boolean; u: string; est?: boolean };
+export type Match = { p: number; t: number; s: string; show: boolean; u: string; est?: boolean; all?: Shop[]; beat?: "full" | "partial" };
 
 export type SiteReport = { domain: string; label: string; products: number; matched: number; byBarcode: number; error?: string };
 export type Flag = { id: string; name: string; ours: number; theirs: number; floor: number; site: string; url: string; why: "below floor" | "no cost" | "check match" };
@@ -220,6 +222,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
   const idx = await getIndex();
   const sourcing = await getSourcing();
   const best = new Map<string, { t: number; site: PriceMatchSite; u: string; how: string }>();
+  const shops = new Map<string, Shop[]>();
   for (const site of sites) {
     if (siteReports.find((r) => r.domain === site.domain)?.error) continue;
     let cursor = "0";
@@ -230,6 +233,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
         const t = Number(p);
         const prev = best.get(flat[i]);
         if (!prev || t < prev.t) best.set(flat[i], { t, site, u, how });
+        (shops.get(flat[i]) ?? shops.set(flat[i], []).get(flat[i])!).push([site.label, r2(t), site.showName]);
       }
       cursor = String(next);
     } while (cursor !== "0");
@@ -244,7 +248,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     const p = idx.byId.get(id);
     if (!p || p.status !== "active") continue;
     if (b.t >= p.price - 0.005) {
-      cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName } satisfies Cmp));
+      cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
       continue;
     }
     cheaper++;
@@ -268,7 +272,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     mBefore += (p.price - cost) / p.price;
     mAfter += (sp - cost) / sp;
     supers.push({ id, name, ours: p.price, theirs: b.t, superPrice: sp, cost: r2(cost), margin: Math.round(((sp - cost) / sp) * 1000) / 10, est: !known, site: b.site.label });
-    const m: Match = { p: sp, t: r2(b.t), s: b.site.label, show: b.site.showName, u: b.u, ...(known ? {} : { est: true }) };
+    const m: Match = { p: sp, t: r2(b.t), s: b.site.label, show: b.site.showName, u: b.u, ...(known ? {} : { est: true }), all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]), beat: sp <= target + 0.005 ? "full" : "partial" };
     prices.push(id, JSON.stringify(m));
   }
   await db.cmd(["DEL", PRICES]);

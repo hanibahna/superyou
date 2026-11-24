@@ -76,6 +76,9 @@ export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredient
   /** Already the best price: the cheapest other shop's price, and its name ("" = not shown). */
   cmpVs?: number;
   cmpShop?: string;
+  /** SuperPrice: every shop compared ([name, price], name "" when hidden), and whether the extra % below was given in full. */
+  shops?: [string, number][];
+  beat?: "full" | "partial" | "none";
 };
 
 export const toLite = (p: Product): ProductLite => {
