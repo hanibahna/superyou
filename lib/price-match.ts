@@ -31,6 +31,7 @@ const BUDGET_MS = 230_000;
 const STAT = (d: string) => `pm:stat:${d}`; // products, variants, inStock, supplements, protein, priceSum, priceN
 const BRANDS = (d: string) => `pm:brands:${d}`; // set of brand names
 const TYPES = (d: string) => `pm:types:${d}`; // product type → count
+const BCOUNT = (d: string) => `pm:bcount:${d}`; // brand → products
 
 export const SUPP = /\b(supplement|vitamin|multivitamin|capsule|softgel|tablet|gumm(y|ies)|collagen|omega|fish oil|probiotic|magnesium|zinc|iron|biotin|melatonin|ashwagandha|electrolyte|whey|protein powder|isolate|casein|creatine|bcaa|eaa|glutamine|pre-?workout|mass gainer|nutrition)\b/i;
 export const PROTEIN = /\b(whey|protein powder|protein bar|isolate|casein|creatine|bcaa|eaa|mass gainer|pre-?workout|plant protein)\b/i;
@@ -39,13 +40,18 @@ async function statPage(domain: string, page: SourceProduct[]) {
   if (!page.length) return;
   let variants = 0, inStock = 0, supp = 0, prot = 0, sum = 0, n = 0;
   const brands = new Set<string>();
+  const bcount = new Map<string, number>();
   const types = new Map<string, number>();
   for (const sp of page) {
     const tags = Array.isArray(sp.tags) ? sp.tags.join(" ") : sp.tags ?? "";
     const text = `${sp.title} ${sp.product_type ?? ""} ${tags}`;
     if (SUPP.test(text) && !/\b(hair|shampoo|conditioner|serum|cream|lotion)\b/i.test(sp.title)) supp++;
     if (PROTEIN.test(text) && !/\b(hair|shampoo|conditioner)\b/i.test(sp.title)) prot++;
-    if (sp.vendor?.trim()) brands.add(sp.vendor.trim().toUpperCase());
+    if (sp.vendor?.trim()) {
+      const b = sp.vendor.trim().toUpperCase().slice(0, 40);
+      brands.add(b);
+      bcount.set(b, (bcount.get(b) ?? 0) + 1);
+    }
     const ty = (sp.product_type || "Other").trim().slice(0, 40) || "Other";
     types.set(ty, (types.get(ty) ?? 0) + 1);
     for (const v of sp.variants ?? []) {
@@ -62,6 +68,7 @@ async function statPage(domain: string, page: SourceProduct[]) {
     ["SADD", BRANDS(domain), ...brands],
   ];
   for (const [k, c] of types) ops.push(["HINCRBY", TYPES(domain), k, c]);
+  for (const [k, c] of bcount) ops.push(["HINCRBY", BCOUNT(domain), k, c]);
   await db.pipeline(ops.filter((o) => o[0] !== "SADD" || o.length > 2) as string[][]);
 }
 
@@ -71,11 +78,15 @@ export async function competitorStats() {
   const idx = await getIndex();
   const out = [];
   for (const s of g.sites) {
-    const [st, brands, types] = await Promise.all([
+    const [st, brands, types, bc] = await Promise.all([
       db.cmd<string[] | null>(["HGETALL", STAT(s.domain)]),
       db.cmd<number>(["SCARD", BRANDS(s.domain)]),
       db.cmd<string[] | null>(["HGETALL", TYPES(s.domain)]),
+      db.cmd<string[] | null>(["HGETALL", BCOUNT(s.domain)]),
     ]);
+    const tb: [string, number][] = [];
+    for (let i = 0; bc && i < bc.length; i += 2) tb.push([bc[i], Number(bc[i + 1])]);
+    tb.sort((a, b) => b[1] - a[1]);
     const o: Record<string, number> = {};
     for (let i = 0; st && i < st.length; i += 2) o[st[i]] = Number(st[i + 1]);
     const t: [string, number][] = [];
@@ -96,7 +107,7 @@ export async function competitorStats() {
     ratios.sort((a, b) => a - b);
     const med = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 0;
     const overlap = { n: ratios.length, median: Math.round(med * 1000) / 1000, cheaperThanUs: ratios.filter((r) => r < 0.995).length, sameAsUs: ratios.filter((r) => r >= 0.995 && r <= 1.005).length, dearerThanUs: ratios.filter((r) => r > 1.005).length };
-    out.push({ domain: s.domain, label: s.label, enabled: s.enabled, overlap, products: o.products ?? 0, variants: o.variants ?? 0, inStock: o.inStock ?? 0, brands: brands ?? 0, supplements: o.supplements ?? 0, protein: o.protein ?? 0, avgPrice: o.priceN ? Math.round((o.priceSum / o.priceN) * 100) / 100 : 0, topTypes: t.slice(0, 8) });
+    out.push({ domain: s.domain, label: s.label, enabled: s.enabled, overlap, products: o.products ?? 0, variants: o.variants ?? 0, inStock: o.inStock ?? 0, brands: brands ?? 0, supplements: o.supplements ?? 0, protein: o.protein ?? 0, avgPrice: o.priceN ? Math.round((o.priceSum / o.priceN) * 100) / 100 : 0, topTypes: t.slice(0, 8), topBrands: tb.slice(0, 10) });
   }
   return out;
 }
@@ -232,7 +243,7 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
     try {
       if (st.page === 1) {
         await db.cmd(["DEL", OFFERS(site.domain)]);
-        await db.cmd(["DEL", STAT(site.domain), BRANDS(site.domain), TYPES(site.domain)]);
+        await db.cmd(["DEL", STAT(site.domain), BRANDS(site.domain), TYPES(site.domain), BCOUNT(site.domain)]);
         const cur = await currencyOf(site.domain);
         if (cur !== "USD") throw new Error(`prices are in ${cur}, not US dollars`);
       }

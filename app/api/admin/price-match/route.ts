@@ -25,6 +25,7 @@ export async function GET(req: Request) {
       protein: all.filter((p) => pm.PROTEIN.test(text(p)) && !/\b(hair|shampoo|conditioner)\b/i.test(p.name)).length,
       avgPrice: Math.round((all.reduce((s, p) => s + p.price, 0) / (all.length || 1)) * 100) / 100,
       topTypes: [...cats].sort((a, b) => b[1] - a[1]).slice(0, 8),
+      topBrands: [...all.reduce((m, p) => m.set(p.brand.trim().toUpperCase(), (m.get(p.brand.trim().toUpperCase()) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1]).slice(0, 10),
     };
     return NextResponse.json({ us, shops: await pm.competitorStats() });
   }
