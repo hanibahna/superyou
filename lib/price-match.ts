@@ -193,7 +193,8 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
     }
     await writeState(st);
     // Time left in this call: go on with the next shop (or the final step) right here.
-    if (st.page === 1 && Date.now() - t0 < BUDGET_MS - 90_000) return step(t0);
+    // The final step only takes seconds, so it nearly always fits.
+    if (st.page === 1 && Date.now() - t0 < (st.site >= sites.length ? 270_000 : BUDGET_MS - 90_000)) return step(t0);
     return { more: true, state: st };
   }
 

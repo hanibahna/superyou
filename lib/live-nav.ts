@@ -17,6 +17,8 @@ type LiveNav = {
   key: string; collections: Set<string>; categories: Set<string>; concerns: Set<string>; brands: Set<string>; knownBrands: Set<string>; brandNames: Map<string, string>;
   /** Which product categories each collection / brand has on sale (so "Caudalie" under Fragrances counts only Caudalie fragrances). */
   colCats: Map<string, Set<string>>; brandCats: Map<string, Set<string>>;
+  /** Categories with products on sale from local stock / imported catalogs ("Imported from the USA" links). */
+  originCats: Map<string, Set<string>>;
   /** Every category, on sale or not, to tell which category a menu section is about. */
   allCats: { slug: string; name: string }[];
 };
@@ -29,6 +31,7 @@ export async function liveNav(): Promise<LiveNav> {
   const list: ProductLite[] = live.list;
   const colCats = new Map<string, Set<string>>();
   const brandCats = new Map<string, Set<string>>();
+  const originCats = new Map<string, Set<string>>();
   const add = (m: Map<string, Set<string>>, k: string, c: string) => (m.get(k) ?? m.set(k, new Set()).get(k)!).add(c);
   const collections = new Set<string>();
   const categories = new Set<string>();
@@ -38,6 +41,7 @@ export async function liveNav(): Promise<LiveNav> {
     for (const c of p.collections ?? []) (collections.add(c.toLowerCase()), add(colCats, c.toLowerCase(), p.category));
     add(brandCats, slugify(p.brand).replace(/-/g, ""), p.category);
     categories.add(p.category);
+    add(originCats, p.origin ?? "local", p.category);
     for (const c of p.concerns) concerns.add(c);
     brands.add(slugify(p.brand));
   }
@@ -58,7 +62,7 @@ export async function liveNav(): Promise<LiveNav> {
   for (const b of [...knownBrands]) knownBrands.add(b.replace(/-/g, ""));
   for (const b of [...brands]) brands.add(b.replace(/-/g, ""));
   const allCats = tax.categories.map((c) => ({ slug: c.slug, name: c.name }));
-  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, allCats };
+  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats };
   return g.__liveNav;
 }
 
@@ -90,9 +94,12 @@ function hrefCats(href: string, nav: LiveNav): Set<string> | null {
   if (path === "/shop" || path === "/shop/") {
     const cat = u.searchParams.get("category");
     const brand = u.searchParams.get("brand");
-    if (!cat && !brand) return null;
+    const origin = u.searchParams.get("origin");
+    if (!cat && !brand && !origin) return null;
     let cats = brand ? (nav.brandCats.get(slugify(brand).replace(/-/g, "")) ?? empty) : new Set(nav.categories);
     if (cat) cats = new Set([...cats].filter((c) => c === cat));
+    // "Imported from the USA" and similar: only while an imported catalog is switched on.
+    if (origin) cats = new Set([...cats].filter((c) => nav.originCats.get(origin)?.has(c)));
     return cats;
   }
   return null;
