@@ -27,6 +27,63 @@ const CMP = "pm:cmp"; // productId → JSON Cmp: a shop sells it for the same or
 const VER = "pm:ver";
 const REPORT = "pm:report";
 const BUDGET_MS = 230_000;
+// Competitor benchmark, refreshed with every price check (admin only, never shown to shoppers).
+const STAT = (d: string) => `pm:stat:${d}`; // products, variants, inStock, supplements, protein, priceSum, priceN
+const BRANDS = (d: string) => `pm:brands:${d}`; // set of brand names
+const TYPES = (d: string) => `pm:types:${d}`; // product type → count
+
+export const SUPP = /\b(supplement|vitamin|multivitamin|capsule|softgel|tablet|gumm(y|ies)|collagen|omega|fish oil|probiotic|magnesium|zinc|iron|biotin|melatonin|ashwagandha|electrolyte|whey|protein powder|isolate|casein|creatine|bcaa|eaa|glutamine|pre-?workout|mass gainer|nutrition)\b/i;
+export const PROTEIN = /\b(whey|protein powder|protein bar|isolate|casein|creatine|bcaa|eaa|mass gainer|pre-?workout|plant protein)\b/i;
+
+async function statPage(domain: string, page: SourceProduct[]) {
+  if (!page.length) return;
+  let variants = 0, inStock = 0, supp = 0, prot = 0, sum = 0, n = 0;
+  const brands = new Set<string>();
+  const types = new Map<string, number>();
+  for (const sp of page) {
+    const tags = Array.isArray(sp.tags) ? sp.tags.join(" ") : sp.tags ?? "";
+    const text = `${sp.title} ${sp.product_type ?? ""} ${tags}`;
+    if (SUPP.test(text) && !/\b(hair|shampoo|conditioner|serum|cream|lotion)\b/i.test(sp.title)) supp++;
+    if (PROTEIN.test(text) && !/\b(hair|shampoo|conditioner)\b/i.test(sp.title)) prot++;
+    if (sp.vendor?.trim()) brands.add(sp.vendor.trim().toUpperCase());
+    const ty = (sp.product_type || "Other").trim().slice(0, 40) || "Other";
+    types.set(ty, (types.get(ty) ?? 0) + 1);
+    for (const v of sp.variants ?? []) {
+      variants++;
+      if (v.available) inStock++;
+      const pr = Number(v.price);
+      if (pr > 0) (sum += pr, n++);
+    }
+  }
+  const ops: (string | number)[][] = [
+    ["HINCRBY", STAT(domain), "products", page.length], ["HINCRBY", STAT(domain), "variants", variants], ["HINCRBY", STAT(domain), "inStock", inStock],
+    ["HINCRBY", STAT(domain), "supplements", supp], ["HINCRBY", STAT(domain), "protein", prot],
+    ["HINCRBYFLOAT", STAT(domain), "priceSum", Math.round(sum * 100) / 100], ["HINCRBY", STAT(domain), "priceN", n],
+    ["SADD", BRANDS(domain), ...brands],
+  ];
+  for (const [k, c] of types) ops.push(["HINCRBY", TYPES(domain), k, c]);
+  await db.pipeline(ops.filter((o) => o[0] !== "SADD" || o.length > 2) as string[][]);
+}
+
+/** Admin benchmark: what each shop carries (from the last price check). */
+export async function competitorStats() {
+  const g = (await getGrowth()).priceMatch;
+  const out = [];
+  for (const s of g.sites) {
+    const [st, brands, types] = await Promise.all([
+      db.cmd<string[] | null>(["HGETALL", STAT(s.domain)]),
+      db.cmd<number>(["SCARD", BRANDS(s.domain)]),
+      db.cmd<string[] | null>(["HGETALL", TYPES(s.domain)]),
+    ]);
+    const o: Record<string, number> = {};
+    for (let i = 0; st && i < st.length; i += 2) o[st[i]] = Number(st[i + 1]);
+    const t: [string, number][] = [];
+    for (let i = 0; types && i < types.length; i += 2) t.push([types[i], Number(types[i + 1])]);
+    t.sort((a, b) => b[1] - a[1]);
+    out.push({ domain: s.domain, label: s.label, enabled: s.enabled, products: o.products ?? 0, variants: o.variants ?? 0, inStock: o.inStock ?? 0, brands: brands ?? 0, supplements: o.supplements ?? 0, protein: o.protein ?? 0, avgPrice: o.priceN ? Math.round((o.priceSum / o.priceN) * 100) / 100 : 0, topTypes: t.slice(0, 8) });
+  }
+  return out;
+}
 
 /** We are already the best price: t = the cheapest other shop, s = that shop. */
 /** Every shop that sells it: [name, price, show name]. */
@@ -159,12 +216,14 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
     try {
       if (st.page === 1) {
         await db.cmd(["DEL", OFFERS(site.domain)]);
+        await db.cmd(["DEL", STAT(site.domain), BRANDS(site.domain), TYPES(site.domain)]);
         const cur = await currencyOf(site.domain);
         if (cur !== "USD") throw new Error(`prices are in ${cur}, not US dollars`);
       }
       const book = bookOf((await getIndex()).all, site.domain);
       while (Date.now() - t0 < BUDGET_MS) {
         const page = await fetchPage(site.domain, st.page);
+        await statPage(site.domain, page).catch(() => {});
         const best = new Map<string, [number, string, string]>();
         for (const sp of page) {
           for (const v of sp.variants ?? []) {

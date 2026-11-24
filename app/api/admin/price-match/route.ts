@@ -11,6 +11,23 @@ export async function GET(req: Request) {
   const u = new URL(req.url);
   if (u.searchParams.has("analyse"))
     return NextResponse.json(await (await import("@/lib/price-match")).analyse(Number(u.searchParams.get("beat") ?? 5), Number(u.searchParams.get("margin") ?? 10), Number(u.searchParams.get("assume") ?? 0)));
+  if (u.searchParams.has("competitors")) {
+    const pm = await import("@/lib/price-match");
+    const { getIndex } = await import("@/lib/catalog");
+    const all = (await getIndex()).all.filter((p) => p.status === "active");
+    const text = (p: (typeof all)[number]) => `${p.name} ${p.category} ${(p.tags ?? []).join(" ")}`;
+    const cats = new Map<string, number>();
+    for (const p of all) cats.set(p.category, (cats.get(p.category) ?? 0) + 1);
+    const us = {
+      label: "SuperYou", products: all.length, brands: new Set(all.map((p) => p.brand.trim().toUpperCase())).size,
+      inStock: all.filter((p) => p.inStock).length,
+      supplements: all.filter((p) => pm.SUPP.test(text(p)) && !/\b(hair|shampoo|conditioner|serum|cream|lotion)\b/i.test(p.name)).length,
+      protein: all.filter((p) => pm.PROTEIN.test(text(p)) && !/\b(hair|shampoo|conditioner)\b/i.test(p.name)).length,
+      avgPrice: Math.round((all.reduce((s, p) => s + p.price, 0) / (all.length || 1)) * 100) / 100,
+      topTypes: [...cats].sort((a, b) => b[1] - a[1]).slice(0, 8),
+    };
+    return NextResponse.json({ us, shops: await pm.competitorStats() });
+  }
   return NextResponse.json(await (await import("@/lib/price-match")).getReport());
 }
 
