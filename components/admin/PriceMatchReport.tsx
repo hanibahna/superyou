@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Report } from "@/lib/price-match";
 
-type Data = { report: Report | null; running: { site: number; page: number; startedAt: string } | null };
+type Data = { report: Report | null; running: { site: number; page: number; startedAt: string; error?: string } | null };
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Beirut" });
@@ -18,18 +18,22 @@ export function PriceMatchReport() {
     const t = setInterval(load, 15_000);
     return () => clearInterval(t);
   }, []);
-  const run = async () => {
+  const run = async (resume = false) => {
     setBusy(true);
-    await fetch("/api/admin/price-match/", { method: "POST" }).catch(() => {});
+    await fetch("/api/admin/price-match/", { method: "POST", body: JSON.stringify({ resume }) }).catch(() => {});
     setTimeout(() => (setBusy(false), load()), 4000);
   };
   const r = d?.report;
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={run} disabled={busy || !!d?.running} className="rounded-full bg-ink px-4 py-2 font-semibold text-white disabled:opacity-50">
+        <button type="button" onClick={() => run()} disabled={busy || (!!d?.running && Date.now() - new Date(d.running.startedAt).getTime() < 20 * 60_000)} className="rounded-full bg-ink px-4 py-2 font-semibold text-white disabled:opacity-50">
           {d?.running ? "Checking prices…" : busy ? "Starting…" : "Check prices now"}
         </button>
+        {d?.running && Date.now() - new Date(d.running.startedAt).getTime() > 10 * 60_000 && (
+          <button type="button" onClick={() => run(true)} disabled={busy} className="rounded-full border border-line px-4 py-2 font-semibold">Continue the check</button>
+        )}
+        {d?.running?.error && <span className="text-sale">Last error: {d.running.error}</span>}
         <span className="text-muted">{d?.running ? `Shop ${d.running.site + 1}, page ${d.running.page}. Takes a few minutes; you can leave this page.` : r ? `Last check: ${when(r.at)}` : "No check yet. It also runs every night at 3 am."}</span>
       </div>
       {r && (

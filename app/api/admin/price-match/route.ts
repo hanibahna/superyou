@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { siteUrl } from "@/lib/site-url";
 
@@ -12,10 +12,13 @@ export async function GET() {
 }
 
 /** "Check prices now": starts a run in the background (it takes a few minutes). */
-export async function POST() {
+export async function POST(req: Request) {
   const denied = await adminGuard();
   if (denied) return denied;
   const secret = process.env.CRON_SECRET;
-  after(() => fetch(`${siteUrl()}/api/cron/price-match/`, { headers: secret ? { authorization: `Bearer ${secret}` } : {}, cache: "no-store" }).catch((e) => console.error("[price-match start]", e)));
+  // A run that stopped half-way (state still there) is continued instead of restarted.
+  const { running } = await (await import("@/lib/price-match")).getReport();
+  const resume = running && (await req.json().catch(() => ({}))).resume;
+  await (async () => fetch(`${siteUrl()}/api/cron/price-match/${resume ? "?hop=1" : ""}`, { headers: secret ? { authorization: `Bearer ${secret}` } : {}, cache: "no-store" }).catch((e) => console.error("[price-match start]", e)))();
   return NextResponse.json({ ok: true });
 }

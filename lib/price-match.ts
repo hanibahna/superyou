@@ -34,7 +34,7 @@ export type SiteReport = { domain: string; label: string; products: number; matc
 export type Flag = { id: string; name: string; ours: number; theirs: number; floor: number; site: string; url: string; why: "below floor" | "no cost" | "check match" };
 export type Report = { at: string; sites: SiteReport[]; matched: number; cheaper: number; matchedNow: number; flags: Flag[] };
 
-type State = { run: string; site: number; page: number; startedAt: string; sites: SiteReport[] };
+type State = { run: string; site: number; page: number; startedAt: string; sites: SiteReport[]; error?: string; tries?: number };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const digits = (s?: string | null) => (s ?? "").replace(/\D/g, "").replace(/^0+/, "");
@@ -195,7 +195,16 @@ export async function step(): Promise<{ more: boolean; state: State | null }> {
     return { more: true, state: st };
   }
 
-  await apply(sites, g.marginPct, st.sites);
+  try {
+    await apply(sites, g.marginPct, st.sites);
+  } catch (e) {
+    // Keep the state so the next call retries the final step (at most 3 times).
+    const tries = (st.tries ?? 0) + 1;
+    console.error("[price-match apply]", e);
+    if (tries < 3) return (await writeState({ ...st, tries, error: (e as Error).message.slice(0, 200) }), { more: true, state: st });
+    await writeState(null);
+    throw e;
+  }
   await writeState(null);
   return { more: false, state: null };
 }
