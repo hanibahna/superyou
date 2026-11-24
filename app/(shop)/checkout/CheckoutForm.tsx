@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { DeliverySplit, ShipBadge } from "@/components/ShipBadge";
+import { PriceGuaranteeNote, PriceMatchBadge } from "@/components/PriceMatch";
 import { CouponBox, GiftPicker, Totals } from "@/components/CartPromos";
 import { DEMO_MODE } from "@/lib/config";
 import { useGrowth, useSettings, useT } from "@/lib/site-context";
@@ -191,7 +192,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
                   <ProductImage product={product} className="h-14 w-14 rounded-lg" />
                   <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-ink text-[10px] text-white">{qty}</span>
                 </span>
-                <span className="flex-1 leading-snug">{cleanName(product.name)}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><LinePlan name={product.name} productId={product.id} every={every} readOnly /></span>
+                <span className="flex-1 leading-snug">{cleanName(product.name)}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><PriceMatchBadge p={product} className="ml-1 mt-1" /><LinePlan name={product.name} productId={product.id} every={every} readOnly /></span>
                 <span className="font-medium">{money(lineTotal)}</span>
               </li>
             ))}
@@ -204,6 +205,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
             </ul>
           )}
           <DeliverySplit items={detailed.map((l) => l.product)} className="mt-4" />
+          <PriceGuaranteeNote items={detailed.map((l) => l.product)} className="mt-3" />
           <div className="mt-4 border-t border-line pt-4"><CouponBox /></div>
           <div className="mt-4"><Totals /></div>
           {error && <p className="mt-4 rounded-lg bg-sale/10 p-3 text-sm text-sale">{error}</p>}

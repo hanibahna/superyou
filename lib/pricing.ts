@@ -8,6 +8,7 @@ import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
 import { getPromotions, getRoutine, getSettings, getSourcing, getVisibility } from "@/lib/site-store";
+import { priceMatches } from "@/lib/price-match";
 import { shipInfo } from "@/lib/sourcing";
 import { collectionsFor } from "@/lib/import/collection-map";
 import { bucketKey, nameTokens, sameNames, stepOf, type Growth } from "@/lib/growth";
@@ -55,10 +56,11 @@ function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"]
 
 /** Active products with automatic sale prices applied. Cached until the catalog or promotions change. */
 export async function liveProducts() {
-  const [idx, promos, vis, growth, ratings, sourcing] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing()]);
+  const [idx, promos, vis, growth, ratings, sourcing, pm] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing(), priceMatches()]);
+  const pmOn = growth.priceMatch.enabled;
   const auto = promos.discounts.filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
   // Re-evaluate at least every minute so scheduled sales start and stop on time.
-  const key = `${idx.ver}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${JSON.stringify(sourcing)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
+  const key = `${idx.ver}|pm${pmOn ? pm.ver : 'off'}${growth.priceMatch.badge ? 'b' : ''}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${JSON.stringify(sourcing)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
   if (g.__live?.key === key) return g.__live;
   const hiddenSrc = new Set(vis.hiddenSources.map((x) => x.toLowerCase()));
   const hiddenBrand = new Set(vis.hiddenBrands.map((x) => x.toLowerCase()));
@@ -70,9 +72,12 @@ export async function liveProducts() {
     // Imported catalogs join the same menu collections as local stock (Make Up › Eyes › Mascara…).
     const cols = ship.origin === "international" && !p.collections?.length ? collectionsFor(p.name) : undefined;
     const q: ProductLite = { ...p, ...(r ? { rating: r.avg, reviewCount: r.count } : {}), ...(cols?.length ? { collections: cols } : {}), origin: ship.origin, shipFrom: ship.country, daysMin: ship.daysMin, daysMax: ship.daysMax };
-    if (!auto.length) return q;
-    const s = salePrice(q, auto);
-    return s.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
+    const s = auto.length ? salePrice(q, auto) : null;
+    const sold = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
+    // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
+    const m = pmOn ? pm.map.get(p.id) : undefined;
+    if (m && m.t < sold.price - 0.005 && m.t >= m.f) return { ...sold, price: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "" } : {}) };
+    return sold;
   });
   let dupOf = new Map<string, string>();
   if (growth.dedupe.enabled) ({ list, dupOf } = mergeDuplicates(list, growth.dedupe.prefer, sourcing.preferLocal));
@@ -82,7 +87,7 @@ export async function liveProducts() {
 
 const snapOf = (p: ProductLite): ProductSnap => ({
   id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, compareAt: p.compareAt, size: p.size,
-  variant: p.variant, image: shopImg(p.image), shape: p.shape, color: p.color, inStock: p.inStock,
+  variant: p.variant, image: shopImg(p.image), match: p.match, shape: p.shape, color: p.color, inStock: p.inStock,
   origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
@@ -182,7 +187,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   return {
     giftCard: gc && "amount" in gc ? gc : undefined,
     giftCardError: gc && "error" in gc ? gc.error : undefined,
-    lines: lines.filter((l): l is NonNullable<typeof l> => !!l).map((l) => ({ productId: l.productId, price: l.price, compareAt: l.compareAt, available: l.available })),
+    lines: lines.filter((l): l is NonNullable<typeof l> => !!l).map((l) => ({ productId: l.productId, price: l.price, compareAt: l.compareAt, available: l.available, ...(live.byId.get(l.productId)?.match !== undefined ? { match: live.byId.get(l.productId)!.match } : {}) })),
     subtotal: q.subtotal,
     discounts: q.discounts,
     discountTotal: q.discountTotal,

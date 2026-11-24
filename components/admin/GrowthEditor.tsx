@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { BADGES, type Growth } from "@/lib/growth";
+import { PriceMatchReport } from "./PriceMatchReport";
 import { Area, Card, Header, ListInput, MediaField, Num, ProductPicker, Select, Text, Toggle, useSaver } from "./fields";
 
-const TABS = ["Gamification", "Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
+const TABS = ["Price match", "Gamification", "Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
 
 export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth; aiReady: boolean; emailReady: boolean }) {
   const [g, setG] = useState(initial);
@@ -234,6 +235,36 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
           </Card>
           <Card title="Foundation shade finder" sub="Page /shade-finder/: 5 questions → shade range, undertone letters and matching foundations in stock.">
             <Toggle label="Shade finder page is on" checked={g.shadeFinder.enabled} onChange={(enabled) => up("shadeFinder", { enabled })} />
+          </Card>
+        </div>
+      )}
+
+      {tab === "Price match" && (
+        <div className="space-y-5">
+          <Card title="Price guarantee" sub="Every night we read the shops below and find our products there (by barcode, or by brand, name and size). When a shop sells an item for less, the website and app sell it at their price too, with a “Price matched” badge, but never below cost + your margin. When they go back up, our price comes back by itself.">
+            <Toggle label="Price match on" checked={g.priceMatch.enabled} onChange={(enabled) => up("priceMatch", { enabled })} />
+            <Toggle label="Show the “Price matched” badge" hint="On the product page, in the bag and at checkout." checked={g.priceMatch.badge} onChange={(badge) => up("priceMatch", { badge })} />
+            <Num label="Minimum margin over cost (%)" hint="Imported items use the landed cost (freight, duty and VAT included). Items with no cost are never matched; they are listed in the report." value={g.priceMatch.marginPct} onChange={(marginPct) => up("priceMatch", { marginPct })} />
+          </Card>
+          <Card title="Shops we compare with" sub="Shopify shops with a public product feed, priced in US dollars. Turn off “Show name” to say “Price matched” without naming the shop.">
+            <div className="space-y-3">
+              {g.priceMatch.sites.map((s, i) => {
+                const set = (patch: Partial<typeof s>) => up("priceMatch", { sites: g.priceMatch.sites.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+                return (
+                  <div key={i} className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto_auto_auto]">
+                    <Text label={i ? "" : "Web address"} value={s.domain} placeholder="shop.com" onChange={(domain) => set({ domain: domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "") })} />
+                    <Text label={i ? "" : "Name shown"} value={s.label} onChange={(label) => set({ label })} />
+                    <Toggle label="On" checked={s.enabled} onChange={(enabled) => set({ enabled })} />
+                    <Toggle label="Show name" checked={s.showName} onChange={(showName) => set({ showName })} />
+                    <button type="button" onClick={() => up("priceMatch", { sites: g.priceMatch.sites.filter((_, j) => j !== i) })} className="pb-2 text-sale" aria-label="Remove">✕</button>
+                  </div>
+                );
+              })}
+              <button type="button" onClick={() => up("priceMatch", { sites: [...g.priceMatch.sites, { domain: "", label: "", enabled: true, showName: true }] })} className="text-sm font-semibold text-brand-600">+ Add shop</button>
+            </div>
+          </Card>
+          <Card title="Last check" sub="Save your changes first, then check now, or wait for tonight's check.">
+            <PriceMatchReport />
           </Card>
         </div>
       )}

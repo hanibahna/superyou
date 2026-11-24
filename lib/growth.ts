@@ -55,6 +55,7 @@ export type Growth = {
   motion: boolean; // site animations
   trust: { lines: string[]; returnsSummary: string };
   game: Game;
+  priceMatch: PriceMatch;
 };
 
 /** Gamification (Admin › Gamification). Points-only rewards; every-spin-wins wheel lives in popup. */
@@ -112,6 +113,22 @@ export const DEFAULT_TIPS = [
   "Fragrance-free is gentler for sensitive and eczema-prone skin.",
   "Not sure what your skin needs? Take a free SuperScan in the app.",
 ];
+
+// Price guarantee: competitor shops checked nightly; when one sells the same item for less,
+// SuperYou matches it, never below cost + marginPct. Server-only (not in publicGrowth).
+export type PriceMatchSite = { domain: string; label: string; enabled: boolean; showName: boolean };
+export type PriceMatch = { enabled: boolean; marginPct: number; badge: boolean; sites: PriceMatchSite[] };
+export const defaultPriceMatch: PriceMatch = {
+  enabled: true,
+  marginPct: 10,
+  badge: true,
+  sites: [
+    { domain: "feel22.com", label: "Feel22", enabled: true, showName: true },
+    { domain: "neovitale.com", label: "NeoVitale", enabled: true, showName: true },
+    { domain: "skinsociety.me", label: "Skin Society", enabled: true, showName: true },
+    { domain: "nexuscare.me", label: "NexusCare", enabled: true, showName: true },
+  ],
+};
 
 export const defaultGame: Game = {
   enabled: true,
@@ -194,6 +211,7 @@ export const defaultGrowth: Growth = {
   images: { frame: "grey", padding: 8 },
   motion: true,
   game: defaultGame,
+  priceMatch: defaultPriceMatch,
   trust: {
     lines: ["100% authentic — supplied by a licensed Lebanese pharmacy", "Advice from qualified pharmacists, free on WhatsApp", "Easy returns on unopened items within 7 days"],
     returnsSummary: "Unopened items can be returned within 7 days. Opened skincare can't be returned for hygiene reasons unless faulty.",
@@ -243,6 +261,10 @@ export const growthSchema = z.object({
     quest: z.object({ enabled: z.boolean(), reviews: z.number().int().min(1).max(20), points: z.number().int().min(0).max(10000) }),
     race: z.object({ enabled: z.boolean(), steps: z.array(z.object({ friends: z.number().int().min(1).max(1000), points: z.number().int().min(0).max(100000) })).max(6) }),
   }).transform((g) => g as Game).default(defaultGame),
+  priceMatch: z.object({
+    enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
+    sites: z.preprocess((a) => (Array.isArray(a) ? a.filter((x) => x && String(x.domain ?? "").trim()) : a), z.array(z.object({ domain: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9.-]+\.[a-z]{2,}$/), label: z.string().trim().min(1).max(40), enabled: z.boolean(), showName: z.boolean() })).max(12)),
+  }).default(defaultPriceMatch),
 });
 
 export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growth {
@@ -254,6 +276,7 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     reviews: { ...d.reviews, ...v.reviews }, club: { ...d.club, ...v.club, bonus: { ...d.club.bonus, ...v.club?.bonus }, referral: { ...d.club.referral, ...v.club?.referral }, memberPrice: { ...d.club.memberPrice, ...v.club?.memberPrice } }, pharmacist: { ...d.pharmacist, ...v.pharmacist },
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
     skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
+    priceMatch: { ...defaultPriceMatch, ...v.priceMatch, sites: v.priceMatch?.sites ?? defaultPriceMatch.sites },
     game: { ...defaultGame, ...v.game, badges: { ...defaultGame.badges, ...v.game?.badges, points: { ...defaultGame.badges.points, ...v.game?.badges?.points } }, ladder: { ...defaultGame.ladder, ...v.game?.ladder }, streak: { ...defaultGame.streak, ...v.game?.streak }, checkin: { ...defaultGame.checkin, ...v.game?.checkin }, quest: { ...defaultGame.quest, ...v.game?.quest }, race: { ...defaultGame.race, ...v.game?.race } },
   };
 }

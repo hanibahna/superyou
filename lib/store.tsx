@@ -15,12 +15,14 @@ export type ProductSnap = {
   id: string; slug: string; name: string; brand: string; price: number; compareAt?: number;
   size: string; variant?: string; image?: string; shape: AnyProduct["shape"]; color: string; inStock: boolean;
   origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;
+  match?: string; // price guarantee: matched this shop's lower price ("" = name not shown)
 };
 
 export const snap = (p: AnyProduct | ProductSnap): ProductSnap => ({
   id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, compareAt: p.compareAt,
   size: p.size, variant: p.variant, image: firstImage(p as { image?: string; images?: string[] }), shape: p.shape, color: p.color, inStock: p.inStock,
   ...("origin" in p && p.origin ? { origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax } : {}),
+  ...("match" in p && p.match !== undefined ? { match: p.match } : {}),
 });
 
 /** every: subscription interval in months (1, 2, 3, 4 or 6, per product); none = one-time purchase. */
@@ -28,7 +30,7 @@ export type CartLine = { productId: string; qty: number; product: ProductSnap; e
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
-  lines: { productId: string; price: number; compareAt?: number; available: boolean }[];
+  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string }[];
   subtotal: number;
   discounts: { name: string; code?: string; amount: number }[];
   discountTotal: number;
@@ -142,9 +144,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             let changed = false;
             const next = prev.map((l) => {
               const s = q.lines.find((x) => x.productId === l.productId);
-              if (!s || (s.price === l.product.price && s.compareAt === l.product.compareAt)) return l;
+              if (!s || (s.price === l.product.price && s.compareAt === l.product.compareAt && s.match === l.product.match)) return l;
               changed = true;
-              return { ...l, product: { ...l.product, price: s.price, compareAt: s.compareAt } };
+              return { ...l, product: { ...l.product, price: s.price, compareAt: s.compareAt, match: s.match } };
             });
             return changed ? next : prev;
           });

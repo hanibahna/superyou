@@ -11,6 +11,7 @@ import { useShop } from "@/lib/store";
 import { CloseIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
 import { DeliverySplit, ShipBadge } from "./ShipBadge";
+import { PriceMatchBadge } from "./PriceMatch";
 
 export function CartDrawer() {
   const tx = useT();
@@ -43,6 +44,7 @@ export function CartDrawer() {
                     <p className="text-sm font-medium leading-snug">{cleanName(product.name)}</p>
                     {product.variant && <p className="text-xs text-muted">{product.variant}</p>}
                     <ShipBadge p={product} className="mt-1 self-start" />
+                    <PriceMatchBadge p={product} className="mt-1 self-start" />
                     <LinePlan name={product.name} productId={product.id} every={every} />
                     <div className="mt-auto flex items-center justify-between">
                       <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />

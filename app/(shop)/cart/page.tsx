@@ -12,6 +12,7 @@ import { FreeDeliveryBar, RecentlyViewed } from "@/components/Growth";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { ProductImage } from "@/components/ProductImage";
 import { DeliverySplit, ShipBadge } from "@/components/ShipBadge";
+import { PriceMatchBadge } from "@/components/PriceMatch";
 import type { CardItem } from "@/lib/listing";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
@@ -62,6 +63,7 @@ export default function CartPage() {
                 <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{cleanName(product.name)}</Link>
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
                 <ShipBadge p={product} className="mt-1 self-start" />
+                    <PriceMatchBadge p={product} className="mt-1 self-start" />
                 <LinePlan name={product.name} productId={product.id} every={every} />
                 <div className="mt-auto flex items-center gap-4">
                   <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />

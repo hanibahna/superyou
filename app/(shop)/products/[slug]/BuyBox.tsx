@@ -19,6 +19,7 @@ import { localeOf } from "@/lib/i18n";
 import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
 import { ShipBadge } from "@/components/ShipBadge";
+import { PriceMatchBadge } from "@/components/PriceMatch";
 
 export function BuyBox({
   variants,
@@ -152,6 +153,7 @@ export function BuyBox({
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <ShipBadge p={v} size="md" />
+          <PriceMatchBadge p={v} size="md" />
           {v.inStock && <p className="text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
         </div>
         {v.origin === "international" && (
