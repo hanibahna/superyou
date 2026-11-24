@@ -174,15 +174,16 @@ export const defaultGame: Game = {
 export const defaultGrowth: Growth = {
   popup: {
     enabled: true,
-    mode: "classic",
+    mode: "wheel",
     percent: 10,
+    // Odds (weight = % chance): 5% off 50, 10% off 35, 15% off 10, 20% off 5. One code per phone number.
     wheel: [
-      { label: "5% off", percent: 5, weight: 40 },
-      { label: "10% off", percent: 10, weight: 35 },
-      { label: "15% off", percent: 15, weight: 20 },
+      { label: "5% off", percent: 5, weight: 50 },
       { label: "20% off", percent: 20, weight: 5 },
+      { label: "10% off", percent: 10, weight: 35 },
+      { label: "15% off", percent: 15, weight: 10 },
     ],
-    title: "Get 10% off your first order",
+    title: "Spin to win up to 20% off your first order",
     text: "Join SuperYou for pharmacist tips, early access to sales and your welcome code.",
     image: "",
     delaySeconds: 8,
