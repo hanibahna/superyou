@@ -19,9 +19,17 @@ export function GiftPicker({ compact = false }: { compact?: boolean }) {
         const chosen = giftPicks[t.id] ?? [];
         if (!t.unlocked)
           return t.showProgress ? (
-            <div key={t.id} className="flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-sm">
-              <GiftIcon width={18} height={18} className="shrink-0 text-brand-600" />
-              <span>{tx("Spend")} <b>{money(t.remaining)}</b> more to get <b>{t.name}</b></span>
+            <div key={t.id} className="rounded-lg border border-dashed border-brand-500/40 bg-brand-50/60 px-3 py-2 text-sm">
+              <p className="flex items-center gap-2">
+                <span aria-hidden>🔒</span>
+                <span>{tx("Spend")} <b>{money(t.remaining)}</b> {tx("more to unlock")} <b>{t.name}</b></span>
+              </p>
+              {t.options.length > 0 && (
+                <div className="mt-2 flex gap-1.5 overflow-hidden" aria-hidden>
+                  {t.options.slice(0, compact ? 5 : 7).map((o) => <ProductImage key={o.id} product={o} width={80} className="h-10 w-10 shrink-0 rounded opacity-60 grayscale-[40%]" />)}
+                  {t.options.length > (compact ? 5 : 7) && <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white text-[10px] text-muted">+{t.options.length - (compact ? 5 : 7)}</span>}
+                </div>
+              )}
             </div>
           ) : null;
         return (

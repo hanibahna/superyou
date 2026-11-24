@@ -207,6 +207,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     prime = { status: st.status, until: st.until, trialUsed: st.trialUsed, trialOk, choice, fee, free, known: !!input.phone };
   }
   const bySku = new Map(live.list.map((p) => [p.sku.toLowerCase(), p]));
+  const inBag = new Set(input.items.map((i) => live.byId.get(i.productId)?.slug).filter(Boolean));
   const gc = input.giftCard ? await giftCardFor(input.giftCard, q.total) : null;
   return {
     giftCard: gc && "amount" in gc ? gc : undefined,
@@ -225,7 +226,8 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     doublePointsAt: growth.game?.enabled && growth.game.ladder.enabled && growth.club.enabled ? growth.game.ladder.doublePointsAt : 0,
     gifts: q.gifts.map(({ tier, unlocked, remaining }) => ({
       id: tier.id, name: tier.name, unlocked, remaining, pick: tier.pick, showProgress: tier.showProgress,
-      options: tier.choices.map((sku) => bySku.get(sku.toLowerCase())).filter((p): p is ProductLite => !!p).map(snapOf),
+      // Samples of other products than the ones in the bag.
+      options: tier.choices.map((sku) => bySku.get(sku.toLowerCase())).filter((p): p is ProductLite => !!p && !inBag.has(p.slug)).map(snapOf),
     })),
     _lines: ok,
     _promos: promos,

@@ -35,6 +35,13 @@ export function RewardLadder() {
     <div className="border-b border-line px-5 py-3">
       <p className="text-sm">
         {next ? <>{tx("Add")} <b>{money(next.at - subtotal)}</b> {tx("for")} <b>{next.label}</b> {next.icon}</> : <b className="text-brand-600">{tx("Every reward unlocked")} 🎉</b>}
+        {(() => {
+          // Both goals in words: free delivery and the next free gift, when neither is the line above.
+          const ship = steps.find((x) => x.icon === "🚚" && subtotal < x.at);
+          const gift = steps.find((x) => x.icon === "🎁" && subtotal < x.at);
+          const other = next === ship ? gift : next === gift ? ship : undefined;
+          return other ? <span className="mt-0.5 block text-xs text-muted">{tx("and")} <b>{money(other.at - subtotal)}</b> {tx("for")} {other.label} {other.icon}</span> : null;
+        })()}
       </p>
       <div className="relative mt-3 h-2 rounded-full bg-line">
         <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-brand-500 to-sale transition-all duration-700" style={{ width: `${Math.min(100, (subtotal / max) * 100)}%` }} />
