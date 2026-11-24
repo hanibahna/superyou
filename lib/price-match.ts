@@ -47,12 +47,17 @@ const digits = (s?: string | null) => (s ?? "").replace(/\D/g, "").replace(/^0+/
 
 // ── Reading a competitor ────────────────────────────────────
 
-async function fetchPage(domain: string, page: number): Promise<SourceProduct[]> {
+async function fetchPage(domain: string, page: number, tries = 0): Promise<SourceProduct[]> {
+  if (page > 1) await new Promise((ok) => setTimeout(ok, 400)); // be gentle: some shops limit requests
   const res = await fetch(`https://${domain}/products.json?limit=250&page=${page}`, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; SuperYou-PriceCheck/1.0)", Accept: "application/json" },
     cache: "no-store",
     signal: AbortSignal.timeout(25_000),
   });
+  if (res.status === 429 && tries < 4) {
+    await new Promise((ok) => setTimeout(ok, 4000 * (tries + 1)));
+    return fetchPage(domain, page, tries + 1);
+  }
   if (!res.ok) throw new Error(`answered ${res.status}`);
   const j = (await res.json()) as { products?: SourceProduct[] };
   if (!Array.isArray(j.products)) throw new Error("no public product feed");
@@ -225,7 +230,9 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
   const best = new Map<string, { t: number; site: PriceMatchSite; u: string; how: string }>();
   const shops = new Map<string, Shop[]>();
   for (const site of sites) {
-    if (siteReports.find((r) => r.domain === site.domain)?.error) continue;
+    // A shop that stopped part-way (e.g. too many requests) still counts for what was read.
+    const rep = siteReports.find((r) => r.domain === site.domain);
+    if (rep?.error && !rep.products) continue;
     let cursor = "0";
     do {
       const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", OFFERS(site.domain), cursor, "COUNT", 2000])) ?? ["0", []];
