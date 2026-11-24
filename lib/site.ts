@@ -48,10 +48,10 @@ export const defaultSettings: Settings = {
     openingHours: "Mon–Sat 9:00–19:00",
   },
   social: { instagram: "", facebook: "", tiktok: "https://www.tiktok.com/@pharmatipss", youtube: "" },
-  announcement: { enabled: true, text: "Free delivery on orders over $30 · Free sample with every order over $100", link: "", showContacts: true },
+  announcement: { enabled: true, text: "Free delivery on orders over $100 · Free sample with every order over $100", link: "", showContacts: true },
   delivery: {
     fee: 4,
-    freeThreshold: 30,
+    freeThreshold: 100,
     estimate: "1–3 working days. We'll call before arriving.",
     zones: ["Beirut", "Metn", "Keserwan", "Jbeil", "Baabda", "Aley", "Chouf", "North Lebanon", "South Lebanon", "Bekaa"].map((name) => ({ name })),
   },
@@ -63,7 +63,7 @@ export const defaultSettings: Settings = {
   seo: { title: "", description: "" },
   trust: [
     { title: "100% authentic", text: "Sourced from official distributors" },
-    { title: "Fast delivery", text: "All over Lebanon · free over $30" },
+    { title: "Fast delivery", text: "All over Lebanon · free over $100" },
     { title: "Rewards", text: "Earn points on every order" },
     { title: "Pharmacist advice", text: "Ask us on WhatsApp" },
   ],

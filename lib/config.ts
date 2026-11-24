@@ -13,7 +13,7 @@ export const store = {
   address: "Beirut, Lebanon",
   freeDeliveryThreshold: 30,
   deliveryFee: 4,
-  announcement: "Free delivery on orders over $30 · Free sample with every order over $100",
+  announcement: "Free delivery on orders over $100 · Free sample with every order over $100",
   social: {
     instagram: "https://instagram.com/",
     facebook: "https://facebook.com/",
