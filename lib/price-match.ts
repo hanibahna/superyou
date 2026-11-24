@@ -75,13 +75,14 @@ async function currencyOf(domain: string): Promise<string> {
 type Ours = { p: ProductLite; tokens: Set<string>; sizes: Set<string> };
 type Book = { byBarcode: Map<string, ProductLite[]>; byBrand: Map<string, Ours[]>; byVariant: Map<string, ProductLite[]> };
 
-function bookOf(all: ProductLite[], domain: string): Book {
+export function bookOf(all: ProductLite[], domain: string, excludeSource?: string): Book {
   const byBarcode = new Map<string, ProductLite[]>();
   // Items we imported from this very shop carry its variant id in their SKU ("NEO-4567…").
   const byVariant = new Map<string, ProductLite[]>();
   const byBrand = new Map<string, Ours[]>();
   for (const p of all) {
     if (p.status !== "active" || p.brand === "SuperYou Clinic") continue;
+    if (excludeSource && (p.source ?? "").toLowerCase() === excludeSource) continue;
     const b = digits(p.barcode);
     if (b.length >= 8) (byBarcode.get(b) ?? byBarcode.set(b, []).get(b)!).push(p);
     const vid = (p.source ?? "").toLowerCase() === domain ? p.sku.match(/-(\d{6,})$/)?.[1] : undefined;
@@ -95,7 +96,7 @@ function bookOf(all: ProductLite[], domain: string): Book {
 }
 
 /** Our products that are the same item as this competitor variant. */
-function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["variants"][number]): { ids: string[]; how: "barcode" | "name" } | null {
+export function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["variants"][number]): { ids: string[]; how: "barcode" | "name" } | null {
   const same = book.byVariant.get(String(v.id));
   if (same?.length) return { ids: same.map((p) => p.id), how: "barcode" };
   // Public feeds hide the barcode field; many shops put the barcode in the SKU instead.

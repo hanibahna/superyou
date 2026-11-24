@@ -15,6 +15,7 @@ export function StoreImporter() {
   const [adjust, setAdjust] = useState("0");
   const [round, setRound] = useState<"cents" | "quarter">("cents");
   const [asDraft, setAsDraft] = useState(false);
+  const [skipDup, setSkipDup] = useState(true);
   const [sync, setSync] = useState(true);
   const [running, setRunning] = useState(false);
   const [stop, setStop] = useState(false);
@@ -39,7 +40,7 @@ export function StoreImporter() {
         const res = await fetch("/api/admin/import-store/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source, page, adjustPct: Number(adjust) || 0, round, asDraft, skuPrefix: prefixFor(source) }),
+          body: JSON.stringify({ source, page, adjustPct: Number(adjust) || 0, round, asDraft, skipDuplicates: skipDup, skuPrefix: prefixFor(source) }),
         });
         data = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
         if (res.ok) break;
@@ -100,6 +101,7 @@ export function StoreImporter() {
       </div>
       <div className="mt-3 space-y-1.5 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" checked={asDraft} onChange={(e) => setAsDraft(e.target.checked)} disabled={running} /> Import as drafts (hidden until you publish them)</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={skipDup} onChange={(e) => setSkipDup(e.target.checked)} disabled={running} /> Skip products we already sell from another catalog (same barcode, or same brand, name and size)</label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={sync} onChange={(e) => setSync(e.target.checked)} disabled={running} /> Remove products the store no longer sells (from earlier imports of this store)</label>
       </div>
       <p className="mt-2 text-xs text-muted">SKUs are created as <b>{prefixFor(source)}-</b>&lt;their variant number&gt;, so re-running updates the same products instead of duplicating them.</p>

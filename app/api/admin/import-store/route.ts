@@ -14,6 +14,8 @@ const schema = z.object({
   adjustPct: z.number().min(-50).max(100).default(0),
   round: z.enum(["cents", "quarter", "none"]).default("cents"),
   asDraft: z.boolean().default(false),
+  // Leave out items we already sell from another catalog (same barcode, or same brand + name + size).
+  skipDuplicates: z.boolean().default(false),
   skuPrefix: z.string().regex(/^[A-Z0-9]{2,8}$/).default("SRC"),
   // When the server can't reach the store (bot check), the admin page sends the page it fetched itself.
   products: z.array(z.any()).max(250).optional(),
@@ -45,9 +47,18 @@ export async function POST(req: NextRequest) {
   // International catalogs (Admin → Sourcing) are priced at landed cost: freight, duty, fees, VAT and margin.
   const rule = (await getSourcing()).sources.find((s) => s.source.toLowerCase() === sourceName.toLowerCase());
   const landedPricing = rule?.origin === "international" ? rule.pricing : undefined;
+  const fetchedCount = products.length;
+  const idx = await getIndex();
+  let skipped = 0;
+  if (o.skipDuplicates) {
+    const { bookOf, matchVariant } = await import("@/lib/price-match");
+    const book = bookOf(idx.all, "", sourceName.toLowerCase());
+    products = products
+      .map((p) => ({ ...p, variants: p.variants.filter((v) => !matchVariant(book, p, v) || (skipped++, false)) }))
+      .filter((p) => p.variants.length);
+  }
   const rows = products.flatMap((p) => mapSourceProduct(p, { adjustPct: o.adjustPct, round: o.round, asDraft: o.asDraft, skuPrefix: o.skuPrefix, sourceName, landed: landedPricing }));
   // Products whose photos were replaced from another store keep those photos.
-  const idx = await getIndex();
   for (const row of rows) {
     const id = idx.skuToId.get(String(row.sku).toLowerCase());
     if (id && idx.byId.get(id)?.photosFrom) delete row.images;
@@ -56,8 +67,9 @@ export async function POST(req: NextRequest) {
   const categories: Record<string, number> = {};
   for (const row of rows) categories[String(row.category)] = (categories[String(row.category)] ?? 0) + 1;
   return NextResponse.json({
-    done: products.length < 250,
-    fetched: products.length,
+    done: fetchedCount < 250,
+    fetched: fetchedCount,
+    skippedDuplicates: skipped,
     rows: rows.length,
     created: r.created,
     updated: r.updated,
