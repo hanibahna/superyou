@@ -151,7 +151,7 @@ export function RoutineWizard({ title, intro, skinTypes, concerns, goals, labels
                         <Link href={`/products/${p.slug}/`} className="flex min-w-64 flex-1 items-center gap-3 rounded-lg bg-brand-50 p-2">
                           <ProductImage product={p} width={120} className="h-16 w-16 rounded" />
                           <span className="flex-1 text-sm leading-snug"><span className="block text-xs font-semibold uppercase text-muted">{p.brand}</span>{p.name}</span>
-                          <span className="font-semibold">{money(p.price)}</span>
+                          <span className="font-semibold">{money(p.matchWas || p.price)}</span>
                         </Link>
                       ) : s.skipped ? <p className="text-sm text-muted">{tx("Optional: not included. Tap a product below to add it.")}</p> : <p className="text-sm text-muted">{tx("No match in stock right now.")}</p>}
                     </div>

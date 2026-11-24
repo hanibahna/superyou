@@ -19,7 +19,7 @@ import { localeOf } from "@/lib/i18n";
 import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
 import { ShipBadge } from "@/components/ShipBadge";
-import { PriceMatchBadge, SuperPriceCard, SuperPriceSticker } from "@/components/PriceMatch";
+import { PriceMatchBadge, SuperPriceCard, SuperPriceSticker, SuperPriceTag } from "@/components/PriceMatch";
 
 export function BuyBox({
   variants,
@@ -103,9 +103,9 @@ export function BuyBox({
         {(v.variant || v.size) && <p className="mt-1 text-sm text-muted">{v.variant ?? v.size}</p>}
 
         <div className="mt-4 flex flex-wrap items-baseline gap-3">
-          <span className={`pdp-price text-3xl font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</span>
-          {pct && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
-          {pct && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
+          {sp && v.matchWas && v.match !== undefined ? <SuperPriceTag was={v.matchWas} price={v.price} /> : <span className={`pdp-price text-3xl font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</span>}
+          {pct && !v.matchWas && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
+          {pct && !v.matchWas && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
         </div>
         {growth.club?.enabled && growth.game?.enabled && growth.club.pointsPerDollar > 0 && v.price >= 1 && (
           <p className="mt-1.5 text-xs text-muted">✦ {t("Earn")} <b className="text-ink">{Math.floor(v.price * growth.club.pointsPerDollar)} {growth.club.name || "Club"} {t("points")}</b>{growth.game.badges.enabled && growth.game.badges.points.review ? <> · {t("review it after delivery for")} +{growth.club.bonus.review || growth.game.badges.points.review}</> : null}</p>

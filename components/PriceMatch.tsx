@@ -240,3 +240,29 @@ export function SuperPriceSticker({ p }: { p: SP }) {
     </span>
   );
 }
+
+/** Product page price: our normal price first, then the SuperPrice discount comes off it. */
+export function SuperPriceTag({ was, price }: { was: number; price: number }) {
+  const t = useT();
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    setOn(false);
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const id = setTimeout(() => setOn(true), reduce ? 0 : 1100);
+    return () => clearTimeout(id);
+  }, [was, price]);
+  const off = was - price;
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-3">
+      <span className={`pdp-price font-bold transition-all duration-500 ${on ? "text-lg text-muted line-through decoration-[#c0587a]" : "text-3xl"}`}>{money(was)}</span>
+      {on ? (
+        <>
+          <span className="sp-pop pdp-price text-3xl font-bold text-[#9b2c50]">{money(price)}</span>
+          <span className="sp-pop sp-shine inline-flex items-center gap-1 rounded-full bg-[#fdecef] px-2.5 py-1 text-sm font-bold text-[#9b2c50]"><Mark /> SuperPrice −{money(off)} · {fmtPct(off / was)}</span>
+        </>
+      ) : (
+        <span className="flex items-center gap-2 text-xs text-muted"><span className="sp-scan relative h-1 w-14 overflow-hidden rounded-full bg-[#f3c4d2]" aria-hidden />{t("Checking other shops…")}</span>
+      )}
+    </span>
+  );
+}
