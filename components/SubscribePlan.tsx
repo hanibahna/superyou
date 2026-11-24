@@ -16,6 +16,7 @@ export function SubscribeChoice({ price, value, onChange, life, start, onStart, 
   if (!sub?.enabled || (!sub.monthly && !sub.quarterly)) return null;
   const pctOf = (e: number) => (tierOf(e) === "monthly" ? sub.monthly : sub.quarterly);
   const fast = !!(sub as { promoLive?: boolean }).promoLive;
+  const promo = fast ? sub.promo : undefined;
   const needOf = (e: number) => (e === 1 ? sub.unlockMonthly ?? 3 : sub.unlockQuarterly ?? 2);
   const base = life ? everyOptions(life.every) : ([1, 3] as Every[]);
   const plans = [...new Set([...base, ...(value && !base.includes(value) ? [value] : [])])].filter((e) => pctOf(e) > 0);
@@ -32,7 +33,7 @@ export function SubscribeChoice({ price, value, onChange, life, start, onStart, 
               <span className="font-semibold">{k ? t(everyLabel(k)) : t("One-time purchase")}</span>
               {k !== 0 && life && k === life.every && <span className="ms-2 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-800">{t("recommended")}</span>}
               {k !== 0 && <span className="ms-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">{t("earn")} {pctOf(k)}%</span>}
-              {k !== 0 && (fast ? <span className="block text-xs font-semibold text-brand-700">{t("Subscribe now:")} {pctOf(k)}% {t("off from your 2nd order, on every delivery")}</span> : <span className="block text-xs text-muted">{t("After")} {needOf(k)} {t("deliveries")}: {pctOf(k)}% {t("back on them, then")} {pctOf(k)}% {t("off every order")}</span>)}
+              {k !== 0 && (fast ? <span className="block text-xs font-semibold text-brand-700">{promo?.firstPct ? `${promo.firstPct}% ${t("off today")}, ` : ""}{pctOf(k)}% {t("off every delivery after")}{promo?.freeDelivery ? `, ${t("delivery always free")}` : ""}</span> : <span className="block text-xs text-muted">{t("After")} {needOf(k)} {t("deliveries")}: {pctOf(k)}% {t("back on them, then")} {pctOf(k)}% {t("off every order")}</span>)}
             </span>
             <span className="text-sm font-semibold">{money(price)}</span>
           </label>

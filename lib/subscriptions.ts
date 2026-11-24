@@ -28,6 +28,7 @@ export type Subscription = {
   delivered?: Record<string, number>; // orderId → value of the subscribed items in it, once delivered
   unlocked?: boolean; // the discount is earned after N delivered orders
   unlockedAt?: string;
+  freeShip?: boolean; // started during the campaign: delivery is free on all its orders
   fast?: boolean; // started during the "discount from the 2nd order" campaign: unlocks after the first delivery
   noRebate?: boolean; // started within the cooldown after cancelling another one: no rebate on past orders
   rebate?: { earned: number; used: number; pending: number; forfeited: number; uses: Record<string, number> };
@@ -106,6 +107,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
       ...(cooling ? { noRebate: true } : {}),
       // Campaign: the discount starts on the 2nd order (no money back on the first).
       ...(!cooling && fast ? { fast: true, noRebate: true } : {}),
+      ...(fast && g.promo?.freeDelivery ? { freeShip: true } : {}),
       log: [{ at: new Date().toISOString(), text: `Started with order ${order.id}${cooling ? " (no rebate on past orders: cancelled another subscription recently)" : ""}` }],
     };
     await saveSubscription(s);
@@ -225,7 +227,7 @@ export async function subscriptionPricing(id: string) {
   const s = await getSubscription(id);
   if (!s) return null;
   const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
-  return { pct: !s.rules || s.unlocked ? pctFor(s.every, g) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0 };
+  return { pct: !s.rules || s.unlocked ? pctFor(s.every, g) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0, freeShip: !!s.freeShip };
 }
 
 /** Record a rebate spent on an order the subscription placed. */

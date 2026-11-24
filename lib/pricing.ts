@@ -186,9 +186,24 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
         q.discountTotal = +(q.discountTotal + rebate).toFixed(2);
       }
       const { deliveryFor } = await import("@/lib/site");
-      q.delivery = deliveryFor(settings, q.subtotal - q.discountTotal, input.zone);
+      q.delivery = sp.freeShip ? 0 : deliveryFor(settings, q.subtotal - q.discountTotal, input.zone);
       q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
     }
+  }
+  // Subscribe & save campaign, on the order that starts a plan: a first-order % on the subscribed
+  // items (SuperPrice items excluded) and free delivery.
+  const { subPromoLive } = await import("@/lib/growth");
+  if (growth.subscribe.enabled && !input.subscriptionId && subPromoLive(growth) && input.items.some((i) => i.every)) {
+    const pr = growth.subscribe.promo!;
+    const subIds = new Set(input.items.filter((i) => i.every).map((i) => i.productId));
+    const spend = ok.filter((l) => subIds.has(l.productId) && !l.superPrice).reduce((a, l) => a + l.price * l.qty, 0);
+    const amount = +Math.min(q.subtotal - q.discountTotal, (spend * (pr.firstPct ?? 0)) / 100).toFixed(2);
+    if (amount > 0) {
+      q.discounts.push({ name: `Subscribe & save: ${pr.firstPct}% off today`, amount });
+      q.discountTotal = +(q.discountTotal + amount).toFixed(2);
+    }
+    if (pr.freeDelivery) q.delivery = 0;
+    q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
   }
   // SuperPrime: members (or a shopper joining with this order) get free delivery from freeMin.
   let prime: ServerQuote["prime"];
