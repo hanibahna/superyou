@@ -114,6 +114,9 @@ export function splitSections(text: string): { description: string; howToUse: st
 const has = (tags: Set<string>, ...names: string[]) => names.some((n) => tags.has(n.toLowerCase()));
 const re = (s: string, r: RegExp) => r.test(s);
 
+const NON_BEAUTY = /polo|t-?shirt|shirt|bags?\b|wallet|shoe|sneaker|sweat|trouser|pants|dress|tracksuit|parka|blouson|jacket|coat|earring|bracelet|necklace|\brings?\b|jewel|swim|shorts|bermuda|key (ring|holder)|caps|hats|lighter|cigar|ashtray|humidor|scar[fv]|trolley|luggage|suitcase|carry on|watch|seiko|casio|g-shock|baby-g|alba|festina|frederique|oris|doxa|dkny|clock|\bpen\b|pen case|ink|gas refill|tableware|dish|placemat|coaster|napkin|tray|basket|candle|diffuser|^home|vacc?uum|floor|purifier|humidifier|headphone|phone|laptop|computer|bottles?$|thermo|umbrella|glove|socks|underwear|\bbra\b|lounge|pyjama|nightwear|legging|jeans|denim|knit|cardigan|^vest$|^tops?$|tee-shirt|skirt|sandal|boot|ballerina|flip flop|belt|card holder|passport|document|organiser|pouch|purse|clutch|tote|satchel|backpack|briefcase|reporter|towel|painting|mirror|copybook|sharpner|cheese|cruet|confiturier|peeler|tin box|wick|tea and coffee|outwear|outfit|layette|garment|cufflink|anklet|charm|headband|scissors|^tools$|toilet(ry)? (kit|case|bag)|vanity|travel (necessities|accessories)|aromatherapy|room spray|environmental|beirut shattered|work basket|wet pack|smartwatch|jewelry/;
+const BEAUTY_WORDS = /\b(cream|serum|lotion|cleanser|mascara|lipstick|parfum|perfume|eau de|shampoo|conditioner|spf|moisturi[sz]er|foundation|concealer|mask|toner|balm|oil)\b/i;
+
 export function categorize(p: SourceProduct, tags: Set<string>): string {
   const t = p.product_type.toLowerCase();
   const title = p.title.toLowerCase();
@@ -126,6 +129,17 @@ export function categorize(p: SourceProduct, tags: Set<string>): string {
   const supplement = has(tags, "supplement", "food supplement", "protein powder", "vitamins") || re(title, /\b(capsules?|caps|tablets?|tabs|softgels?|gummies|sachets?|vitamin|mg|mcg|iu)\b/);
 
   if (t.includes("gift card") || t === "posm") return "";
+  // Department stores (e.g. HOLDAL) also sell fashion, bags, watches and homeware: leave those out.
+  if (NON_BEAUTY.test(t)) return "";
+  const beautyTag = [...tags].some((x) => /beauty|skin|make ?up|fragrance|perfume|hair|body care|cosmetic|parapharm|derma|grooming/.test(x));
+  if ((!t || /^(0|sets?|gifts?|kits?|full set|samples?|accessories)$/.test(t)) && !beautyTag && !BEAUTY_WORDS.test(title)) return "";
+  // Clear beauty product types (as department stores name them).
+  if (/parfum|toilette|cologne|fragrance|perfume|body (mist|splash|spray)|eau de soin/.test(t)) return "Fragrance";
+  if (/nail/.test(t)) return "Nails";
+  if (/sun ?(care|screen)/.test(t)) return "Suncare";
+  if (/lipstick|lip (gloss|liner|oil|balm|care)|^lips$|mascara|foundation|concealer|blush|bronzer|highlighter|eye ?(shadow|liner|pencil)|^eyes$|eyebrow|primer|powder|setting spray|fixer|bb cream|makeup|make up/.test(t)) return /remover/.test(t) ? "Skincare" : "Makeup";
+  if (/hair|shampoo|conditioner|leave in|scalp|styler|straightener|straignt|dryer|steampod/.test(t)) return "Hair";
+  if (/body|bath|shower|deodorant|hand (cream|wash)|foot|soap|roll-on/.test(t)) return "Body & Bath";
   if (t.includes("fragrance") || (fragrance && !t.includes("baby"))) return "Fragrance";
   if (t.includes("men")) return "Men";
   if (t.includes("baby")) return "Baby & Mom";

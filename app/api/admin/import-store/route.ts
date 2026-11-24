@@ -16,6 +16,7 @@ const schema = z.object({
   asDraft: z.boolean().default(false),
   // Leave out items we already sell from another catalog (same barcode, or same brand + name + size).
   skipDuplicates: z.boolean().default(false),
+  dryRun: z.boolean().default(false), // count and categorise only; nothing is saved
   skuPrefix: z.string().regex(/^[A-Z0-9]{2,8}$/).default("SRC"),
   // When the server can't reach the store (bot check), the admin page sends the page it fetched itself.
   products: z.array(z.any()).max(250).optional(),
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     const id = idx.skuToId.get(String(row.sku).toLowerCase());
     if (id && idx.byId.get(id)?.photosFrom) delete row.images;
   }
-  const r = await upsertProducts(rows);
+  const r = o.dryRun ? { created: 0, updated: 0, errors: [] as { errors: string[] }[] } : await upsertProducts(rows);
   const categories: Record<string, number> = {};
   for (const row of rows) categories[String(row.category)] = (categories[String(row.category)] ?? 0) + 1;
   return NextResponse.json({
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
     errorCount: r.errors.length,
     skus: rows.map((x) => x.sku),
     categories,
+    ...(o.dryRun ? { sample: rows.slice(0, 40).map((x) => `${x.brand} | ${x.name} | ${x.variant ?? ""} | $${x.price} | ${x.category}`) } : {}),
     sourceName,
     pricing: landedPricing ? "landed" : "adjusted",
   });
