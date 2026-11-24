@@ -304,6 +304,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
   return {
     popup: { ...popup, wheel: wheel.map((w) => w.label) },
     freeDeliveryBar: g.freeDeliveryBar,
+    superPrice: g.priceMatch.enabled && g.priceMatch.badge,
     reviews: { enabled: g.reviews.enabled, showOnCards: g.reviews.showOnCards },
     club: { enabled: g.club.enabled, name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue, tiers: g.club.tiers, bonus: g.club.bonus, referral: g.club.referral, expiryMonths: g.club.expiryMonths, memberPrice: g.club.memberPrice, birthdayPercent: g.club.birthdayPercent },
     pharmacist: g.pharmacist,

@@ -4,9 +4,9 @@
 // (5% below, never under cost + margin). Prices are compared every night at 3 am (Beirut).
 import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
-import { useT } from "@/lib/site-context";
+import { useGrowth, useT } from "@/lib/site-context";
 
-type SP = { match?: string; matchWas?: number; matchVs?: number; price?: number; spLimit?: number };
+type SP = { match?: string; matchWas?: number; matchVs?: number; price?: number; spLimit?: number; cmpVs?: number; cmpShop?: string };
 
 /** Next nightly price check: 01:00 UTC (3 am in Beirut). */
 function nextCheck(now = Date.now()) {
@@ -47,31 +47,53 @@ export function PriceMatchBadge({ p, size = "sm", className = "" }: { p: SP; siz
   );
 }
 
-/** Product page: the comparison, revealed with a short animation. */
+/** Product page, every product: the nightly comparison, revealed with a short animation.
+ *  SuperPrice (we lowered ours), already the best price, or not sold at the other shops. */
 export function SuperPriceCard({ p, className = "" }: { p: SP; className?: string }) {
   const t = useT();
+  const on = !!useGrowth().superPrice;
   const [stage, setStage] = useState(0);
   useEffect(() => {
-    if (!p.matchWas) return;
+    setStage(0);
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return setStage(2);
-    const a = setTimeout(() => setStage(1), 700);
-    const b = setTimeout(() => setStage(2), 1500);
+    const a = setTimeout(() => setStage(1), 900);
+    const b = setTimeout(() => setStage(2), 1700);
     return () => (clearTimeout(a), clearTimeout(b));
-  }, [p.matchWas]);
-  if (!p.matchWas || p.match === undefined || !p.price) return null;
-  const shop = p.match || t("another shop");
+  }, [p.price]);
+  if (!on || !p.price) return null;
+  const lowered = !!p.matchWas && p.match !== undefined;
+  const vs = lowered ? p.matchVs : p.cmpVs;
+  const shop = (lowered ? p.match : p.cmpShop) || t("Another shop");
   return (
     <div className={`overflow-hidden rounded-xl border border-[#f3c4d2] bg-gradient-to-r from-[#fff5f8] to-white p-3 text-sm ${className}`}>
-      <p className="flex items-center gap-2 font-semibold text-[#9b2c50]"><Mark /> SuperPrice Guaranteed</p>
-      {stage === 0 && <p className="mt-1 text-xs text-muted motion-safe:animate-pulse">{t("Comparing prices with other shops in Lebanon…")}</p>}
-      {stage >= 1 && (
-        <p className="mt-1 text-xs text-muted">
-          {shop}: <span className="line-through">{money(p.matchVs ?? 0)}</span>
+      <p className="flex items-center gap-2 font-semibold text-[#9b2c50]">
+        <Mark /> SuperPrice Guaranteed
+        {stage >= 2 && <span className="sp-pop grid h-4 w-4 place-items-center rounded-full bg-[#046c4e] text-[10px] text-white" aria-hidden>✓</span>}
+      </p>
+      {stage === 0 && (
+        <p className="mt-1 flex items-center gap-2 text-xs text-muted">
+          <span className="sp-scan relative h-1 w-16 overflow-hidden rounded-full bg-[#f3c4d2]" aria-hidden />
+          {t("Comparing prices with other shops in Lebanon…")}
+        </p>
+      )}
+      {stage >= 1 && vs !== undefined && (
+        <p className="sp-in mt-1 text-xs text-muted">
+          {shop}: <span className={lowered ? "line-through" : ""}>{money(vs)}</span>
           {stage >= 2 && <span className="sp-pop ml-2 font-bold text-ink">SuperYou: {money(p.price)}</span>}
         </p>
       )}
-      {stage >= 2 && <p className="mt-1 text-[11px] text-muted">{t("Prices checked every night. Limited quantity per order; one SuperPrice order a day.")}</p>}
+      {stage >= 2 && (
+        <p className="sp-in mt-1 text-[11px] text-muted">
+          {lowered
+            ? t("We lowered our price below theirs. Checked every night; limited quantity per order, one SuperPrice order a day.")
+            : vs !== undefined
+              ? vs - p.price > 0.009
+                ? `${t("Already the best price:")} ${money(vs - p.price)} ${t("less here. Checked every night.")}`
+                : t("Same best price. Checked every night.")
+              : t("No lower price found in tonight's check. Checked every night.")}
+        </p>
+      )}
     </div>
   );
 }
@@ -115,5 +137,38 @@ export function PriceGuaranteeNote({ items, className = "" }: { items: (SP & { q
       </p>
       {left && <p className="mt-1 text-muted">{t("SuperPrices held for")} <b className="tabular-nums text-ink">{left}</b> {t("(next price check at 3 am). One SuperPrice order per customer a day.")}</p>}
     </div>
+  );
+}
+
+/** Sticker on the Add to cart button, on every product: the SuperPrice promise, with a short
+ *  explanation on tap. Animated (shine + gentle bob); still for visitors who reduce motion. */
+export function SuperPriceSticker({ p }: { p: SP }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const cheaper = !!p.matchWas && p.match !== undefined;
+  return (
+    <span className="absolute -top-3 right-2 z-10">
+      <button
+        type="button"
+        onClick={(e) => (e.stopPropagation(), setOpen((o) => !o))}
+        aria-expanded={open}
+        className="sp-bob sp-shine flex items-center gap-1 whitespace-nowrap rounded-full border border-[#f3c4d2] bg-[#fdecef] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9b2c50] shadow-sm"
+      >
+        <Mark /> SuperPrice {t("Guaranteed")}
+      </button>
+      {open && (
+        <span role="dialog" className="sp-in absolute right-0 top-7 w-64 rounded-xl border border-line bg-white p-3 text-left text-xs font-normal normal-case leading-relaxed text-ink shadow-lg">
+          <b className="flex items-center gap-1.5 text-[#9b2c50]"><Mark /> SuperPrice Guaranteed</b>
+          <span className="mt-1 block">
+            {cheaper
+              ? `${p.match || t("Another shop")} ${t("sells it for")} ${money(p.matchVs ?? 0)}. ${t("Here it's")} ${money(p.price ?? 0)}.`
+              : p.cmpVs !== undefined
+                ? `${t("Price compared:")} ${p.cmpShop || t("another shop")} ${money(p.cmpVs)}, SuperYou ${money(p.price ?? 0)}.`
+                : t("We compare our prices with other shops in Lebanon every night. When one sells it for less, we drop ours below theirs.")}
+          </span>
+          <span className="mt-1 block text-muted">{t("Original products only. Limited quantity per order; one SuperPrice order a day.")}</span>
+        </span>
+      )}
+    </span>
   );
 }

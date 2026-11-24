@@ -77,6 +77,9 @@ export async function liveProducts() {
     // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
     const m = pmOn ? pm.map.get(p.id) : undefined;
     if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "" } : {}) };
+    // Already the best price: say which shop we compared with (shown as "price compared").
+    const c = pmOn && growth.priceMatch.badge ? pm.cmp.get(p.id) : undefined;
+    if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: c.show ? c.s : "" };
     return sold;
   });
   let dupOf = new Map<string, string>();

@@ -446,3 +446,11 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 .sp-in { animation: sp-in 0.35s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .sp-shine, .sp-pop, .sp-in { animation: none; } }
 html[data-motion="off"] .sp-shine, html[data-motion="off"] .sp-pop, html[data-motion="off"] .sp-in { animation: none; }
+@keyframes sp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.sp-bob { animation: sp-bob 2.4s ease-in-out infinite, sp-shine 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sp-bob { animation: none; } }
+html[data-motion="off"] .sp-bob { animation: none; }
+@keyframes sp-scan { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.sp-scan::after { content: ""; position: absolute; inset: 0; width: 40%; border-radius: 9999px; background: #c0587a; animation: sp-scan 0.9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sp-scan::after { animation: none; } }
+html[data-motion="off"] .sp-scan::after { animation: none; }

@@ -19,7 +19,7 @@ import { localeOf } from "@/lib/i18n";
 import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
 import { ShipBadge } from "@/components/ShipBadge";
-import { PriceMatchBadge, SuperPriceCard } from "@/components/PriceMatch";
+import { PriceMatchBadge, SuperPriceCard, SuperPriceSticker } from "@/components/PriceMatch";
 
 export function BuyBox({
   variants,
@@ -56,6 +56,7 @@ export function BuyBox({
   const lang = useLang();
   const growth = useGrowth();
   const settings = useSettings();
+  const sp = !!useGrowth().superPrice;
   const rating = variants.find((x) => x.reviewCount)?.rating;
   const reviewCount = variants.find((x) => x.reviewCount)?.reviewCount ?? 0;
   const by = deliveryBy(v.daysMax ? String(v.daysMax) : settings.delivery.estimate || "3").toLocaleDateString(localeOf(lang), { weekday: "short", day: "numeric", month: "short" });
@@ -140,7 +141,10 @@ export function BuyBox({
           {v.inStock ? (
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
-              <button onClick={() => add(v, qty, plan || null)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
+              <span className="relative flex flex-1">
+                <button onClick={() => add(v, qty, plan || null)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
+                {sp && <SuperPriceSticker p={v} />}
+              </span>
             </>
           ) : (
             <button disabled className="flex-1 rounded-lg bg-line py-3 font-semibold text-muted">{t("Sold out")}</button>

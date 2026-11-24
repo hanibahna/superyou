@@ -23,10 +23,13 @@ import type { PriceMatch, PriceMatchSite } from "@/lib/growth";
 const STATE = "pm:state";
 const OFFERS = (d: string) => `pm:o:${d}`; // productId → "price|url|how"
 const PRICES = "pm:prices"; // productId → JSON Match (what the shop uses)
+const CMP = "pm:cmp"; // productId → JSON Cmp: a shop sells it for the same or more (we are the best price)
 const VER = "pm:ver";
 const REPORT = "pm:report";
 const BUDGET_MS = 230_000;
 
+/** We are already the best price: t = the cheapest other shop, s = that shop. */
+export type Cmp = { t: number; s: string; show: boolean };
 /** What the storefront needs for one product: p = SuperPrice, t = competitor price, s = shop. */
 export type Match = { p: number; t: number; s: string; show: boolean; u: string; est?: boolean };
 
@@ -236,9 +239,14 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
   const flags: Flag[] = [];
   const supers: Matched[] = [];
   let cheaper = 0, matchedNow = 0, estimated = 0, mBefore = 0, mAfter = 0;
+  const cmp: string[] = [];
   for (const [id, b] of best) {
     const p = idx.byId.get(id);
-    if (!p || p.status !== "active" || b.t >= p.price - 0.005) continue;
+    if (!p || p.status !== "active") continue;
+    if (b.t >= p.price - 0.005) {
+      cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName } satisfies Cmp));
+      continue;
+    }
     cheaper++;
     const name = `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`;
     const flag = (why: Flag["why"], floor = 0) => flags.push({ id, name, ours: p.price, theirs: b.t, floor: r2(floor), site: b.site.label, url: b.u, why });
@@ -265,6 +273,8 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
   }
   await db.cmd(["DEL", PRICES]);
   for (let i = 0; i < prices.length; i += 1000) await db.cmd(["HSET", PRICES, ...prices.slice(i, i + 1000)]);
+  await db.cmd(["DEL", CMP]);
+  for (let i = 0; i < cmp.length; i += 2000) await db.cmd(["HSET", CMP, ...cmp.slice(i, i + 2000)]);
   await db.cmd(["INCR", VER]);
   flags.sort((a, b) => b.ours - b.theirs - (a.ours - a.theirs));
   supers.sort((a, b) => b.ours - b.superPrice - (a.ours - a.superPrice));
@@ -284,10 +294,10 @@ export async function getReport(): Promise<{ report: Report | null; running: Sta
 
 // ── What the storefront reads ───────────────────────────────
 
-const g = globalThis as unknown as { __pm?: { ver: string; at: number; map: Map<string, Match> } };
+const g = globalThis as unknown as { __pm?: { ver: string; at: number; map: Map<string, Match>; cmp: Map<string, Cmp> } };
 
 /** Matched prices, cached per server instance and re-checked every minute. */
-export async function priceMatches(): Promise<{ ver: string; map: Map<string, Match> }> {
+export async function priceMatches(): Promise<{ ver: string; map: Map<string, Match>; cmp: Map<string, Cmp> }> {
   const now = Date.now();
   if (g.__pm && now - g.__pm.at < 60_000) return g.__pm;
   try {
@@ -300,9 +310,16 @@ export async function priceMatches(): Promise<{ ver: string; map: Map<string, Ma
       for (let i = 0; i < flat.length; i += 2) map.set(flat[i], JSON.parse(flat[i + 1]) as Match);
       cursor = String(next);
     } while (cursor !== "0");
-    g.__pm = { ver, at: now, map };
+    const cmp = new Map<string, Cmp>();
+    cursor = "0";
+    do {
+      const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", CMP, cursor, "COUNT", 5000])) ?? ["0", []];
+      for (let i = 0; i < flat.length; i += 2) cmp.set(flat[i], JSON.parse(flat[i + 1]) as Cmp);
+      cursor = String(next);
+    } while (cursor !== "0");
+    g.__pm = { ver, at: now, map, cmp };
   } catch {
-    g.__pm = { ver: "0", at: now, map: new Map() };
+    g.__pm = { ver: "0", at: now, map: new Map(), cmp: new Map() };
   }
   return g.__pm;
 }
