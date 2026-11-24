@@ -10,12 +10,14 @@ import { getOps } from "@/lib/ops-store";
 import { getOrder, ORDER_STATUSES, orderValue, refunded, statusLabels } from "@/lib/orders";
 import { refundProvider } from "@/lib/payments";
 import { normPhone } from "@/lib/wa";
+import { getSheet, ORDERS_INBOX } from "@/lib/order-internal";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Beirut" });
 
 export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin("orders");
-  const [o, ops] = await Promise.all([getOrder((await params).id), getOps()]);
+  const id0 = (await params).id;
+  const [o, ops, internal] = await Promise.all([getOrder(id0), getOps(), getSheet(id0)]);
   if (!o) notFound();
   const c = o.customer;
   const back = refunded(o);
@@ -34,6 +36,29 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
+          {internal.sheet && (
+            <section className="rounded-xl border-2 border-ink bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="font-semibold">Cost, supplier and profit <span className="text-xs font-normal text-muted">(staff only)</span></h2>
+                <span className="text-xs text-muted">Email to {ORDERS_INBOX}: {internal.mail ?? "—"}</span>
+              </div>
+              <table className="mt-3 w-full text-sm">
+                <thead className="text-left text-xs uppercase text-muted"><tr><th className="py-1">Item</th><th>Supplier</th><th>Sell</th><th>Cost</th><th>Margin</th></tr></thead>
+                <tbody className="divide-y divide-line">
+                  {internal.sheet.lines.map((l, i) => (
+                    <tr key={i}><td className="py-1.5">{l.qty} × {l.brand} {l.name}</td><td>{l.supplier}</td><td>{money(l.unitPrice)}</td><td>{money(l.unitCost)}{l.costEstimated ? " (est.)" : ""}</td><td>{l.margin}%</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+                <div><dt className="text-xs text-muted">Revenue</dt><dd className="font-semibold">{money(internal.sheet.revenue)}</dd></div>
+                <div><dt className="text-xs text-muted">Product cost</dt><dd>{money(internal.sheet.cost - internal.sheet.courierCost)}</dd></div>
+                <div><dt className="text-xs text-muted">Delivery</dt><dd>{internal.sheet.deliveryPaidBy === "client" ? `Client paid ${money(internal.sheet.deliveryCharged)}` : "Free for client"} · courier {money(internal.sheet.courierCost)} paid by us</dd></div>
+                <div><dt className="text-xs text-muted">Profit</dt><dd className={`font-bold ${internal.sheet.profit < 0 ? "text-sale" : "text-[#046c4e]"}`}>{money(internal.sheet.profit)} ({internal.sheet.marginPct}%)</dd></div>
+              </dl>
+              {internal.sheet.estimated && <p className="mt-2 text-xs text-muted">Some costs are estimates (no supplier price on file; assumed margin from Price match settings).</p>}
+            </section>
+          )}
           <section className="rounded-xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 font-semibold">Items</h2>
             <table className="w-full text-sm">
