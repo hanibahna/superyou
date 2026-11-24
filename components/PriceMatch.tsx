@@ -188,9 +188,9 @@ export function SuperPriceSticker({ p }: { p: SP }) {
         type="button"
         onClick={(e) => (e.stopPropagation(), setOpen((o) => !o))}
         aria-expanded={open}
-        className="sp-bob sp-shine flex items-center gap-1 whitespace-nowrap rounded-full border border-[#f3c4d2] bg-[#fdecef] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9b2c50] shadow-sm"
+        className="sp-sticker flex items-center gap-1 whitespace-nowrap rounded-full border border-[#f3c4d2] bg-[#fdecef] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9b2c50] shadow-sm"
       >
-        <Mark /> SuperPrice {t("Guaranteed")}
+        <span className="sp-spin inline-grid"><Mark /></span> SuperPrice {t("Guaranteed")}
       </button>
       {open && (
         <span role="dialog" className="sp-in absolute right-0 top-7 w-64 rounded-xl border border-line bg-white p-3 text-left text-xs font-normal normal-case leading-relaxed text-ink shadow-lg">
