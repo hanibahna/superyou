@@ -28,12 +28,13 @@ export type Subscription = {
   delivered?: Record<string, number>; // orderId → value of the subscribed items in it, once delivered
   unlocked?: boolean; // the discount is earned after N delivered orders
   unlockedAt?: string;
+  fast?: boolean; // started during the "discount from the 2nd order" campaign: unlocks after the first delivery
   noRebate?: boolean; // started within the cooldown after cancelling another one: no rebate on past orders
   rebate?: { earned: number; used: number; pending: number; forfeited: number; uses: Record<string, number> };
   log?: { at: string; text: string }[];
 };
 
-export const needFor = (s: Pick<Subscription, "every">, g: { unlockMonthly: number; unlockQuarterly: number }) => (s.every === 1 ? g.unlockMonthly : g.unlockQuarterly);
+export const needFor = (s: Pick<Subscription, "every" | "fast">, g: { unlockMonthly: number; unlockQuarterly: number }) => (s.fast ? 1 : s.every === 1 ? g.unlockMonthly : g.unlockQuarterly);
 const pctFor = (e: number, g: { monthly: number; quarterly: number }) => (tierOf(e) === "monthly" ? g.monthly : g.quarterly);
 const R = (s: Subscription) => (s.rebate ??= { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} });
 const note = (s: Subscription, text: string) => { s.log = [...(s.log ?? []), { at: new Date().toISOString(), text }].slice(-40); };
@@ -78,6 +79,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
   const mine = (await listSubscriptions()).filter((x) => x.status !== "cancelled" && x.customer.phone.replace(/\D/g, "") === phone);
   const already = new Set(mine.flatMap((x) => x.items.map((i) => i.productId)));
   const lastCancel = Number(await db.cmd<string | null>(["GET", CANCELLED(phone)]).catch(() => null)) || 0;
+  const fast = (await import("@/lib/growth")).subPromoLive({ subscribe: g });
   const cooling = g.cooldownDays > 0 && Date.now() - lastCancel < g.cooldownDays * 864e5;
   const made: string[] = [];
   // One subscription per plan: same frequency and same next date chosen on the calendar.
@@ -102,6 +104,8 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
       delivered: {},
       rebate: { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} },
       ...(cooling ? { noRebate: true } : {}),
+      // Campaign: the discount starts on the 2nd order (no money back on the first).
+      ...(!cooling && fast ? { fast: true, noRebate: true } : {}),
       log: [{ at: new Date().toISOString(), text: `Started with order ${order.id}${cooling ? " (no rebate on past orders: cancelled another subscription recently)" : ""}` }],
     };
     await saveSubscription(s);

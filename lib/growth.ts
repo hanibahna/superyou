@@ -49,7 +49,7 @@ export type Growth = {
   reorder: { enabled: boolean; days: { category: string; days: number }[]; defaultDays: number };
   advent: { enabled: boolean; year: number; title: string; intro: string; doors: AdventDoor[] };
   skinScan: { enabled: boolean; intro: string };
-  subscribe: { enabled: boolean; monthly: number; quarterly: number; collection: string; note: string; unlockMonthly: number; unlockQuarterly: number; maxRebate: number; cooldownDays: number }; // Subscribe & save: earned after N delivered orders
+  subscribe: { enabled: boolean; monthly: number; quarterly: number; collection: string; note: string; unlockMonthly: number; unlockQuarterly: number; maxRebate: number; cooldownDays: number; promo?: { enabled: boolean; endsAt: string } }; // Subscribe & save: earned after N delivered orders
   shadeFinder: { enabled: boolean };
   images: { frame: "white" | "grey"; padding: number }; // uniform product photos
   motion: boolean; // site animations
@@ -286,7 +286,7 @@ export const defaultGrowth: Growth = {
     intro: "A new deal or gift behind every door, 1–24 December. Come back each day.",
     doors: Array.from({ length: 24 }, (_, i) => ({ day: i + 1, title: `Day ${i + 1}`, text: "", code: "", href: "/shop/?sale=1", image: "" })),
   },
-  subscribe: { enabled: true, monthly: 10, quarterly: 15, collection: "", note: "Skip, change or cancel any time. Pay on delivery, nothing charged in advance.", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90 },
+  subscribe: { enabled: true, monthly: 10, quarterly: 15, collection: "", note: "Skip, change or cancel any time. Pay on delivery, nothing charged in advance.", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "" } },
   skinScan: { enabled: true, intro: "SuperScan is our free 3D AI skin scan, like setting up Face ID: look at the screen, slowly turn your head in a circle, and the AI reads your skin from five angles: front, both sides, chin up and chin down. You get your skin type, a zone-by-zone reading and a routine from products in stock. Photos are analysed once and never stored." },
   shadeFinder: { enabled: true },
   images: { frame: "grey", padding: 8 },
@@ -329,7 +329,7 @@ export const growthSchema = z.object({
     doors: z.array(z.object({ day: z.number().int().min(1).max(31), title: z.string().max(80), text: z.string().max(300), code: z.string().max(40), href: z.string().max(300), image: z.string().max(500) })).max(31),
   }),
   skinScan: z.object({ enabled: z.boolean(), intro: z.string().max(400) }),
-  subscribe: z.object({ enabled: z.boolean(), monthly: z.number().min(0).max(50), quarterly: z.number().min(0).max(50), collection: z.string().max(200), note: z.string().max(200), unlockMonthly: z.number().int().min(1).max(12).default(3), unlockQuarterly: z.number().int().min(1).max(12).default(2), maxRebate: z.number().min(0).max(500).default(15), cooldownDays: z.number().int().min(0).max(365).default(90) }).default({ enabled: true, monthly: 10, quarterly: 15, collection: "", note: "", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90 }),
+  subscribe: z.object({ enabled: z.boolean(), monthly: z.number().min(0).max(50), quarterly: z.number().min(0).max(50), collection: z.string().max(200), note: z.string().max(200), unlockMonthly: z.number().int().min(1).max(12).default(3), unlockQuarterly: z.number().int().min(1).max(12).default(2), maxRebate: z.number().min(0).max(500).default(15), cooldownDays: z.number().int().min(0).max(365).default(90), promo: z.object({ enabled: z.boolean(), endsAt: z.string().max(10) }).default({ enabled: false, endsAt: "" }) }).default({ enabled: true, monthly: 10, quarterly: 15, collection: "", note: "", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "" } }),
   shadeFinder: z.object({ enabled: z.boolean() }),
   images: z.object({ frame: z.enum(["white", "grey"]), padding: z.number().min(0).max(20) }),
   motion: z.boolean(),
@@ -371,6 +371,9 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
   };
 }
 
+/** "Subscribe now: the discount starts from your 2nd order" campaign. */
+export const subPromoLive = (g: Pick<Growth, "subscribe">) => !!g.subscribe.promo?.enabled && (!g.subscribe.promo.endsAt || g.subscribe.promo.endsAt >= new Date().toISOString().slice(0, 10));
+
 /** One-time: add the directory shops and go 2% below a cheaper shop (owner's rule, Nov 2026). */
 function withDirectory(pm: PriceMatch): PriceMatch {
   if (pm.directoryV === 1) return pm;
@@ -393,7 +396,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     advent: { enabled: g.advent.enabled },
     // Only offered to shoppers once the AI key is in place (otherwise the page just says "not connected").
     skinScan: { enabled: g.skinScan.enabled && (aiKey ?? (typeof process !== "undefined" && !!process.env.ANTHROPIC_API_KEY)) },
-    subscribe: g.subscribe,
+    subscribe: { ...g.subscribe, promoLive: subPromoLive(g) },
     shadeFinder: g.shadeFinder,
     images: g.images,
     trust: g.trust,
