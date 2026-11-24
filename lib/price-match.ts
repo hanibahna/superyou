@@ -68,6 +68,7 @@ async function statPage(domain: string, page: SourceProduct[]) {
 /** Admin benchmark: what each shop carries (from the last price check). */
 export async function competitorStats() {
   const g = (await getGrowth()).priceMatch;
+  const idx = await getIndex();
   const out = [];
   for (const s of g.sites) {
     const [st, brands, types] = await Promise.all([
@@ -80,7 +81,22 @@ export async function competitorStats() {
     const t: [string, number][] = [];
     for (let i = 0; types && i < types.length; i += 2) t.push([types[i], Number(types[i + 1])]);
     t.sort((a, b) => b[1] - a[1]);
-    out.push({ domain: s.domain, label: s.label, enabled: s.enabled, products: o.products ?? 0, variants: o.variants ?? 0, inStock: o.inStock ?? 0, brands: brands ?? 0, supplements: o.supplements ?? 0, protein: o.protein ?? 0, avgPrice: o.priceN ? Math.round((o.priceSum / o.priceN) * 100) / 100 : 0, topTypes: t.slice(0, 8) });
+    // Price index on the products both shops sell: their price ÷ ours (1.10 = they're 10% dearer).
+    const ratios: number[] = [];
+    let cursor = "0";
+    do {
+      const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", OFFERS(s.domain), cursor, "COUNT", 2000])) ?? ["0", []];
+      for (let i = 0; i < flat.length; i += 2) {
+        const ours = idx.byId.get(flat[i]);
+        const t = Number(flat[i + 1].split("|")[0]);
+        if (ours && ours.status === "active" && ours.price > 0 && t > 0) ratios.push(t / ours.price);
+      }
+      cursor = String(next);
+    } while (cursor !== "0");
+    ratios.sort((a, b) => a - b);
+    const med = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 0;
+    const overlap = { n: ratios.length, median: Math.round(med * 1000) / 1000, cheaperThanUs: ratios.filter((r) => r < 0.995).length, sameAsUs: ratios.filter((r) => r >= 0.995 && r <= 1.005).length, dearerThanUs: ratios.filter((r) => r > 1.005).length };
+    out.push({ domain: s.domain, label: s.label, enabled: s.enabled, overlap, products: o.products ?? 0, variants: o.variants ?? 0, inStock: o.inStock ?? 0, brands: brands ?? 0, supplements: o.supplements ?? 0, protein: o.protein ?? 0, avgPrice: o.priceN ? Math.round((o.priceSum / o.priceN) * 100) / 100 : 0, topTypes: t.slice(0, 8) });
   }
   return out;
 }
