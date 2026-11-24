@@ -133,6 +133,7 @@ export type PriceMatch = {
   marginPct: number; // never below cost + this %
   badge: boolean;
   beatPct: number; // sell this % below the cheapest competitor (0 = match)
+  directoryV?: number; // 1 once the retailer-directory shops and the 2% beat were applied
   tieBeatPct: number; // a shop sells it at our price: go this % below them
   assumeMarginPct: number; // no cost on file: assume our price carries this margin (0 = never match those)
   maxOffPct: number; // never more than this % below our own price
@@ -145,7 +146,7 @@ export const defaultPriceMatch: PriceMatch = {
   enabled: true,
   marginPct: 10,
   badge: true,
-  beatPct: 5,
+  beatPct: 2,
   tieBeatPct: 2,
   assumeMarginPct: 30,
   maxOffPct: 25,
@@ -159,6 +160,55 @@ export const defaultPriceMatch: PriceMatch = {
     { domain: "nexuscare.me", label: "NexusCare", enabled: true, showName: true },
   ],
 };
+
+/** Lebanese beauty shops from the retailer directory (Nov 2026); added once to the price check, then editable in admin. */
+export const DIRECTORY_SITES: PriceMatchSite[] = [
+  { domain: "drugstoreonline.me", label: "Drugstore Online", enabled: true, showName: true },
+  { domain: "hbytala.com", label: "H by Tala", enabled: true, showName: true },
+  { domain: "by-sara.com", label: "By Sara", enabled: true, showName: true },
+  { domain: "ahramcare.com", label: "Ahram Care", enabled: true, showName: true },
+  { domain: "filiforme.me", label: "Filiforme", enabled: true, showName: true },
+  { domain: "dalibeauty.co", label: "Dali Beauty", enabled: true, showName: true },
+  { domain: "sohaticare.com", label: "Sohati Care", enabled: true, showName: true },
+  { domain: "parapharm.com.lb", label: "Parapharm", enabled: true, showName: true },
+  { domain: "phreya.com", label: "Phreya", enabled: true, showName: true },
+  { domain: "kencosmetics.com", label: "KenCosmetics", enabled: true, showName: true },
+  { domain: "kokare.com", label: "KOKARE", enabled: true, showName: true },
+  { domain: "skinify.me", label: "Skinify", enabled: true, showName: true },
+  { domain: "officialsolveskin.com", label: "Solveskin", enabled: true, showName: true },
+  { domain: "articleprive.com", label: "Article Privé", enabled: true, showName: true },
+  { domain: "germanyexpres.com", label: "Germany Express", enabled: true, showName: true },
+  { domain: "beautypharm.com", label: "Beauty Pharm", enabled: true, showName: true },
+  { domain: "beautyboxlb.com", label: "Beauty Box", enabled: true, showName: true },
+  { domain: "facefactslb.com", label: "Face Facts", enabled: true, showName: true },
+  { domain: "flormarlebanon.com", label: "Flormar Lebanon", enabled: true, showName: true },
+  { domain: "shinyskinoo.com", label: "Shinyskinoo", enabled: true, showName: true },
+  { domain: "samerkhouzami.com", label: "Samer Khouzami", enabled: true, showName: true },
+  { domain: "bassamfattouh.com", label: "Bassam Fattouh", enabled: true, showName: true },
+  { domain: "samoacosmetics.com", label: "SAMOA Cosmetics", enabled: true, showName: true },
+  { domain: "faceofdee.com", label: "Face of Dee", enabled: true, showName: true },
+  { domain: "theglamedition.com", label: "The Glam Edition", enabled: true, showName: true },
+  { domain: "shamsinebeauty.com", label: "Shamsine Beauty", enabled: true, showName: true },
+  { domain: "beautyeuphorialb.com", label: "Beauty Euphoria", enabled: true, showName: true },
+  { domain: "beauty4me.shop", label: "Beauty 4 Me", enabled: true, showName: true },
+  { domain: "thebeautyspotlb.com", label: "The Beauty Spot", enabled: true, showName: true },
+  { domain: "rolandekassis.com", label: "Rolande Kassis", enabled: true, showName: true },
+  { domain: "shadesbeauty.shop", label: "Shades Beauty", enabled: true, showName: true },
+  { domain: "koreancosmeticsww.com", label: "Korean Cosmetics Worldwide", enabled: true, showName: true },
+  { domain: "duft-lb.com", label: "Duft", enabled: true, showName: true },
+  { domain: "thebodyshop.com.lb", label: "The Body Shop Lebanon", enabled: true, showName: true },
+  { domain: "lushlebanon.com", label: "Lush Lebanon", enabled: true, showName: true },
+  { domain: "array-lb.com", label: "Array Health & Beauty", enabled: true, showName: true },
+  { domain: "buyitlb.com", label: "Buy It Online", enabled: true, showName: true },
+  { domain: "glow55.com", label: "Glow55", enabled: true, showName: true },
+  { domain: "shopandbeyondlb.com", label: "Shop and Beyond", enabled: true, showName: true },
+  { domain: "360cosmedics.com", label: "360 Cosmedics", enabled: true, showName: true },
+  { domain: "skintoc.com", label: "SKINTOC", enabled: true, showName: true },
+  { domain: "taminaonline.com", label: "Tamina Online", enabled: true, showName: true },
+  { domain: "faceshine.me", label: "Faceshine", enabled: true, showName: true },
+  { domain: "atelierbeautanique.com", label: "Atelier Beautanique", enabled: true, showName: true },
+  { domain: "lorekacare.com", label: "Loréka Care", enabled: true, showName: true },
+];
 
 export const defaultGame: Game = {
   enabled: true,
@@ -300,7 +350,7 @@ export const growthSchema = z.object({
   }).default(defaultPrime),
   priceMatch: z.object({
     enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
-    beatPct: z.number().min(0).max(30).default(5), tieBeatPct: z.number().min(0).max(30).default(2), assumeMarginPct: z.number().min(0).max(80).default(30), maxOffPct: z.number().min(1).max(60).default(25),
+    beatPct: z.number().min(0).max(30).default(2), tieBeatPct: z.number().min(0).max(30).default(2), directoryV: z.number().optional(), assumeMarginPct: z.number().min(0).max(80).default(30), maxOffPct: z.number().min(1).max(60).default(25),
     maxUnits: z.number().int().min(1).max(20).default(2), oncePerDay: z.boolean().default(true), skipOwnSource: z.boolean().default(true),
     sites: z.preprocess((a) => (Array.isArray(a) ? a.filter((x) => x && String(x.domain ?? "").trim()) : a), z.array(z.object({ domain: z.string().trim().toLowerCase().min(3).max(100).regex(/^[a-z0-9.-]+\.[a-z]{2,}$/), label: z.string().trim().min(1).max(40), enabled: z.boolean(), showName: z.boolean() })).max(12)),
   }).default(defaultPriceMatch),
@@ -316,9 +366,16 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
     skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
     prime: { ...defaultPrime, ...v.prime, promo: { ...defaultPrime.promo, ...v.prime?.promo } },
-    priceMatch: { ...defaultPriceMatch, ...v.priceMatch, sites: v.priceMatch?.sites ?? defaultPriceMatch.sites },
+    priceMatch: withDirectory({ ...defaultPriceMatch, ...v.priceMatch, sites: v.priceMatch?.sites ?? defaultPriceMatch.sites }),
     game: { ...defaultGame, ...v.game, badges: { ...defaultGame.badges, ...v.game?.badges, points: { ...defaultGame.badges.points, ...v.game?.badges?.points } }, ladder: { ...defaultGame.ladder, ...v.game?.ladder }, streak: { ...defaultGame.streak, ...v.game?.streak }, checkin: { ...defaultGame.checkin, ...v.game?.checkin }, quest: { ...defaultGame.quest, ...v.game?.quest }, race: { ...defaultGame.race, ...v.game?.race } },
   };
+}
+
+/** One-time: add the directory shops and go 2% below a cheaper shop (owner's rule, Nov 2026). */
+function withDirectory(pm: PriceMatch): PriceMatch {
+  if (pm.directoryV === 1) return pm;
+  const have = new Set(pm.sites.map((s) => s.domain.toLowerCase()));
+  return { ...pm, beatPct: 2, directoryV: 1, sites: [...pm.sites, ...DIRECTORY_SITES.filter((s) => !have.has(s.domain))] };
 }
 
 /** What the browser needs (no voucher logic, no wheel odds). */

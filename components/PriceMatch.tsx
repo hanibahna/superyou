@@ -1,7 +1,7 @@
 "use client";
 
 // SuperPrice Guaranteed: an item another shop sells for less is sold here for less again
-// (5% below, never under cost + margin). Prices are compared every night at 3 am (Beirut).
+// (2% below, never under cost + margin). Prices are compared every night at 3 am (Beirut).
 import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
