@@ -10,7 +10,7 @@ import { getOps } from "@/lib/ops-store";
 import { getOrder, ORDER_STATUSES, orderValue, refunded, statusLabels } from "@/lib/orders";
 import { refundProvider } from "@/lib/payments";
 import { normPhone } from "@/lib/wa";
-import { getSheet, ORDERS_INBOX } from "@/lib/order-internal";
+import { buildSheet, getSheet, ORDERS_INBOX } from "@/lib/order-internal";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Beirut" });
 
@@ -19,6 +19,8 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
   const id0 = (await params).id;
   const [o, ops, internal] = await Promise.all([getOrder(id0), getOps(), getSheet(id0)]);
   if (!o) notFound();
+  // Orders placed before the sheet existed: worked out now (not emailed).
+  if (!internal.sheet) internal.sheet = await buildSheet(o).catch(() => null);
   const c = o.customer;
   const back = refunded(o);
   const max = +(orderValue(o) - back).toFixed(2);
