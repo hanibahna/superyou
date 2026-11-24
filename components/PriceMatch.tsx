@@ -37,8 +37,23 @@ const Mark = () => (
 export function PriceMatchBadge({ p, size = "sm", className = "" }: { p: SP; size?: "sm" | "md"; className?: string }) {
   const t = useT();
   if (p.spLimit) return <span className={`inline-flex rounded-full bg-[#fdecef] px-2 py-0.5 text-[11px] font-semibold text-[#9b2c50] ${className}`}>{t("SuperPrice is for up to")} {p.spLimit} {t("per order")}</span>;
-  if (p.match === undefined) return null;
   const cls = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]";
+  // Product page: one sticker for every shop we're cheaper than (SuperPrice or already cheaper).
+  if (size === "md" && p.shops?.length && p.price) {
+    const below = p.shops.filter(([, x]) => x - p.price! > 0.009);
+    if (below.length)
+      return (
+        <>
+          {below.map(([name, x], i) => (
+            <span key={i} title={`${name || t("Another shop")}: ${money(x)}`} className={`sp-shine sp-in inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full bg-[#fdecef] font-semibold text-[#9b2c50] ${cls} ${className}`} style={{ animationDelay: `${i * 0.12}s` }}>
+              <Mark />
+              SuperPrice · {t("below")} {name || t("another shop")}
+            </span>
+          ))}
+        </>
+      );
+  }
+  if (p.match === undefined) return null;
   return (
     <span title={p.match ? `${t("Cheaper than")} ${p.match}` : t("Cheaper than other shops")} className={`sp-shine inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full bg-[#fdecef] font-semibold text-[#9b2c50] ${cls} ${className}`}>
       <Mark />
