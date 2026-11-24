@@ -95,7 +95,8 @@ export function Totals({ big = false }: { big?: boolean }) {
       {quote?.discounts.map((d) => (
         <div key={d.name + d.code} className="flex justify-between text-brand-700"><dt>{d.name}{d.code ? ` (${d.code})` : ""}</dt><dd>−{money(d.amount)}</dd></div>
       ))}
-      <div className="flex justify-between"><dt>{tx("Delivery")}</dt><dd>{delivery === 0 ? tx("Free") : money(delivery)}</dd></div>
+      <div className="flex justify-between"><dt>{tx("Delivery")}</dt><dd>{delivery === 0 ? (quote?.prime?.free ? `${tx("Free")} · SuperPrime` : tx("Free")) : money(delivery)}</dd></div>
+      {!!quote?.prime?.fee && <div className="flex justify-between"><dt>SuperPrime ({tx("30 days")})</dt><dd>{money(quote.prime.fee)}</dd></div>}
       {quote?.giftCard && quote.giftCard.amount > 0 && <div className="flex justify-between text-brand-700"><dt>{tx("Gift card")} ({quote.giftCard.code})</dt><dd>−{money(quote.giftCard.amount)}</dd></div>}
       <div className="flex justify-between border-t border-line pt-2 text-base font-semibold"><dt>{tx("Total")}</dt><dd>{money(total)}</dd></div>
       {saleSavings > 0 && <p className="text-xs text-brand-700">You're saving {money(saleSavings + (quote?.discountTotal ?? 0))} on this order</p>}

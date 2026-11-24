@@ -8,6 +8,8 @@ const schema = z.object({
   code: z.string().max(40).optional(),
   zone: z.string().max(60).optional(),
   giftCard: z.string().max(30).optional(),
+  phone: z.string().max(20).optional(),
+  prime: z.enum(["trial", "join"]).optional(),
 });
 
 // Live cart prices, discounts, free-gift tiers and delivery for the cart and checkout.

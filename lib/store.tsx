@@ -44,6 +44,8 @@ export type ServerQuote = {
   giftCard?: { code: string; amount: number; balance: number };
   giftCardError?: string;
   minOrder: number;
+  /** SuperPrime for this phone and cart: membership, the choice made at checkout, the fee added. */
+  prime?: { status: "none" | "trial" | "active" | "lapsed"; until?: string; trialUsed: boolean; trialOk: boolean; choice?: "trial" | "join"; fee: number; free: boolean; known: boolean };
   gifts: { id: string; name: string; unlocked: boolean; remaining: number; pick: number; showProgress: boolean; options: ProductSnap[] }[];
   routine?: { have: number; need: number; percent: number; steps: string[]; all: string[] } | null;
   doublePointsAt?: number;
@@ -55,6 +57,11 @@ type ShopState = {
   add: (product: AnyProduct | ProductSnap, qty?: number, every?: Every | null) => void;
   /** The item just added (for the SuperPrice reveal in the bag). */
   lastAdded: { id: string; at: number } | null;
+  /** SuperPrime at checkout: the phone typed (to recognise members) and the shopper's choice. */
+  primePhone: string;
+  setPrimePhone: (v: string) => void;
+  primeChoice: "" | "trial" | "join";
+  setPrimeChoice: (v: "" | "trial" | "join") => void;
   setEvery: (productId: string, every?: Every) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
@@ -112,6 +119,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [giftPicks, setGiftPicks] = useState<Record<string, string[]>>({});
   const [quote, setQuote] = useState<ServerQuote | null>(null);
   const [lastAdded, setLastAdded] = useState<{ id: string; at: number } | null>(null);
+  const [primePhone, setPrimePhone] = useState("");
+  const [primeChoice, setPrimeChoice] = useState<"" | "trial" | "join">("");
   const settings = useSettings();
 
   useEffect(() => {
@@ -139,7 +148,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       fetch("/api/cart/quote/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: lines.map((l) => ({ productId: l.productId, qty: l.qty, ...(l.every ? { every: l.every } : {}) })), code, zone, giftCard: giftCard || undefined }),
+        body: JSON.stringify({ items: lines.map((l) => ({ productId: l.productId, qty: l.qty, ...(l.every ? { every: l.every } : {}) })), code, zone, giftCard: giftCard || undefined, ...(primePhone ? { phone: primePhone } : {}), ...(primeChoice ? { prime: primeChoice } : {}) }),
         signal: ctl.signal,
       })
         .then((r) => (r.ok ? r.json() : null))
@@ -161,7 +170,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         .catch(() => {});
     }, 250);
     return () => (clearTimeout(t), ctl.abort());
-  }, [lines, code, zone, giftCard, hydrated]);
+  }, [lines, code, zone, giftCard, hydrated, primePhone, primeChoice]);
 
   useEffect(() => {
     if (hydrated) save("cart:v3", lines);
@@ -190,6 +199,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return {
       lines,
       lastAdded,
+      primePhone,
+      setPrimePhone,
+      primeChoice,
+      setPrimeChoice,
       wishlist,
       setEvery: (productId, every) => setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, every } : l))),
       add: (product, qty = 1, every) => {
@@ -231,11 +244,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       detailed,
       subtotal,
       delivery,
-      total: Math.max(0, +(subtotal - discountTotal + delivery - giftCardAmount).toFixed(2)),
+      total: Math.max(0, +(subtotal - discountTotal + delivery + (fresh ? quote.prime?.fee ?? 0 : 0) - giftCardAmount).toFixed(2)),
       drawerOpen,
       setDrawerOpen,
     };
-  }, [lines, wishlist, drawerOpen, code, giftCard, zone, giftPicks, quote, settings, lastAdded]);
+  }, [lines, wishlist, drawerOpen, code, giftCard, zone, giftPicks, quote, settings, lastAdded, primePhone, primeChoice]);
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }

@@ -5,7 +5,7 @@ import { BADGES, type Growth } from "@/lib/growth";
 import { PriceMatchReport } from "./PriceMatchReport";
 import { Area, Card, Header, ListInput, MediaField, Num, ProductPicker, Select, Text, Toggle, useSaver } from "./fields";
 
-const TABS = ["Price match", "Gamification", "Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
+const TABS = ["SuperPrime", "Price match", "Gamification", "Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
 
 export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth; aiReady: boolean; emailReady: boolean }) {
   const [g, setG] = useState(initial);
@@ -235,6 +235,22 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
           </Card>
           <Card title="Foundation shade finder" sub="Page /shade-finder/: 5 questions → shade range, undertone letters and matching foundations in stock.">
             <Toggle label="Shade finder page is on" checked={g.shadeFinder.enabled} onChange={(enabled) => up("shadeFinder", { enabled })} />
+          </Card>
+        </div>
+      )}
+
+      {tab === "SuperPrime" && (
+        <div className="space-y-5">
+          <Card title="SuperPrime membership" sub="Free delivery on every order, and SuperPrice with no daily limit. Paid with an order (cash on delivery works): each payment covers 30 days and is renewed at checkout, never charged by itself. One free trial per phone number.">
+            <Toggle label="SuperPrime on" checked={g.prime.enabled} onChange={(enabled) => up("prime", { enabled })} />
+            <div className="grid gap-4 md:grid-cols-3">
+              <Text label="Name" value={g.prime.name} onChange={(name) => up("prime", { name })} />
+              <Num label="Price per month ($)" step={0.01} value={g.prime.monthlyPrice} onChange={(monthlyPrice) => up("prime", { monthlyPrice })} />
+              <Num label="Free trial (months)" hint="0 = no trial" value={g.prime.trialMonths} onChange={(trialMonths) => up("prime", { trialMonths })} />
+              <Num label="Trial needs a first order of at least ($)" value={g.prime.trialMinOrder} onChange={(trialMinOrder) => up("prime", { trialMinOrder })} />
+              <Num label="Free delivery for members from ($)" hint="Stops $2 orders costing a $4 delivery. 0 = every order." value={g.prime.freeMin} onChange={(freeMin) => up("prime", { freeMin })} />
+            </div>
+            <Toggle label="Members get SuperPrice with no daily limit" checked={g.prime.unlimitedSuperPrice} onChange={(unlimitedSuperPrice) => up("prime", { unlimitedSuperPrice })} />
           </Card>
         </div>
       )}

@@ -56,6 +56,7 @@ export type Growth = {
   trust: { lines: string[]; returnsSummary: string };
   game: Game;
   priceMatch: PriceMatch;
+  prime: Prime;
 };
 
 /** Gamification (Admin › Gamification). Points-only rewards; every-spin-wins wheel lives in popup. */
@@ -113,6 +114,12 @@ export const DEFAULT_TIPS = [
   "Fragrance-free is gentler for sensitive and eczema-prone skin.",
   "Not sure what your skin needs? Take a free SuperScan in the app.",
 ];
+
+// SuperPrime: a monthly membership. Free delivery on every order (from freeMin), no daily limit on
+// SuperPrice orders. Free for trialMonths with a first order of at least trialMinOrder. Paid with an
+// order (cash on delivery works): each payment covers 30 days, renewed at checkout, never charged by itself.
+export type Prime = { enabled: boolean; name: string; monthlyPrice: number; trialMonths: number; trialMinOrder: number; freeMin: number; unlimitedSuperPrice: boolean };
+export const defaultPrime: Prime = { enabled: true, name: "SuperPrime", monthlyPrice: 3.99, trialMonths: 3, trialMinOrder: 100, freeMin: 10, unlimitedSuperPrice: true };
 
 // Price guarantee: competitor shops checked nightly; when one sells the same item for less,
 // SuperYou matches it, never below cost + marginPct. Server-only (not in publicGrowth).
@@ -229,6 +236,7 @@ export const defaultGrowth: Growth = {
   motion: true,
   game: defaultGame,
   priceMatch: defaultPriceMatch,
+  prime: defaultPrime,
   trust: {
     lines: ["100% authentic — supplied by a licensed Lebanese pharmacy", "Advice from qualified pharmacists, free on WhatsApp", "Easy returns on unopened items within 7 days"],
     returnsSummary: "Unopened items can be returned within 7 days. Opened skincare can't be returned for hygiene reasons unless faulty.",
@@ -278,6 +286,10 @@ export const growthSchema = z.object({
     quest: z.object({ enabled: z.boolean(), reviews: z.number().int().min(1).max(20), points: z.number().int().min(0).max(10000) }),
     race: z.object({ enabled: z.boolean(), steps: z.array(z.object({ friends: z.number().int().min(1).max(1000), points: z.number().int().min(0).max(100000) })).max(6) }),
   }).transform((g) => g as Game).default(defaultGame),
+  prime: z.object({
+    enabled: z.boolean(), name: z.string().trim().min(1).max(30), monthlyPrice: z.number().min(0).max(100), trialMonths: z.number().int().min(0).max(12),
+    trialMinOrder: z.number().min(0).max(10000), freeMin: z.number().min(0).max(1000), unlimitedSuperPrice: z.boolean(),
+  }).default(defaultPrime),
   priceMatch: z.object({
     enabled: z.boolean(), marginPct: z.number().min(0).max(100), badge: z.boolean(),
     beatPct: z.number().min(0).max(30).default(5), tieBeatPct: z.number().min(0).max(30).default(2), assumeMarginPct: z.number().min(0).max(80).default(30), maxOffPct: z.number().min(1).max(60).default(25),
@@ -295,6 +307,7 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     reviews: { ...d.reviews, ...v.reviews }, club: { ...d.club, ...v.club, bonus: { ...d.club.bonus, ...v.club?.bonus }, referral: { ...d.club.referral, ...v.club?.referral }, memberPrice: { ...d.club.memberPrice, ...v.club?.memberPrice } }, pharmacist: { ...d.pharmacist, ...v.pharmacist },
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
     skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
+    prime: { ...defaultPrime, ...v.prime },
     priceMatch: { ...defaultPriceMatch, ...v.priceMatch, sites: v.priceMatch?.sites ?? defaultPriceMatch.sites },
     game: { ...defaultGame, ...v.game, badges: { ...defaultGame.badges, ...v.game?.badges, points: { ...defaultGame.badges.points, ...v.game?.badges?.points } }, ladder: { ...defaultGame.ladder, ...v.game?.ladder }, streak: { ...defaultGame.streak, ...v.game?.streak }, checkin: { ...defaultGame.checkin, ...v.game?.checkin }, quest: { ...defaultGame.quest, ...v.game?.quest }, race: { ...defaultGame.race, ...v.game?.race } },
   };
@@ -307,6 +320,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     popup: { ...popup, wheel: wheel.map((w) => w.label) },
     freeDeliveryBar: g.freeDeliveryBar,
     superPrice: g.priceMatch.enabled && g.priceMatch.badge,
+    prime: g.prime,
     reviews: { enabled: g.reviews.enabled, showOnCards: g.reviews.showOnCards },
     club: { enabled: g.club.enabled, name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue, tiers: g.club.tiers, bonus: g.club.bonus, referral: g.club.referral, expiryMonths: g.club.expiryMonths, memberPrice: g.club.memberPrice, birthdayPercent: g.club.birthdayPercent },
     pharmacist: g.pharmacist,

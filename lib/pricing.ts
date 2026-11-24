@@ -95,7 +95,7 @@ const snapOf = (p: ProductLite): ProductSnap => ({
   origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
-export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string; noSuperPrice?: boolean };
+export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string; noSuperPrice?: boolean; phone?: string; prime?: "trial" | "join" };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);
@@ -190,6 +190,22 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
       q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
     }
   }
+  // SuperPrime: members (or a shopper joining with this order) get free delivery from freeMin.
+  let prime: ServerQuote["prime"];
+  const pr = growth.prime;
+  if (pr.enabled && !input.subscriptionId) {
+    const { getPrime, primeState } = await import("@/lib/prime");
+    const st = primeState(input.phone ? await getPrime(input.phone).catch(() => null) : null);
+    const after = q.subtotal - q.discountTotal;
+    const member = st.status === "trial" || st.status === "active";
+    const trialOk = !st.trialUsed && pr.trialMonths > 0 && after >= pr.trialMinOrder;
+    const choice = member ? undefined : input.prime === "trial" ? (trialOk ? "trial" : undefined) : input.prime;
+    const fee = choice === "join" ? pr.monthlyPrice : 0;
+    const free = (member || !!choice) && after >= pr.freeMin;
+    if (free) q.delivery = 0;
+    q.total = +(after + q.delivery + fee).toFixed(2);
+    prime = { status: st.status, until: st.until, trialUsed: st.trialUsed, trialOk, choice, fee, free, known: !!input.phone };
+  }
   const bySku = new Map(live.list.map((p) => [p.sku.toLowerCase(), p]));
   const gc = input.giftCard ? await giftCardFor(input.giftCard, q.total) : null;
   return {
@@ -203,6 +219,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     total: q.total,
     couponError: q.couponError,
     minOrder: settings.checkout.minOrder,
+    prime,
     // Gamification: routine completion meter and the double-points step of the reward ladder.
     routine: growth.bundles.enabled ? { have: routineSteps.length, need: growth.bundles.minSteps, percent: growth.bundles.percent, steps: routineSteps.map((id) => routine.steps.find((x) => x.id === id)?.name ?? id), all: routine.steps.filter((x) => x.essential || routine.steps.length <= 6).map((x) => x.name) } : null,
     doublePointsAt: growth.game?.enabled && growth.game.ladder.enabled && growth.club.enabled ? growth.game.ladder.doublePointsAt : 0,

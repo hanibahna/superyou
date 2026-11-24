@@ -36,6 +36,7 @@ export const checkoutSchema = z.object({
   waOffers: z.boolean().optional(), // marketing opt-in
   gifts: z.array(z.object({ tierId: z.string().max(40), productIds: z.array(z.string().max(60)).max(10) })).max(20).optional(),
   joinClub: z.boolean().optional(), // SuperYou Club loyalty
+  prime: z.enum(["trial", "join"]).optional(), // SuperPrime: start the free trial, or pay a month
   birthday: z.string().regex(/^\d{2}-\d{2}$/).optional().or(z.literal("")),
   giftCard: z.string().max(30).optional(),
   // Where the shopper came from (campaign tags); a bad value is dropped, never blocks the order.
@@ -115,11 +116,14 @@ const spDay = () => new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 1
 const spUsedKey = (phone: string) => `sp:used:${normPhone(phone)}:${spDay()}`;
 
 export async function priceOrder(input: CheckoutInput) {
-  let q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId });
+  const base = { items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId, phone: input.customer.phone, prime: input.prime };
+  let q = await serverQuote(base);
   // SuperPrice: one order per customer (phone number) per day. The first try explains it;
   // placing the order again within 10 minutes buys those items at the regular price.
   const { getGrowth: gg } = await import("@/lib/growth-store");
-  if (q._lines.some((l) => l.superPrice) && (await gg()).priceMatch.oncePerDay && normPhone(input.customer.phone)) {
+  const g0 = await gg();
+  const primeMember = q.prime?.status === "trial" || q.prime?.status === "active" || !!q.prime?.choice;
+  if (q._lines.some((l) => l.superPrice) && g0.priceMatch.oncePerDay && !(primeMember && g0.prime.unlimitedSuperPrice) && normPhone(input.customer.phone)) {
     const { db } = await import("@/lib/db");
     if (await db.cmd(["EXISTS", spUsedKey(input.customer.phone)])) {
       const warn = `sp:warned:${normPhone(input.customer.phone)}`;
@@ -127,7 +131,7 @@ export async function priceOrder(input: CheckoutInput) {
         await db.cmd(["SET", warn, "1", "EX", 600]);
         throw new Error("SuperPrice is one order per customer per day, and this number already used it today. Place the order again to buy these items at the regular price, or come back tomorrow.");
       }
-      q = await serverQuote({ items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId, noSuperPrice: true });
+      q = await serverQuote({ ...base, noSuperPrice: true });
     }
   }
   const { isSubscribable } = await import("@/lib/subscribable");
@@ -185,9 +189,12 @@ export async function priceOrder(input: CheckoutInput) {
       q.discountTotal = +(q.discountTotal + amount).toFixed(2);
       const { deliveryFor } = await import("@/lib/site");
       q.delivery = deliveryFor(q._settings, q.subtotal - q.discountTotal, input.customer.zone);
-      q.total = +(q.subtotal - q.discountTotal + q.delivery).toFixed(2);
+      if (q.prime?.free && q.subtotal - q.discountTotal >= growth.prime.freeMin) q.delivery = 0;
+      q.total = +(q.subtotal - q.discountTotal + q.delivery + (q.prime?.fee ?? 0)).toFixed(2);
     }
   }
+  // SuperPrime month bought with this order: shown as its own line.
+  if (q.prime?.fee) lines.push({ productId: "superprime", name: `${growth.prime.name} membership (30 days)`, brand: "SuperYou", unitPrice: q.prime.fee, qty: 1, lineTotal: q.prime.fee });
   let giftCard: Order["giftCard"];
   if (input.giftCard) {
     const { giftCardFor } = await import("@/lib/pricing");
@@ -207,11 +214,12 @@ export async function priceOrder(input: CheckoutInput) {
     total: +(q.total - (giftCard?.amount ?? 0)).toFixed(2),
     _prefix: q._settings.store.name,
     _superPrice: q._lines.some((l) => l.superPrice),
+    _prime: q.prime?.choice,
   };
 }
 
 export async function createOrder(input: CheckoutInput): Promise<Order> {
-  const { _prefix, _superPrice, ...priced } = await priceOrder(input);
+  const { _prefix, _superPrice, _prime, ...priced } = await priceOrder(input);
   if (_superPrice && normPhone(input.customer.phone)) await (await import("@/lib/db")).db.cmd(["SET", spUsedKey(input.customer.phone), "1", "EX", 2 * 86400]).catch(() => {});
   if (priced.code) {
     await countCouponUse(priced.code).catch(() => {});
@@ -244,6 +252,11 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   if (order.code) await (await import("@/lib/influencers")).creditOrder(order).catch((e) => console.error("[influencer]", e));
   // New subscriptions (not for orders a subscription placed itself).
   if (!input.subscriptionId && order.lines.some((l) => l.every)) await (await import("@/lib/subscriptions")).startSubscriptions(order, input).catch((e) => console.error("[subscriptions]", e));
+  // SuperPrime: start the free trial, or add the 30 days paid for with this order.
+  if (_prime) {
+    const g = await (await import("@/lib/growth-store")).getGrowth();
+    await (await import("@/lib/prime")).activatePrime(order.customer.phone, _prime, g.prime.trialMonths, order.id).catch((e) => console.error("[prime]", e));
+  }
   return order;
 }
 
