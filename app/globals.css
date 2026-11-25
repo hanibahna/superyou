@@ -254,6 +254,7 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
    the trust promises on one scrollable line, a compact countdown. */
 @media (max-width: 767px) {
   [data-preset="pop"] .bf-hero .container-x { padding-top: 1.5rem; padding-bottom: 1.25rem; gap: 1.25rem; }
+  [data-preset="pop"] .bf-hero .container-x > * { min-width: 0; }
   [data-preset="pop"] .bf-title { font-size: clamp(2.6rem, 12vw, 3.4rem); margin-top: .9rem; }
   [data-preset="pop"] .bf-hero:not(.has-video) .bf-text { font-size: 1rem; line-height: 1.45; margin-top: .6rem; }
   [data-preset="pop"] .bf-hero .bf-count { width: 3.4rem; padding: .35rem 0; font-size: 1.5rem; }
