@@ -124,7 +124,8 @@ export function MobileTabBar() {
             <span className="font-semibold">{t("SuperScan")}</span>
           </Link>
         )}
-        <button onClick={() => setSearch(true)} className={`${item} text-muted`}><SearchIcon width={22} height={22} />{t("Search")}</button>
+        {/* The search bar is always at the top on phones: with SuperScan on, its tab gives way so SuperScan sits in the middle. */}
+        {!scanOn && <button onClick={() => setSearch(true)} className={`${item} text-muted`}><SearchIcon width={22} height={22} />{t("Search")}</button>}
         <button onClick={() => setDrawerOpen(true)} className={`${item} relative text-muted`}>
           <BagIcon data-bag width={22} height={22} />{t("Bag")}
           {count > 0 && <span className="absolute top-1.5 grid h-4 min-w-4 translate-x-3 place-items-center rounded-full bg-sale px-1 text-[10px] font-bold text-white">{count}</span>}
