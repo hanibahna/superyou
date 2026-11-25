@@ -27,7 +27,7 @@ export const linkFor = (id: string, role: Role) => `${siteUrl()}/f/${encodeURICo
 export const PAYABLES = "fulfil:payables"; // orderId → JSON { amount, at, paidAt? }
 export const CASH = "fulfil:cash"; // orderId → JSON { amount, at, courier, settledAt? }: cash the courier collected for us
 
-export type FLine = { name: string; brand: string; qty: number; sku: string; variant: string; cost: number };
+export type FLine = { name: string; brand: string; qty: number; sku: string; variant: string; cost: number; price: number };
 
 /** The order's lines that the supplier ships, with their SKU and our cost. */
 export async function supplierLines(o: Order, source: string): Promise<FLine[]> {
@@ -35,7 +35,7 @@ export async function supplierLines(o: Order, source: string): Promise<FLine[]> 
   return o.lines.filter((l) => l.productId !== "superprime").flatMap((l) => {
     const p = idx.byId.get(l.productId);
     if ((p?.source ?? "").toLowerCase() !== source.toLowerCase()) return [];
-    return [{ name: l.name, brand: l.brand, qty: l.qty, sku: p?.sku ?? l.productId, variant: p?.variant ?? "", cost: Math.round((p?.cost ?? 0) * l.qty * 100) / 100 }];
+    return [{ name: l.name, brand: l.brand, qty: l.qty, sku: p?.sku ?? l.productId, variant: p?.variant ?? "", cost: Math.round((p?.cost ?? 0) * l.qty * 100) / 100, price: l.lineTotal }];
   });
 }
 
@@ -93,12 +93,29 @@ export async function markReady(id: string, by = "supplier") {
   const sent = await tell(
     o.test ? team : { email: f.courierEmail, whatsapp: f.courierWhatsapp },
     `${o.test ? "[TEST] " : ""}Pickup: SuperYou parcel ${poNumber(o.id)} is ready`,
-    `Hello ${f.courierName || ""},\n\nSuperYou parcel ${poNumber(o.id)} (order ${o.id}) is ready for pickup at:\n${f.supplierName} — ${f.supplierAddress}\n\nDeliver to: ${to}\nAddress: ${o.customer.address}\nPhone: ${o.customer.phone}\nCollect: ${collectOf(o)}\n\nScan the label's QR code (or open this link) to confirm pickup, then delivery with a photo:\n${link}\n\nThank you,\nSuperYou`,
-    { key: "pickupRequest", vars: { order_id: poNumber(o.id), pickup_address: `${f.supplierName}, ${f.supplierAddress}`.slice(0, 200), deliver_to: to, collect: collectOf(o), link } },
+    `Hello ${f.courierName || ""},\n\nSuperYou parcel ${poNumber(o.id)} (order ${o.id}) is ready for pickup at:\n${f.supplierName} — ${f.supplierAddress}\n\nScan the parcel's QR code with your phone: the customer's name, address and phone are then sent to your WhatsApp. Confirm pickup and delivery (with a photo) here:\n${link}\n\nThank you,\nSuperYou`,
+    { key: "pickupRequest", vars: { order_id: poNumber(o.id), pickup_address: `${f.supplierName}, ${f.supplierAddress}`.slice(0, 200), deliver_to: o.customer.city, collect: collectOf(o), link } },
   );
   const next = await updateOrder(o.id, { fulfil: { ...(o.fulfil ?? { stage: "sent" }), stage: "ready", readyAt: new Date().toISOString() }, ...(["pending_cod", "paid", "confirmed"].includes(o.status) ? { status: "packed" as const } : {}) }, by, `Ready for pickup — courier told (${sent.join(", ") || "not sent: add the courier's email/WhatsApp"})`);
   await tellTeam(o, `ready for pickup at ${f.supplierName}`);
   return next;
+}
+
+/** The label was scanned: the customer's details go to the courier's WhatsApp only (never shown on the page).
+ *  At most once every 2 minutes per parcel, so repeated scans don't flood the chat. */
+export async function sendCourierDetails(id: string) {
+  const o = await getOrder(id);
+  if (!o) throw new Error("Parcel not found");
+  const f = (await getOps()).fulfil;
+  const team = f.teamWhatsapp;
+  const to = o.test ? team : f.courierWhatsapp;
+  if (!to) throw new Error("The courier's WhatsApp number isn't set up yet");
+  if (!(await db.cmd<string | null>(["SET", `fulfil:scan:${id}`, "1", "NX", "EX", "120"]))) return "recent";
+  const c = o.customer;
+  const vars = { po: poNumber(o.id), name: `${c.firstName} ${c.lastName}`, address: `${c.address}, ${c.city} (${c.zone})${c.notes ? `. Note: ${c.notes}` : ""}${c.lat && c.lng ? `. Map: https://www.google.com/maps?q=${c.lat},${c.lng}` : ""}`.slice(0, 600), phone: c.phone, collect: collectOf(o), link: linkFor(o.id, "c") };
+  const ok = await (await import("@/lib/whatsapp")).trigger("courierDetails", to, vars).catch(() => false);
+  if (!ok) await (await import("@/lib/sms")).sendSms(to, `SuperYou ${vars.po}: ${vars.name}, ${vars.address}. Tel ${vars.phone}. Collect ${vars.collect}. ${vars.link}`).catch(() => null);
+  return "sent";
 }
 
 /** 3. The courier scanned the label and took the parcel. */

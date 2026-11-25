@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { limited } from "@/lib/ratelimit";
-import { courierKey, markDelivered, markPicked, markReady, storePod, tokenFor, type Role } from "@/lib/fulfil";
+import { markDelivered, markPicked, markReady, sendCourierDetails, storePod, tokenFor, type Role } from "@/lib/fulfil";
 
 // The supplier and the courier update an order from the label link (no login: the link carries a key).
 export const maxDuration = 60;
@@ -11,14 +11,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const form = await req.formData();
   const t = String(form.get("t") ?? ""), r = String(form.get("r") ?? "") as Role, action = String(form.get("action") ?? "");
-  // The courier's remembered phone (cookie) counts as their key for any parcel.
-  const device = r === "c" && req.cookies.get("sy_courier")?.value === courierKey();
-  if ((r !== "s" && r !== "c") || (t !== tokenFor(id, r) && !device)) return NextResponse.json({ error: "This link is not valid" }, { status: 403 });
-  if (action === "remember" && r === "c") {
-    const res = NextResponse.json({ ok: true });
-    res.cookies.set("sy_courier", courierKey(), { httpOnly: true, secure: true, sameSite: "lax", maxAge: 365 * 86400, path: "/" });
-    return res;
+  // Label scanned by any phone: the details go to the courier's WhatsApp only (no key needed, nothing returned).
+  if (action === "scan") {
+    try { return NextResponse.json({ ok: true, result: await sendCourierDetails(id) }); }
+    catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 400 }); }
   }
+  if ((r !== "s" && r !== "c") || t !== tokenFor(id, r)) return NextResponse.json({ error: "This link is not valid" }, { status: 403 });
   try {
     if (action === "ready" && r === "s") return NextResponse.json({ ok: true, stage: (await markReady(id, "supplier"))?.fulfil?.stage });
     if (action === "picked" && r === "c") return NextResponse.json({ ok: true, stage: (await markPicked(id, "courier"))?.fulfil?.stage });

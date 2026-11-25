@@ -3,18 +3,11 @@
 import { useEffect, useState } from "react";
 
 /** Buttons on the parcel page: supplier → Print + Ready for pickup; courier → Picked up, then Delivered with a photo. */
-export function FulfilActions({ id, t, role, stage: initial, pod, po, remember }: { id: string; t: string; role: "s" | "c"; stage: string; pod?: string; po: string; remember?: boolean }) {
+export function FulfilActions({ id, t, role, stage: initial, pod, po }: { id: string; t: string; role: "s" | "c"; stage: string; pod?: string; po: string }) {
   const [stage, setStage] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
-  // The courier opened their link: remember this phone, so scanning any label later opens the delivery details.
-  useEffect(() => {
-    if (!remember) return;
-    const fd = new FormData();
-    fd.set("t", t); fd.set("r", "c"); fd.set("action", "remember");
-    fetch(`/api/fulfil/${encodeURIComponent(id)}/`, { method: "POST", body: fd }).catch(() => {});
-  }, [remember, id, t]);
   const send = async (action: string, file?: File) => {
     setBusy(true);
     setErr("");
@@ -32,7 +25,6 @@ export function FulfilActions({ id, t, role, stage: initial, pod, po, remember }
     <div className="mt-5 space-y-3 print:hidden">
       {role === "s" && (
         <>
-          <button onClick={() => window.print()} className={`${big} border-2 border-ink`}>🖨️ Print label (10 × 15 cm)</button>
           {stage === "sent" ? (
             <button disabled={busy} onClick={() => send("ready")} className={`${big} bg-[#046c4e] text-white`}>{busy ? "…" : "✓ Packed — ready for pickup"}</button>
           ) : (
@@ -84,4 +76,34 @@ async function shrink(f: File): Promise<File> {
   } catch {
     return f;
   }
+}
+
+/** Prints just one part of the page (the purchase order or the parcel label). */
+export function PrintButton({ target, label }: { target: "po" | "label"; label: string }) {
+  return (
+    <button
+      onClick={() => { document.body.dataset.print = target; window.print(); setTimeout(() => delete document.body.dataset.print, 500); }}
+      className="mt-2 flex min-h-[48px] w-full items-center justify-center rounded-full border-2 border-ink font-bold print:hidden"
+    >{label}</button>
+  );
+}
+
+/** Label scanned: the delivery details are sent to the courier's WhatsApp (never shown here). */
+export function ScanNotice({ id }: { id: string }) {
+  const [state, setState] = useState<"" | "sent" | "recent" | "error">("");
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    const fd = new FormData();
+    fd.set("action", "scan");
+    fetch(`/api/fulfil/${encodeURIComponent(id)}/`, { method: "POST", body: fd }).then(async (r) => {
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) setState(d.result === "recent" ? "recent" : "sent");
+      else (setState("error"), setErr(d.error ?? "Could not send"));
+    }).catch(() => setState("error"));
+  }, [id]);
+  return (
+    <p className={`mt-6 rounded-xl p-4 text-sm font-semibold ${state === "error" ? "bg-[#fdecef] text-[#9b2c50]" : "bg-[#e6f4ee] text-[#046c4e]"}`}>
+      {state === "" ? "Sending the delivery details…" : state === "error" ? err : "✓ The delivery details were sent to the courier's WhatsApp."}
+    </p>
+  );
 }
