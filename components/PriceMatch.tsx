@@ -145,7 +145,7 @@ const fmtPct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 /** Who we beat, by how much ($ and %), and whether the extra discount below them was applied. */
 function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) {
   const t = useT();
-  if (vs === undefined || !p.price) return <p className="sp-in mt-1.5 text-[11px] text-muted">{t("No lower price found in tonight's check. Checked every night.")}</p>;
+  if (vs === undefined || !p.price) return <NoCheaper />;
   const price = p.price;
   const shops = (p.shops?.length ? p.shops : [[lowered ? p.match ?? "" : p.cmpShop ?? "", vs] as [string, number]]).filter(([, x]) => x - price > 0.009);
   const who = shops.map(([n, x]) => `${n || t("another shop")} ${t("by")} ${money(x - price)} (${fmtPct((x - price) / x)})`);
@@ -163,6 +163,69 @@ function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) 
       {list ? <b className="text-[#046c4e]">✓ {lowered ? t("Beats") : t("Cheaper than")} {list}.</b> : <b className="text-[#046c4e]">✓ {t("Same as the lowest price.")}</b>}{" "}
       <span className="text-muted">{status} {t("Checked every night.")}</span>
     </p>
+  );
+}
+
+/** No shop sells it for less: every shop checked ticks off one by one, then the verdict. */
+function NoCheaper() {
+  const t = useT();
+  const g = useGrowth();
+  const shops = g.superPriceShops ?? [];
+  const [n, setN] = useState(0);
+  const [all, setAll] = useState(false);
+  const SHOW = 12;
+  const list = all ? shops : shops.slice(0, SHOW);
+  useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return setN(list.length + 1);
+    setN(0);
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setN(i);
+      if (i > list.length) clearInterval(id);
+    }, 110);
+    return () => clearInterval(id);
+  }, [list.length]);
+  if (!shops.length) return <p className="sp-in mt-1.5 text-[11px] text-muted">{t("No lower price found in tonight's check. Checked every night.")}</p>;
+  const done = n > list.length;
+  return (
+    <div className="sp-in mt-2">
+      <div className="flex items-center gap-3">
+        <svg viewBox="0 0 36 36" className="h-11 w-11 shrink-0 -rotate-90" aria-hidden>
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f3c4d2" strokeWidth="3" />
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="#046c4e" strokeWidth="3" strokeLinecap="round" strokeDasharray="97.4" strokeDashoffset={97.4 * (1 - Math.min(n, list.length) / Math.max(list.length, 1))} style={{ transition: "stroke-dashoffset .15s linear" }} />
+        </svg>
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold leading-tight text-ink">
+            {done ? <span className="sp-pop">🏆 {t("Lowest price in Lebanon")}</span> : <>{t("Checking")} {Math.min(n, list.length)}/{list.length}…</>}
+          </p>
+          <p className="text-[11px] text-muted">
+            {t("Checked against")} <b className="text-ink">{shops.length}</b> {t("online shops tonight. None sells it for less.")}
+          </p>
+        </div>
+      </div>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {list.map((name, i) => (
+          <li key={name} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all duration-300 ${i < n ? "border-[#bfe3d2] bg-[#e6f4ee] text-[#046c4e]" : "border-[#f3c4d2] bg-white text-muted opacity-60"}`}>
+            {i < n ? <span className="sp-pop" aria-hidden>✓</span> : <span className="h-1.5 w-1.5 rounded-full bg-[#f3c4d2]" aria-hidden />}
+            {name}
+          </li>
+        ))}
+        {!all && shops.length > SHOW && (
+          <li>
+            <button type="button" onClick={() => setAll(true)} className="rounded-full border border-[#f3c4d2] bg-[#fdecef] px-2 py-0.5 text-[11px] font-semibold text-[#9b2c50]">
+              +{shops.length - SHOW} {t("more")}
+            </button>
+          </li>
+        )}
+      </ul>
+      {done && (
+        <p className="sp-pop mt-2 rounded-lg bg-[#046c4e] px-2.5 py-1.5 text-[12px] font-semibold text-white">
+          ✓ {t("No shop beats our price.")} {t("If one drops its price, we go")} {g.superPriceBeat ?? 3}% {t("below it after the next nightly check.")}
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -388,6 +388,9 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     popup: { ...popup, wheel: wheel.map((w) => w.label) },
     freeDeliveryBar: g.freeDeliveryBar,
     superPrice: g.priceMatch.enabled && g.priceMatch.badge,
+    // Shop names checked every night, for the "no cheaper price anywhere" card. Shops we buy from stay out.
+    superPriceBeat: g.priceMatch.beatPct,
+    superPriceShops: g.priceMatch.enabled ? [...new Set(g.priceMatch.sites.filter((s) => s.enabled && s.showName && s.domain !== "neovitale.com").map((s) => s.label))] : [],
     prime: { ...g.prime, promoLive: primePromoLive(g.prime) },
     reviews: { enabled: g.reviews.enabled, showOnCards: g.reviews.showOnCards },
     club: { enabled: g.club.enabled, name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue, tiers: g.club.tiers, bonus: g.club.bonus, referral: g.club.referral, expiryMonths: g.club.expiryMonths, memberPrice: g.club.memberPrice, birthdayPercent: g.club.birthdayPercent },
