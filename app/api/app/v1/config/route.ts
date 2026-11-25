@@ -23,6 +23,10 @@ export async function GET() {
       wheel: g.popup.enabled && g.popup.mode === "wheel" ? { title: g.popup.title, text: g.popup.text, slices: g.popup.wheel.map((w) => w.label) } : null,
       game: g.game.enabled ? { celebrate: g.game.celebrate, checkin: g.game.checkin.enabled ? { days: g.game.checkin.days, points: g.game.checkin.points } : null } : null,
       club: g.club.enabled ? { name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue } : null,
+      // SuperPrice: we beat other Lebanese shops' prices; the app shows the comparison on each product.
+      superPrice: g.priceMatch.enabled && g.priceMatch.badge ? { beatPct: g.priceMatch.beatPct, shops: (await (await import("@/lib/price-match")).shopsRead().catch(() => null))?.filter((x) => x !== "NeoVitale") ?? g.priceMatch.sites.filter((x) => x.enabled && x.showName && x.domain !== "neovitale.com").map((x) => x.label) } : null,
+      // SuperPrime: monthly membership with free delivery; joined (or trial started) at checkout.
+      prime: g.prime.enabled ? { name: g.prime.name, monthlyPrice: g.prime.monthlyPrice, trialMonths: g.prime.trialMonths, trialMinOrder: g.prime.trialMinOrder, freeMin: g.prime.freeMin, unlimitedSuperPrice: g.prime.unlimitedSuperPrice, promoLive: (await import("@/lib/growth")).primePromoLive(g.prime) } : null,
       subscribe: g.subscribe.enabled ? { monthly: g.subscribe.monthly, quarterly: g.subscribe.quarterly, note: g.subscribe.note, unlockMonthly: g.subscribe.unlockMonthly, unlockQuarterly: g.subscribe.unlockQuarterly } : null,
     },
     services: svc.enabled ? svc.services.filter((v) => v.enabled).map((v) => ({ id: v.id, title: v.title, category: v.category, description: v.description, duration: v.duration, price: v.price, priceNote: v.priceNote, video: v.video ?? "no" })) : [],

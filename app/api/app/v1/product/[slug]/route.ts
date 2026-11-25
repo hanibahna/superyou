@@ -26,6 +26,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     guide: await (await import("@/lib/product-guide")).getGuide(slug),
     ...(await (async () => { const l = await (await import("@/lib/lifespan")).getLife(slug); return { subscribable: l ? l.every > 0 : isSubscribable({ name: first.name, category: first.category ?? "" }), life: l && l.every ? { days: l.days, every: l.every, basis: l.basis } : null }; })()),
     url: `${siteUrl()}/products/${slug}/`,
-    variants: variants.map((v) => ({ id: v.id, name: v.variant || v.size || v.name, price: v.price, compareAt: v.compareAt ?? null, inStock: v.inStock, image: abs(shopImg(v.image)), origin: v.origin ?? "local", shipFrom: v.shipFrom ?? "Lebanon", daysMin: v.daysMin ?? 1, daysMax: v.daysMax ?? 3 })),
+    variants: variants.map((v) => ({ id: v.id, name: v.variant || v.size || v.name, price: v.price, compareAt: v.compareAt ?? null, inStock: v.inStock, image: abs(shopImg(v.image)), origin: v.origin ?? "local", shipFrom: v.shipFrom ?? "Lebanon", daysMin: v.daysMin ?? 1, daysMax: v.daysMax ?? 3, superPrice: superPriceOf(v) })),
   });
+}
+
+/** SuperPrice for the app: lowered below another shop (was → price), or already the best price, with every shop
+ *  compared. Nothing when a shop is cheaper and we couldn't go lower (no "best price" claim then). */
+function superPriceOf(v: { price: number; matchWas?: number; matchVs?: number; match?: string; cmpVs?: number; cmpShop?: string; shops?: [string, number][]; beat?: string; pmLose?: boolean }) {
+  if (v.pmLose) return null;
+  const shops = (v.shops ?? []).map(([name, price]) => ({ name: name || "Another shop", price }));
+  if (v.matchWas && v.match !== undefined) return { lowered: true, was: v.matchWas, vs: v.matchVs ?? null, shop: v.match || "Another shop", shops, partial: v.beat === "partial" };
+  if (v.cmpVs !== undefined) return { lowered: false, was: null, vs: v.cmpVs, shop: v.cmpShop || "Another shop", shops, partial: false };
+  return { lowered: false, was: null, vs: null, shop: null, shops: [], partial: false };
 }
