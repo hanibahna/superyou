@@ -61,7 +61,7 @@ export function CampaignHero(p: { eyebrow: string; title: string; text: string; 
               ))}
             </div>
           )}
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-7 flex flex-wrap gap-3 max-md:mt-5 max-md:flex-nowrap max-md:gap-2">
             {p.cta && <Link href={p.href || "/shop/"} className="bf-cta1 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-black hover:bg-brand-100">{p.cta}</Link>}
             {p.cta2 && <Link href={p.href2 || "/shop/"} className="bf-cta2 rounded-full border border-white/60 px-7 py-3.5 text-sm font-bold hover:bg-white/10">{p.cta2}</Link>}
           </div>

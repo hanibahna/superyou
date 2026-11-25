@@ -250,6 +250,20 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="pop"] .bf-hero.has-video { margin: 8px 12px 0; border-radius: 32px; }
 /* Pink runs to both page edges at the bottom (rounded top corners only), so no white shows beside the black ticker. */
 @media (max-width: 1023px) { [data-preset="pop"] .bf-hero:not(.has-video) { margin: 8px 0 0; border-radius: 32px 32px 0 0; } }
+/* Phones: a shorter hero so products show sooner — tighter title and text, both buttons on one row,
+   the trust promises on one scrollable line, a compact countdown. */
+@media (max-width: 767px) {
+  [data-preset="pop"] .bf-hero .container-x { padding-top: 1.5rem; padding-bottom: 1.25rem; gap: 1.25rem; }
+  [data-preset="pop"] .bf-title { font-size: clamp(2.6rem, 12vw, 3.4rem); margin-top: .9rem; }
+  [data-preset="pop"] .bf-hero:not(.has-video) .bf-text { font-size: 1rem; line-height: 1.45; margin-top: .6rem; }
+  [data-preset="pop"] .bf-hero .bf-count { width: 3.4rem; padding: .35rem 0; font-size: 1.5rem; }
+  [data-preset="pop"] .bf-hero .bf-count + div { font-size: 9px; }
+  [data-preset="pop"] .bf-hero .bf-cta1, [data-preset="pop"] .bf-hero .bf-cta2 { flex: 1 1 0; text-align: center; padding: .9rem .75rem !important; font-size: .95rem !important; white-space: nowrap; }
+  [data-preset="pop"] .bf-hero .bf-cta1 { flex-grow: 1.4; }
+  [data-preset="pop"] .bf-trust { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; margin-top: 1rem; padding-bottom: 2px; }
+  [data-preset="pop"] .bf-trust::-webkit-scrollbar { display: none; }
+  [data-preset="pop"] .bf-trust > span { white-space: nowrap; padding: 5px 11px; font-size: 12px; }
+}
 @media (min-width: 1024px) { [data-preset="pop"] .bf-hero:not(.has-video) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; } }
 [data-preset="pop"] .bf-title { text-transform: none; font-family: var(--font-heading); font-weight: 700; font-size: clamp(3.2rem, 9vw, 8.5rem); line-height: .88; letter-spacing: -0.045em; }
 [data-preset="pop"] .bf-hero:not(.has-video) .bf-eyebrow { background: var(--color-ink); color: #fff; border: 0; border-radius: 9999px; letter-spacing: .08em; padding: 8px 14px; }
