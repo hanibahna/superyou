@@ -76,16 +76,16 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
             <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
             {/* Phones & tablets: our address right under the name */}
             {/* Letters spread to exactly the width of the wordmark, on every screen size */}
-            <span dir="ltr" aria-label="shopsuperyou.com" className="site-id-sm flex w-full justify-between text-[9px] font-extrabold leading-none md:text-[11px] xl:hidden">
+            <SiteUrl className="site-id-sm flex w-full justify-between text-[9px] font-extrabold leading-none md:text-[11px] xl:hidden">
               {"SHOPSUPERYOU.COM".split("").map((ch, i) => <span key={i} aria-hidden className={i < 4 || i > 11 ? "sy-accent" : undefined}>{ch}</span>)}
-            </span>
+            </SiteUrl>
             {/* Tablets: the promise sits under the address, lined up with the logo (doesn't widen it) */}
             {store.tagline && <span className="site-id-sm hidden w-0 min-w-full whitespace-nowrap text-[11px] leading-none text-muted md:block lg:hidden">{store.tagline}</span>}
           </span>
         </Link>
         {/* Our web address (so people remember it) and our promise, next to the logo. */}
         <div className="site-id -ms-1 hidden w-[250px] shrink-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex 2xl:w-[300px]">
-          <span dir="ltr" className="text-[13px] font-extrabold tracking-[0.08em]"><span className="sy-accent">SHOP</span>SUPERYOU<span className="sy-accent">.COM</span></span>
+          <SiteUrl className="self-start text-[13px] font-extrabold tracking-[0.08em]"><span className="sy-accent">SHOP</span>SUPERYOU<span className="sy-accent">.COM</span></SiteUrl>
           {store.tagline && <span className="mt-0.5 text-[11px] leading-snug text-muted [text-wrap:balance]">{store.tagline}</span>}
         </div>
 
@@ -225,6 +225,33 @@ function Badge({ n }: { n: number }) {
   return (
     <span className="absolute right-0.5 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
       {n}
+    </span>
+  );
+}
+
+/** Our web address: tap to copy it (a small "Copied" bubble confirms), with a quick WhatsApp share. */
+function SiteUrl({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const t = useT();
+  const [done, setDone] = useState(false);
+  const url = "https://shopsuperyou.com";
+  const copy = async (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try { await navigator.clipboard.writeText(url); } catch {}
+    setDone(true);
+    setTimeout(() => setDone(false), 2500);
+  };
+  return (
+    <span className="relative">
+      <span role="button" tabIndex={0} dir="ltr" title={t("Copy our web address")} aria-label={`shopsuperyou.com, ${t("tap to copy")}`} onClick={copy} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && copy(e)} className={`cursor-copy underline-offset-2 hover:underline ${className}`}>
+        {children}
+      </span>
+      {done && (
+        <span role="status" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="sp-in absolute start-0 top-full z-50 mt-1.5 flex items-center gap-2 whitespace-nowrap rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold normal-case tracking-normal text-white shadow-lg">
+          ✓ {t("Link copied")}
+          <span role="button" tabIndex={0} onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`SuperYou: original beauty & pharmacy, paid on delivery. ${url}`)}`, "_blank", "noopener")} className="cursor-pointer rounded-full bg-[#25d366] px-2 py-0.5 text-white">WhatsApp</span>
+        </span>
+      )}
     </span>
   );
 }
