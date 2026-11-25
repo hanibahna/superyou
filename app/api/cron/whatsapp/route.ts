@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
   const followUps = await gs.sendDueReminders(500).catch(() => 0); // review requests + restock reminders
   const birthdays = await gs.sendBirthdays().catch(() => 0);
   const carts = await (await import("@/lib/carts")).sweepCarts(true).catch(() => 0);
-  const videos = await (await import("@/lib/youtube")).prefillVideos(15).catch(() => 0);
+  // Videos are searched only when a shopper opens a product (saves the daily YouTube allowance).
+  const videos = 0;
   const guides = await (await import("@/lib/product-guide")).prefillGuides(4).catch(() => 0);
   const scanFollowUps = await (await import("@/lib/scans")).runScanFollowUps().catch(() => 0);
   const whishSettled = await (await import("@/lib/payments/whish")).sweepWhish().catch(() => 0);

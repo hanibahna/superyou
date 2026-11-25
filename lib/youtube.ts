@@ -46,7 +46,9 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   // for those, the brand plus the product line is enough here, and Claude's check decides.
   const loose = (title: string, desc: string) => { const t = words(`${title} ${desc.slice(0, 200)}`); return brandWords.some((w) => t.includes(w)) && nameWords.slice(0, 2).every((w) => t.includes(w)) && !MULTI.test(title); };
   // One search per language: English, French, Arabic only.
+  // English first; French and Arabic only when English found too little (saves 2 of 3 searches on most products).
   for (const [lang, extra] of [["en", "review"], ["fr", "avis"], ["ar", "مراجعة"]] as const) {
+    if (lang !== "en" && cands.length >= 3) break;
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&videoEmbeddable=true&safeSearch=strict&relevanceLanguage=${lang}&q=${encodeURIComponent(`${short} ${extra}`)}&key=${encodeURIComponent(key)}`;
     const r = await fetch(url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
     if (!r?.ok) {
