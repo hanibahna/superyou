@@ -238,7 +238,11 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     }
     if (total > 0) {
       const amount = +Math.min(total, q.subtotal - q.discountTotal).toFixed(2);
-      q.discounts.push({ name: buyer ? `Business price${buyer.company ? ` (${buyer.company})` : ""}: ${pct0}% off ${count} items` : `Bulk buy: ${pct0}% off ${count} items (paid now)`, amount });
+      // Show the % actually given (the margin floor can lower it on some items).
+      const ps = [...bulkInfo.values()].filter((x) => x.saving > 0).map((x) => x.pct);
+      const pctTxt = Math.min(...ps) === Math.max(...ps) ? `${ps[0]}%` : `up to ${Math.max(...ps)}%`;
+      const items = `${count} item${count === 1 ? "" : "s"}`;
+      q.discounts.push({ name: buyer ? `Business price${buyer.company ? ` (${buyer.company})` : ""}: ${pctTxt} off ${items}` : `Bulk buy: ${pctTxt} off ${items} (paid now)`, amount });
       q.discountTotal = +(q.discountTotal + amount).toFixed(2);
       const { deliveryFor } = await import("@/lib/site");
       q.delivery = deliveryFor(settings, q.subtotal - q.discountTotal, input.zone);
