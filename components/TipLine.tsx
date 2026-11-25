@@ -45,7 +45,7 @@ export function TipLine({ tips: initial, slug, name, banner }: { tips: string[];
               </>
             )}
             <button type="button" onClick={copy} aria-label={t("Copy tip")} className={btn}>{copied ? "✓" : "⧉"}</button>
-            <a href={`https://wa.me/?text=${encodeURIComponent(share)}`} target="_blank" rel="noopener noreferrer" onClick={() => setPaused(true)} aria-label={t("Share tip on WhatsApp")} className={`${btn} bg-[#25d366] text-white hover:bg-[#1ebe5b]`}>
+            <a href={`https://wa.me/?text=${encodeURIComponent(share)}`} target="_blank" rel="noopener noreferrer" onClick={() => setPaused(true)} aria-label={t("Share tip on WhatsApp")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#25d366] text-white shadow-sm hover:bg-[#1ebe5b]">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l2 .9c.3.1.5.2.5.3.1.1.1.6-.1 1.1z" /></svg>
             </a>
           </span>

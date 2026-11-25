@@ -12,6 +12,7 @@ import { ShopNavProvider } from "@/lib/site-context";
 import { getSettings } from "@/lib/site-store";
 import { translateDeep } from "@/lib/translate";
 import { ShopProvider } from "@/lib/store";
+import { ScrollCue } from "@/components/ScrollCue";
 
 // Catalog lives in the database, so pages render on request and always show current data.
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <SignupPopup />
       <RefCapture />
       <Motion />
+      <ScrollCue />
       <MobileTabBar />
     </ShopProvider>
     </ShopNavProvider>

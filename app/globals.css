@@ -492,3 +492,14 @@ html[data-motion="off"] .sp-scan::after { animation: none; }
 .sp-spin { animation: sp-turn 2.5s ease-in-out infinite; }
 /* Reduced motion: no movement, but the sticker still fades between pink and rose so it is noticed. */
 @media (prefers-reduced-motion: reduce) { .sp-sticker { animation: sp-blink 2s ease-in-out infinite; } .sp-spin { animation: none; } }
+
+/* Whole-page scroll cue: bounces while pointing down, settles once the page is scrolled. */
+.scroll-cue { transition: opacity .3s, transform .3s; }
+.scroll-cue:hover svg { transform: scale(1.06); }
+.scroll-cue svg { transition: transform .2s; }
+@keyframes scroll-cue-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 8px); } }
+.scroll-cue-down { animation: scroll-cue-bob 1.6s ease-in-out infinite; }
+@keyframes scroll-cue-arrow { 0%, 100% { transform: translateY(-1px); opacity: 1; } 50% { transform: translateY(2px); opacity: .6; } }
+.scroll-cue-down .scroll-cue-arrow { animation: scroll-cue-arrow 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .scroll-cue-down, .scroll-cue-down .scroll-cue-arrow { animation: none; } }
+html[data-motion="off"] .scroll-cue-down, html[data-motion="off"] .scroll-cue-down .scroll-cue-arrow { animation: none; }
