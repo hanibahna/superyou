@@ -149,7 +149,7 @@ export function BuyBox({
               </span>
             </>
           ) : (
-            <button disabled className="flex-1 rounded-lg bg-line py-3 font-semibold text-muted">{t("Sold out")}</button>
+            <StockAlert productId={v.id} />
           )}
           <button onClick={() => toggleWish(v)} aria-label={tx("Wishlist")} className={`rounded-lg border border-line p-3 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}>
             <HeartIcon filled={wished} />
@@ -194,5 +194,49 @@ export function BuyBox({
         {underImage}
       </div>
     </div>
+  );
+}
+
+/** Sold out: "Notify me when it's back" — WhatsApp or text message, optional email. */
+function StockAlert({ productId }: { productId: string }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [via, setVia] = useState<"whatsapp" | "sms">("whatsapp");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"" | "busy" | "done">("");
+  const [err, setErr] = useState("");
+  useEffect(() => { setOpen(false); setState(""); }, [productId]);
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setState("busy");
+    setErr("");
+    const r = await fetch("/api/stock-alert/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId, phone, via, email }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r?.ok) { setState(""); return setErr(d.error ?? t("Something went wrong, please try again")); }
+    setState("done");
+  };
+  if (state === "done") return <p className="sp-in flex-1 rounded-lg bg-[#ecfdf3] px-4 py-3 text-sm font-semibold text-[#046c4e]">✓ {t("Done! We'll message you as soon as it's back in stock.")}</p>;
+  if (!open)
+    return (
+      <span className="flex flex-1 flex-col gap-1">
+        <button onClick={() => setOpen(true)} className="tap flex w-full items-center justify-center gap-2 rounded-lg bg-ink py-3 font-semibold text-white hover:bg-black">
+          🔔 {t("Notify me when it's back")}
+        </button>
+        <span className="text-center text-xs text-muted">{t("Sold out for now")}</span>
+      </span>
+    );
+  return (
+    <form onSubmit={send} className="sp-in flex flex-1 flex-col gap-2 rounded-xl border border-line p-3">
+      <p className="text-sm font-semibold">🔔 {t("Tell me when it's back in stock")}</p>
+      <div className="inline-flex self-start rounded-full bg-[#f2f2f2] p-1 text-xs">
+        <button type="button" onClick={() => setVia("whatsapp")} className={`rounded-full px-3 py-1 ${via === "whatsapp" ? "bg-white font-semibold shadow" : ""}`}>WhatsApp</button>
+        <button type="button" onClick={() => setVia("sms")} className={`rounded-full px-3 py-1 ${via === "sms" ? "bg-white font-semibold shadow" : ""}`}>{t("Text message")}</button>
+      </div>
+      <input required type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="70 123 456" aria-label={t("Mobile number")} className="tap w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink" />
+      <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("Email (optional)")} aria-label={t("Email (optional)")} className="tap w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-ink" />
+      <button disabled={state === "busy"} className="tap rounded-lg bg-ink py-2.5 text-sm font-semibold text-white disabled:opacity-60">{state === "busy" ? "…" : t("Notify me")}</button>
+      {err && <p className="text-xs text-sale">{err}</p>}
+    </form>
   );
 }

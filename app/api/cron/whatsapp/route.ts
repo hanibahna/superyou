@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const gs = await import("@/lib/growth-store");
   const followUps = await gs.sendDueReminders(500).catch(() => 0); // review requests + restock reminders
   const birthdays = await gs.sendBirthdays().catch(() => 0);
+  const backInStock = await (await import("@/lib/stock-alerts")).sendStockAlerts().catch(() => 0);
   const carts = await (await import("@/lib/carts")).sweepCarts(true).catch(() => 0);
   // Videos are searched only when a shopper opens a product (saves the daily YouTube allowance).
   const videos = 0;
@@ -42,5 +43,5 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[cron tracking]", e);
   }
-  return NextResponse.json({ ok: true, reminders: due.length, followUps, birthdays, carts, tracked, subscriptions, videos, guides, scanFollowUps, whishSettled, lifespans, priceCheck });
+  return NextResponse.json({ ok: true, backInStock, reminders: due.length, followUps, birthdays, carts, tracked, subscriptions, videos, guides, scanFollowUps, whishSettled, lifespans, priceCheck });
 }
