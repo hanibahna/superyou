@@ -15,6 +15,9 @@ export const PRESS_SITES: Record<string, string> = {
   "instyle.com": "InStyle", "marieclaire.com": "Marie Claire", "marieclaire.fr": "Marie Claire France", "refinery29.com": "Refinery29",
   "goodhousekeeping.com": "Good Housekeeping", "womenshealthmag.com": "Women's Health", "menshealth.com": "Men's Health", "health.com": "Health",
   "healthline.com": "Healthline", "self.com": "SELF", "newbeauty.com": "NewBeauty", "people.com": "People", "nytimes.com": "The New York Times / Wirecutter",
+  "purewow.com": "PureWow", "yahoo.com": "Yahoo Life", "beautycrew.com.au": "BeautyCrew", "whowhatwear.com": "Who What Wear", "intothegloss.com": "Into The Gloss",
+  "popsugar.com": "POPSUGAR", "thecut.com": "The Cut", "nbcnews.com": "NBC Select", "cnn.com": "CNN Underscored", "forbes.com": "Forbes Vetted", "today.com": "TODAY",
+  "glamour.fr": "Glamour France", "cosmopolitan.fr": "Cosmopolitan France", "madame.lefigaro.fr": "Madame Figaro", "doctissimo.fr": "Doctissimo",
   "gq.com": "GQ", "esquire.com": "Esquire", "telegraph.co.uk": "The Telegraph", "theguardian.com": "The Guardian", "independent.co.uk": "The Independent",
 };
 
