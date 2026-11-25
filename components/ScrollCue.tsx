@@ -34,7 +34,7 @@ export function ScrollCue() {
         <div className="h-full origin-left bg-gradient-to-r from-[#c0587a] to-[#9b2c50] transition-transform duration-150" style={{ transform: `scaleX(${p})` }} />
       </div>
       {long && (
-        <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] start-3 z-30 flex scale-90 flex-col items-center gap-1 rounded-full border border-line bg-white/95 p-1 shadow-lg backdrop-blur md:start-auto md:bottom-32 md:end-5 md:scale-100">
+        <div className="fixed bottom-32 end-5 z-30 hidden flex-col items-center gap-1 rounded-full border border-line bg-white/95 p-1 shadow-lg backdrop-blur md:flex">
           <button type="button" onClick={() => step(-1)} onDoubleClick={() => scrollTo({ top: 0, behavior: "smooth" })} disabled={atTop} aria-label={t("Scroll up")} className={`${btn} ${atTop ? "text-muted" : "bg-[#9b2c50] text-white hover:bg-[#7d2341]"}`}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 15l6-6 6 6" /></svg>
           </button>
