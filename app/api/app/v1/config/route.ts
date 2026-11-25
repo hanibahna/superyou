@@ -34,7 +34,8 @@ export async function GET() {
       subscribe: g.subscribe.enabled ? { monthly: g.subscribe.monthly, quarterly: g.subscribe.quarterly, note: g.subscribe.note, unlockMonthly: g.subscribe.unlockMonthly, unlockQuarterly: g.subscribe.unlockQuarterly } : null,
     },
     // Info pages (About, Delivery, Privacy…) the app lists under Account.
-    pages: Object.entries((await (await import("@/lib/site-store")).getSettings()).pages).filter(([, v]) => v.body.trim() || v.title).map(([slug, v]) => ({ slug, title: v.title })),
+    // Only our own core pages (imported brand landing pages and other shops' policies stay out).
+    pages: ["about", "delivery", "payment", "rewards", "privacy", "contact"].flatMap((slug) => (s.pages[slug] ? [{ slug, title: s.pages[slug].title }] : [])),
     services: svc.enabled ? svc.services.filter((v) => v.enabled).map((v) => ({ id: v.id, title: v.title, category: v.category, description: v.description, duration: v.duration, price: v.price, priceNote: v.priceNote, video: v.video ?? "no" })) : [],
   }, { headers: { "Cache-Control": "public, s-maxage=300" } });
 }
