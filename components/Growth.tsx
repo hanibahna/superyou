@@ -15,7 +15,7 @@ import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { useShop, type ProductSnap } from "@/lib/store";
 import { BagIcon, ChatIcon, CloseIcon, GridIcon, HomeIcon, SearchIcon, UserIcon } from "./Icons";
 import { ProductCard } from "./ProductCard";
-import { celebrate } from "./Celebrate";
+import { celebrate, celebrateLevel } from "./Celebrate";
 import { SearchBox } from "./SearchBox";
 
 // ── Storage helpers (never throw: private mode, blocked storage…) ──
@@ -192,6 +192,9 @@ export function SignupPopup() {
   const [copied, setCopied] = useState(false);
   const shown = useRef(false);
   const wheelTarget = useRef(0);
+  const [landed, setLanded] = useState<number | null>(null);
+  const wheelOn = g.wheel.length >= 2;
+  const maxWin = Math.max(0, ...g.wheel.map((w) => Number(w.match(/\d+/)?.[0] ?? 0)));
   const blocked = path.startsWith("/checkout") || path.startsWith("/order") || path.startsWith("/pay");
 
   // Automatic opening: new visitors, after a delay or some scrolling, at most once a week.
@@ -237,17 +240,26 @@ export function SignupPopup() {
     setBusy(false);
     if (!r?.ok) return setErr(data.error ?? tx("Something went wrong, please try again"));
     set("sy:subscribed", "1");
-    if (g.mode === "wheel" && open === "popup" && typeof data.index === "number" && data.index >= 0) {
-      setSpinning(true);
-      window.setTimeout(() => { setSpinning(false); setRes(data); }, 3300);
+    if (wheelOn && typeof data.index === "number" && data.index >= 0) {
+      wheelTarget.current = data.index;
+      setLanded(null);
       setRes(null);
-      (wheelTarget.current = data.index);
+      setSpinning(true);
+      window.setTimeout(() => { setSpinning(false); setLanded(data.index); }, 4600);
+      window.setTimeout(() => setRes(data), 5300);
     } else setRes(data);
   }
   // Celebrate the code the moment it appears (after the wheel stops).
+  // The bigger the prize, the bigger the party: 4 confetti levels from the lowest to the top slice.
   useEffect(() => {
-    if (res) celebrate({ count: 90 });
-  }, [res]);
+    if (landed === null && !res) return;
+    const pcts = [...new Set(g.wheel.map((w) => Number(w.match(/\d+/)?.[0] ?? 0)))].sort((a, b) => a - b);
+    const won = res?.percent ?? Number(g.wheel[landed ?? 0]?.match(/\d+/)?.[0] ?? 0);
+    const rank = Math.max(0, pcts.indexOf(won));
+    const level = pcts.length <= 1 ? 2 : 1 + Math.round((rank / (pcts.length - 1)) * 3);
+    if (landed !== null && !res) celebrateLevel(level);
+    else if (res && landed === null) celebrateLevel(level);
+  }, [landed, res]);
   const n = g.wheel.length;
   const close = () => setOpen(null);
   const colors = ["#111", "#c0587a", "#333", "#e8b4c4", "#555", "#f3d9e1", "#222", "#d98aa5", "#444", "#fbe9ef"];
@@ -256,7 +268,7 @@ export function SignupPopup() {
     <>
       {g.tab && !open && !res && (
         <button onClick={() => setOpen("popup")} className="offer-tab sp-shine fixed bottom-5 start-5 z-30 hidden rounded-full bg-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg md:block">
-          {g.tabLabel || t("Get 10% off")}
+          {wheelOn ? `🎡 ${t("Spin to win")}${maxWin ? ` ${t("up to")} ${maxWin}%` : ""}` : g.tabLabel || t("Get 10% off")}
         </button>
       )}
       {open && (
@@ -265,22 +277,33 @@ export function SignupPopup() {
           <div className="sheet-up relative grid max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white md:max-w-3xl md:grid-cols-2 md:rounded-2xl">
             <button onClick={close} aria-label={tx("Close")} className="absolute end-3 top-3 z-10 rounded-full bg-white/90 p-2"><CloseIcon width={18} height={18} /></button>
             <div className="relative min-h-[230px] bg-ink md:min-h-[380px]">
-              {g.mode === "wheel" && open === "popup" ? (
-                <div className="absolute inset-0 grid place-items-center">
-                  <div className="relative h-52 w-52 md:h-72 md:w-72">
-                    <div className="absolute -top-2 left-1/2 z-10 h-0 w-0 -translate-x-1/2 border-x-[10px] border-t-[18px] border-x-transparent border-t-white" />
-                    <svg viewBox="-100 -100 200 200" className={`h-full w-full ${spinning ? "wheel-spin" : ""}`} style={{ ["--wheel-to" as string]: `${360 * 5 - (wheelTarget.current + 0.5) * (360 / n)}deg` }}>
-                      {g.wheel.map((label, i) => {
-                        const a0 = (i / n) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2, am = (a0 + a1) / 2;
-                        return (
-                          <g key={i}>
-                            <path d={`M0 0L${95 * Math.cos(a0)} ${95 * Math.sin(a0)}A95 95 0 0 1 ${95 * Math.cos(a1)} ${95 * Math.sin(a1)}Z`} fill={colors[i % colors.length]} stroke="#fff" strokeWidth="1" />
-                            <text x={60 * Math.cos(am)} y={60 * Math.sin(am)} fill={i % 2 ? "#111" : "#fff"} fontSize="11" fontWeight="700" textAnchor="middle" dominantBaseline="middle" transform={`rotate(${(am * 180) / Math.PI + 90} ${60 * Math.cos(am)} ${60 * Math.sin(am)})`}>{label}</text>
-                          </g>
-                        );
-                      })}
-                      <circle r="14" fill="#fff" />
-                    </svg>
+              {wheelOn ? (
+                <div className="absolute inset-0 grid place-items-center overflow-hidden">
+                  <div className="wheel-glow absolute h-64 w-64 rounded-full bg-[#c0587a]/30 blur-3xl md:h-80 md:w-80" aria-hidden />
+                  <div className="relative h-56 w-56 md:h-72 md:w-72">
+                    <div className={`absolute -top-3 left-1/2 z-10 -translate-x-1/2 ${spinning ? "wheel-tick" : ""}`} aria-hidden>
+                      <div className="h-0 w-0 border-x-[12px] border-t-[22px] border-x-transparent border-t-white drop-shadow" />
+                    </div>
+                    <div className={`h-full w-full ${spinning || landed !== null || res ? "" : "wheel-idle"}`}>
+                      <svg viewBox="-100 -100 200 200" className={`h-full w-full ${spinning ? "wheel-spin" : ""}`} style={{ ["--wheel-to" as string]: `${360 * 7 - (wheelTarget.current + 0.5) * (360 / n)}deg`, ...(!spinning && (landed !== null || res) ? { transform: `rotate(${360 * 7 - (wheelTarget.current + 0.5) * (360 / n)}deg)` } : {}) }}>
+                        <circle r="99" fill="#c0587a" />
+                        {g.wheel.map((label, i) => {
+                          const a0 = (i / n) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2, am = (a0 + a1) / 2;
+                          const win = landed === i || (res && wheelTarget.current === i);
+                          return (
+                            <g key={i} className={win ? "wheel-win" : ""}>
+                              <path d={`M0 0L${90 * Math.cos(a0)} ${90 * Math.sin(a0)}A90 90 0 0 1 ${90 * Math.cos(a1)} ${90 * Math.sin(a1)}Z`} fill={colors[i % colors.length]} stroke="#fff" strokeWidth="1.5" />
+                              <text x={58 * Math.cos(am)} y={58 * Math.sin(am)} fill={i % 2 ? "#111" : "#fff"} fontSize="12" fontWeight="800" textAnchor="middle" dominantBaseline="middle" transform={`rotate(${(am * 180) / Math.PI + 90} ${58 * Math.cos(am)} ${58 * Math.sin(am)})`}>{label}</text>
+                            </g>
+                          );
+                        })}
+                        {Array.from({ length: 16 }, (_, i) => (
+                          <circle key={i} className="wheel-bulb" style={{ animationDelay: `${(i % 2) * 0.4}s` }} cx={95 * Math.cos((i / 16) * 2 * Math.PI)} cy={95 * Math.sin((i / 16) * 2 * Math.PI)} r="2.6" fill="#fff" />
+                        ))}
+                        <circle r="17" fill="#fff" stroke="#c0587a" strokeWidth="3" />
+                        <text y="1" fontSize="13" fontWeight="900" textAnchor="middle" dominantBaseline="middle" fill="#c0587a">S</text>
+                      </svg>
+                    </div>
                   </div>
                 </div>
               ) : g.image ? (
@@ -339,11 +362,11 @@ export function SignupPopup() {
                       className="tap w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-ink"
                     />
                     <button disabled={busy || spinning} className="tap w-full rounded-full bg-ink py-3 font-semibold text-white disabled:opacity-60">
-                      {spinning ? "…" : g.mode === "wheel" && open === "popup" ? t("Spin the wheel") : t("Get my code")}
+                      {spinning ? "…" : wheelOn ? t("Spin the wheel") : t("Get my code")}
                     </button>
                     {err && <p className="text-sm text-sale">{err}</p>}
                   </form>
-                  {g.mode === "wheel" && open === "popup" && <p className="mt-3 text-xs text-muted md:hidden">Every spin wins: {g.wheel.join(" · ")}</p>}
+                  {wheelOn && <p className="mt-3 text-xs text-muted md:hidden">Every spin wins: {g.wheel.join(" · ")}</p>}
                   <p className="mt-4 text-[11px] text-muted">By signing up you agree to receive offers by {channel === "whatsapp" ? "WhatsApp" : "text message"}{email.trim() ? " and email" : ""}. Unsubscribe anytime (reply STOP on WhatsApp).</p>
                   <button onClick={close} className="mt-2 text-xs text-muted underline">{t("No thanks")}</button>
                 </>

@@ -19,11 +19,10 @@ export async function POST(req: NextRequest) {
   const phone = parsed.data.phone ? normPhone(parsed.data.phone) : "";
   if (!phone) return NextResponse.json({ error: "Please check the mobile number" }, { status: 400 });
 
-  // Offer: wheel slice, cart-exit percent or the classic welcome percent.
+  // Offer: always the spin-to-win wheel (pop-up and cart exit alike).
   let percent = g.popup.percent;
   let index: number | undefined;
-  if (parsed.data.source === "cart" && g.popup.cartExitPercent > 0) percent = g.popup.cartExitPercent;
-  else if (g.popup.mode === "wheel") {
+  if (g.popup.wheel.length >= 2) {
     const s = spin(g);
     (percent = s.slice.percent), (index = s.index);
   }

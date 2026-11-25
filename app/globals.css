@@ -155,7 +155,19 @@ h1, h2, h3, .font-heading { font-family: var(--font-heading); }
 
 /* ── Sign-up wheel ── */
 @keyframes wheel-spin { from { transform: rotate(0deg); } to { transform: rotate(var(--wheel-to, 1440deg)); } }
-.wheel-spin { animation: wheel-spin 3.2s cubic-bezier(.17,.67,.2,1) forwards; }
+.wheel-spin { animation: wheel-spin 4.5s cubic-bezier(.12,.6,.12,1) forwards; }
+@keyframes wheel-idle { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.wheel-idle { animation: wheel-idle 24s linear infinite; }
+@keyframes wheel-tick { 0%, 100% { transform: translateX(-50%) rotate(0); } 50% { transform: translateX(-50%) rotate(-18deg); } }
+.wheel-tick { animation: wheel-tick .12s ease-in-out 30; transform-origin: 50% 0; }
+@keyframes wheel-bulb { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+.wheel-bulb { animation: wheel-bulb .8s steps(1) infinite; }
+@keyframes wheel-win { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.wheel-win path { animation: wheel-win .45s ease-in-out 6; }
+@keyframes wheel-glow { 0%, 100% { transform: scale(.9); opacity: .6; } 50% { transform: scale(1.1); opacity: 1; } }
+.wheel-glow { animation: wheel-glow 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .wheel-idle, .wheel-tick, .wheel-bulb, .wheel-win path, .wheel-glow { animation: none; } }
+html[data-motion="off"] .wheel-idle, html[data-motion="off"] .wheel-bulb, html[data-motion="off"] .wheel-glow { animation: none; }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .sheet-up { animation: sheet-up .28s ease-out; }
 
