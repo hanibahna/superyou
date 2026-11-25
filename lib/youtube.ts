@@ -7,7 +7,7 @@ import { getExtras } from "@/lib/extras";
 // YouTube videos for product pages: the YouTube Data API finds review / how-to videos for the
 // product (strict SafeSearch, embeddable only). Results are cached 30 days per product because each
 // search uses 100 of the 10,000 free daily quota units. Admin pins or hides per product.
-export type YtVideo = { id: string; title: string; channel: string; lang?: "en" | "fr" | "ar" };
+export type YtVideo = { id: string; title: string; channel: string; lang?: string };
 export const VIDEO_LANGS = ["en", "fr", "ar"] as const;
 
 export async function videosForProduct(p: { slug: string; brand: string; name: string }, trace?: string[]): Promise<YtVideo[]> {
@@ -18,9 +18,12 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   if (pin) return [{ id: pin, title: `${fullName(p.brand, p.name)}`, channel: "" }];
   const key = cfg.key || process.env.YOUTUBE_API_KEY;
   if (!key) { trace?.push("no key"); return []; }
-  const ck = `yt:v6:${p.slug}`;
+  const ck = `yt:v7:${p.slug}`;
   const hit = await db.cmd<string | null>(["GET", ck]).catch(() => null);
   if (hit && !trace) return JSON.parse(hit) as YtVideo[];
+  // Videos found before any-language search: keep them (an empty v6 result is searched again).
+  const old = await db.cmd<string | null>(["GET", `yt:v6:${p.slug}`]).catch(() => null);
+  if (old && old !== "[]" && !trace) return JSON.parse(old) as YtVideo[];
   const out: YtVideo[] = [];
   const cands: (YtVideo & { desc: string; hint: string; from: string })[] = [];
   const words = (x: string) => x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
@@ -47,9 +50,11 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   const loose = (title: string, desc: string) => { const t = words(`${title} ${desc.slice(0, 200)}`); return brandWords.some((w) => t.includes(w)) && nameWords.slice(0, 2).every((w) => t.includes(w)) && !MULTI.test(title); };
   // One search per language: English, French, Arabic only.
   // English first; French and Arabic only when English found too little (saves 2 of 3 searches on most products).
-  for (const [lang, extra] of [["en", "review"], ["fr", "avis"], ["ar", "مراجعة"]] as const) {
+  // Last: any language (captions can be translated in the player).
+  for (const [lang, extra] of [["en", "review"], ["fr", "avis"], ["ar", "مراجعة"], ["any", ""]] as const) {
     if (lang !== "en" && cands.length >= 3) break;
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&videoEmbeddable=true&safeSearch=strict&relevanceLanguage=${lang}&q=${encodeURIComponent(`${short} ${extra}`)}&key=${encodeURIComponent(key)}`;
+    const rl = lang === "any" ? "" : `&relevanceLanguage=${lang}`;
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&videoEmbeddable=true&safeSearch=strict${rl}&q=${encodeURIComponent(`${short} ${extra}`.trim())}&key=${encodeURIComponent(key)}`;
     const r = await fetch(url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
     if (!r?.ok) {
       const e = r ? `${r.status} ${(await r.text().catch(() => "")).slice(0, 300)}` : "no response";
@@ -74,7 +79,7 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
   }
   // Second check: Claude keeps only videos about exactly this product, spoken in English, French or Arabic.
   // Up to 4 candidates from each language's search, so English results don't crowd out the others.
-  const pick = ["en", "fr", "ar"].flatMap((l) => cands.filter((c) => c.from === l).slice(0, 4));
+  const pick = ["en", "fr", "ar", "any"].flatMap((l) => cands.filter((c) => c.from === l).slice(0, 4));
   const ok = await confirmSameProduct(p, pick);
   trace?.push(`words: ${nameWords.join(",")} | claude kept: ${[...ok].map(([id, l]) => `${id}:${l}`).join(",") || "none"} | ${lastCheck}`);
   const per: Record<string, number> = {};
@@ -84,7 +89,8 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
     per[l] = (per[l] ?? 0) + 1;
     out.push({ id: v.id, title: v.title, channel: v.channel, lang: l });
   }
-  out.sort((a, b) => VIDEO_LANGS.indexOf(a.lang!) - VIDEO_LANGS.indexOf(b.lang!));
+  const rank = (l?: string) => { const i = (VIDEO_LANGS as readonly string[]).indexOf(l ?? ""); return i < 0 ? 9 : i; };
+  out.sort((a, b) => rank(a.lang) - rank(b.lang));
   await db.cmd(["SET", ck, JSON.stringify(out), "EX", String(out.length ? 30 * 86400 : 7 * 86400)]).catch(() => {});
   return out;
 }
@@ -92,8 +98,8 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
 export let lastCheck = "";
 /** Asks Claude which videos are specifically about this exact product, and in which language
  * (English, French or Arabic only). No key = nothing passes. */
-async function confirmSameProduct(p: { brand: string; name: string }, vids: { id: string; title: string; channel: string; desc: string; hint: string }[]): Promise<Map<string, "en" | "fr" | "ar">> {
-  const out = new Map<string, "en" | "fr" | "ar">();
+async function confirmSameProduct(p: { brand: string; name: string }, vids: { id: string; title: string; channel: string; desc: string; hint: string }[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
   if (!vids.length) return out;
   const { anthropicKey } = await import("@/lib/extras");
   const key = await anthropicKey();
@@ -103,7 +109,7 @@ async function confirmSameProduct(p: { brand: string; name: string }, vids: { id
 
 For each YouTube video below, decide:
 1. Is it specifically about EXACTLY this product: same brand, same product line and same variant (a different shade family, formula, SPF, "night" vs "day", "serum" vs "cream", or another product of the same range is NOT the same)? Reject comparisons, routines, hauls, lists of several products, dupes and videos where the product is only mentioned. When unsure, reject.
-2. Which language is it spoken in? Only English (en), French (fr) or Arabic (ar, any dialect) are allowed; reject any other language. Judge from the title, description, channel and the language hint.
+2. Which language is it spoken in? Any language is allowed. Give its two-letter ISO 639-1 code (en, fr, ar, es, pt, ko, it, de…). Judge from the title, description, channel and the language hint.
 
 Reply with one line per accepted video, exactly "id lang", for example:
 Rx4tU0SBJyM en
@@ -121,7 +127,7 @@ ${list}`;
   const text = (j.content ?? []).map((c) => c.text ?? "").join(" ");
   lastCheck = `${j.stop_reason}: ${text.slice(0, 300)}`;
   const ids = new Set(vids.map((v) => v.id));
-  for (const m of text.matchAll(/([A-Za-z0-9_-]{11})\s+(en|fr|ar)\b/g)) if (ids.has(m[1])) out.set(m[1], m[2] as "en" | "fr" | "ar");
+  for (const m of text.matchAll(/([A-Za-z0-9_-]{11})\s+([a-z]{2})\b/g)) if (ids.has(m[1])) out.set(m[1], m[2]);
   return out;
 }
 
@@ -140,7 +146,7 @@ export async function prefillVideos(limit = 40) {
   for (const p of list) {
     if (done >= limit) break;
     if (cfg.pins[p.slug]) continue;
-    if (await db.cmd<number>(["EXISTS", `yt:v6:${p.slug}`]).catch(() => 1)) continue;
+    if (await db.cmd<number>(["EXISTS", `yt:v7:${p.slug}`]).catch(() => 1)) continue;
     await videosForProduct({ slug: p.slug, brand: p.brand, name: p.name });
     done++;
   }
@@ -150,6 +156,6 @@ export async function prefillVideos(limit = 40) {
 
 /** Videos already found for a product (no YouTube call): for page structured data. */
 export async function cachedVideos(slug: string): Promise<YtVideo[]> {
-  const hit = await db.cmd<string | null>(["GET", `yt:v6:${slug}`]).catch(() => null);
+  const hit = (await db.cmd<string | null>(["GET", `yt:v7:${slug}`]).catch(() => null)) ?? (await db.cmd<string | null>(["GET", `yt:v6:${slug}`]).catch(() => null));
   return hit ? (JSON.parse(hit) as YtVideo[]) : [];
 }
