@@ -16,11 +16,14 @@ export default async function Parcel({ params, searchParams }: { params: Promise
   const { id } = await params;
   const sp = await searchParams;
   const role = sp.r as Role;
-  if ((role !== "s" && role !== "c") || sp.t !== tokenFor(id, role)) notFound();
-  const o = await getOrder(id);
+  // /f/SAMPLE/?r=s or ?r=c: a sample parcel for the team to preview (admins only).
+  const sample = id === "SAMPLE";
+  if (sample) await (await import("@/lib/admin-auth")).requireAdmin("orders");
+  else if ((role !== "s" && role !== "c") || sp.t !== tokenFor(id, role)) notFound();
+  const o = sample ? sampleOrder() : await getOrder(id);
   if (!o) notFound();
   const f = (await getOps()).fulfil;
-  const lines = await supplierLines(o, f.source);
+  const lines = sample ? [{ name: "Effaclar Duo+M", brand: "La Roche-Posay", qty: 1, sku: "NEO-48213377", variant: "40 ml", cost: 14.2 }, { name: "Hyalu B5 Serum", brand: "La Roche-Posay", qty: 1, sku: "NEO-48190021", variant: "30 ml", cost: 27.5 }] : await supplierLines(o, f.source);
   const items = o.lines.filter((l) => l.productId !== "superprime").reduce((s, l) => s + l.qty, 0);
   const cod = o.paymentMethod === "cod" && o.total > 0;
   const [bar, qr] = await Promise.all([barcodeSvg(o.id, "code128", { height: 16, scale: 3 }), barcodeSvg(linkFor(o.id, "c"), "qrcode", { scale: 4 })]);
@@ -86,7 +89,16 @@ export default async function Parcel({ params, searchParams }: { params: Promise
         </section>
       )}
 
-      <FulfilActions id={o.id} t={sp.t!} role={role} stage={stage} pod={o.fulfil?.pod} />
+      {sample ? <p className="mt-5 rounded-xl bg-[#fff4e5] p-3 text-center text-sm print:hidden">Sample only: on a real order the buttons here move the order along.</p> : <FulfilActions id={o.id} t={sp.t!} role={role} stage={stage} pod={o.fulfil?.pod} />}
     </main>
   );
+}
+
+function sampleOrder() {
+  return {
+    id: "SUP-SAMPLE1", accessToken: "", createdAt: new Date().toISOString(), status: "pending_cod", paymentMethod: "cod", lines: [{ productId: "x", name: "Effaclar Duo+M", brand: "La Roche-Posay", unitPrice: 21, qty: 1, lineTotal: 21 }, { productId: "y", name: "Hyalu B5 Serum", brand: "La Roche-Posay", unitPrice: 39, qty: 1, lineTotal: 39 }],
+    subtotal: 60, delivery: 3, total: 63, currency: "USD",
+    customer: { firstName: "Rana", lastName: "Khoury", phone: "+961 70 123 456", email: "", address: "Building 12, 3rd floor, Main street", city: "Jounieh", zone: "Keserwan", notes: "Call before arriving" },
+    fulfil: { stage: "sent", sentAt: new Date().toISOString() },
+  } as unknown as import("@/lib/orders").Order;
 }
