@@ -36,7 +36,7 @@ export async function pressReviews(p: { slug: string; brand: string; name: strin
   if (!trace && !(await db.cmd<string | null>(["SET", `${ck}:lock`, "1", "NX", "EX", "120"]).catch(() => "OK"))) return [];
   const product = fullName(p.brand, p.name);
   const prompt = `Find published reviews or editorial write-ups of this exact product: "${product}".
-Only use articles from these publications: ${Object.values(PRESS_SITES).join(", ")}.
+Only use articles from these publications: ${Object.values(PRESS_SITES).join(", ")}. Search for the product name together with publication names (for example "${product} review Allure", "${product} Byrdie", "${product} Vogue").
 Keep an article only if it reviews or clearly recommends THIS exact product (same brand, same product line and variant). A list article ("best eye creams") counts only if it has a section on this exact product. Skip anything about a different product of the same range.
 
 Reply with JSON only, no other text: an array (max 6) of objects:
@@ -48,7 +48,9 @@ Reply [] if none.`;
     body: JSON.stringify({
       model: process.env.ANTHROPIC_PRESS_MODEL || "claude-sonnet-5-5",
       max_tokens: 2000,
-      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4, allowed_domains: Object.keys(PRESS_SITES) }],
+      // No domain filter on the search itself (several publishers can't be named there); results are
+      // kept only when they come from the publications above.
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
       messages: [{ role: "user", content: prompt }],
     }),
     signal: AbortSignal.timeout(55_000),
