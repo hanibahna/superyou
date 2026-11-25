@@ -103,6 +103,8 @@ export type Order = {
   /** A gift card bought on the site: issued and sent to the recipient once paid. */
   giftCardPurchase?: { amount: number; recipient: string; phone: string; email: string; message: string; from: string; code?: string; sentAt?: string };
   history?: { at: string; status: OrderStatus; by: string; note?: string }[];
+  /** Supplier → courier → customer (lib/fulfil). */
+  fulfil?: { stage: "sent" | "ready" | "picked" | "delivered"; sentAt?: string; readyAt?: string; pickedAt?: string; deliveredAt?: string; pod?: string; podFrom?: "page" | "whatsapp"; payable?: number; paidAt?: string };
 };
 
 export type Refund = { id: string; at: string; amount: number; reason: string; method: "cash" | "card" | "whish" | "giftcard" | "other"; restocked: { productId: string; qty: number }[]; by: string; gateway?: { provider: string; ref: string; status: string } };
@@ -251,6 +253,8 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   await onOrderCreated(order, input).catch((e) => console.error("[whatsapp] order", e));
   // Internal sheet (cost, supplier, profit) to the orders inbox; never shown to the customer.
   await (await import("@/lib/order-internal")).sendOrderSheet(order).catch((e) => console.error("[order sheet]", e));
+  // Supplier's products: barcode label + pick list to the supplier (Admin › Operations › Fulfilment).
+  if (order.status !== "awaiting_payment") await (await import("@/lib/fulfil")).sendToSupplier(order).catch((e) => console.error("[fulfil]", e));
   if (order.code) await (await import("@/lib/influencers")).creditOrder(order).catch((e) => console.error("[influencer]", e));
   // New subscriptions (not for orders a subscription placed itself).
   if (!input.subscriptionId && order.lines.some((l) => l.every)) await (await import("@/lib/subscriptions")).startSubscriptions(order, input).catch((e) => console.error("[subscriptions]", e));
@@ -324,6 +328,7 @@ export async function updateOrder(id: string, patch: Partial<Order>, by = "syste
   const next: Order = { ...order, ...patch };
   const changed = patch.status && patch.status !== order.status;
   if (changed) next.history = [...(order.history ?? []), { at: new Date().toISOString(), status: patch.status!, by, note }];
+  else if (patch.fulfil && note) next.history = [...(order.history ?? []), { at: new Date().toISOString(), status: order.status, by, note }];
   // Cancelled or payment failed: put tracked stock back and return any gift card money.
   if (changed && (patch.status === "cancelled" || patch.status === "payment_failed")) {
     const { getOps } = await import("@/lib/ops-store");
@@ -339,6 +344,7 @@ export async function updateOrder(id: string, patch: Partial<Order>, by = "syste
   }
   await saveOrder(next);
   if (changed) await notifyOrderStatus(next);
+  if (changed && patch.status === "paid" && order.status === "awaiting_payment" && !next.fulfil) await (await import("@/lib/fulfil")).sendToSupplier(next).catch((e) => console.error("[fulfil]", e));
   if (changed && ["delivered", "returned", "cancelled", "payment_failed"].includes(patch.status!)) await (await import("@/lib/subscriptions")).onSubscriptionOrder(next).catch((e) => console.error("[subscriptions]", e));
   return next;
 }

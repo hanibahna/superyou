@@ -54,6 +54,22 @@ export function OperationsEditor({ initial, emailReady }: { initial: Ops; emailR
         </div>
       </Card>
 
+      <Card title="Fulfilment: supplier → courier → customer" sub="Orders with the supplier's products: the supplier gets the barcode label and pick list (email + WhatsApp) and taps Ready; the courier gets a pickup request, scans the label to confirm pickup and sends a photo at delivery; the order is set to Delivered and the supplier's payment becomes due (Admin › Payables).">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Toggle label="Send new orders to the supplier automatically" checked={o.fulfil.enabled} onChange={(enabled) => up("fulfil", { enabled })} />
+          <Text label="Supplier's catalogue (source)" hint="Orders containing products imported from this shop go to this supplier." value={o.fulfil.source} onChange={(source) => up("fulfil", { source })} />
+          <Text label="Supplier name" value={o.fulfil.supplierName} onChange={(supplierName) => up("fulfil", { supplierName })} />
+          <Text label="Supplier email" value={o.fulfil.supplierEmail} onChange={(supplierEmail) => up("fulfil", { supplierEmail })} />
+          <Text label="Supplier WhatsApp" hint="e.g. 961 70 123 456" value={o.fulfil.supplierWhatsapp} onChange={(supplierWhatsapp) => up("fulfil", { supplierWhatsapp })} />
+          <Text label="Pickup address (supplier)" value={o.fulfil.supplierAddress} onChange={(supplierAddress) => up("fulfil", { supplierAddress })} />
+          <Text label="Logistics company" value={o.fulfil.courierName} onChange={(courierName) => up("fulfil", { courierName })} />
+          <Text label="Logistics email" value={o.fulfil.courierEmail} onChange={(courierEmail) => up("fulfil", { courierEmail })} />
+          <Text label="Logistics WhatsApp" hint="Delivery photos sent from this number are matched to orders." value={o.fulfil.courierWhatsapp} onChange={(courierWhatsapp) => up("fulfil", { courierWhatsapp })} />
+          <Text label="Our team email (updates)" hint="Empty = the orders inbox." value={o.fulfil.teamEmail} onChange={(teamEmail) => up("fulfil", { teamEmail })} />
+          <Text label="Our team WhatsApp (updates)" value={o.fulfil.teamWhatsapp} onChange={(teamWhatsapp) => up("fulfil", { teamWhatsapp })} />
+        </div>
+      </Card>
+
       <Card title="Abandoned carts" sub="Shoppers who type their mobile at checkout and agree to WhatsApp offers, but don't order, get one reminder (WhatsApp automation &quot;Forgot something?&quot;).">
         <div className="grid gap-4 md:grid-cols-3">
           <Toggle label="Send reminders" checked={o.carts.enabled} onChange={(enabled) => up("carts", { enabled })} />

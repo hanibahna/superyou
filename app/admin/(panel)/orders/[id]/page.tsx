@@ -11,6 +11,7 @@ import { getOrder, ORDER_STATUSES, orderValue, refunded, statusLabels } from "@/
 import { refundProvider } from "@/lib/payments";
 import { normPhone } from "@/lib/wa";
 import { buildSheet, getSheet, ORDERS_INBOX } from "@/lib/order-internal";
+import { FulfilAdmin } from "@/components/admin/FulfilAdmin";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Beirut" });
 
@@ -129,6 +130,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
             )}
             {c.notes && <p className="mt-2 rounded bg-amber-50 p-2">Note: {c.notes}</p>}
           </div>
+          <FulfilAdmin id={o.id} fulfil={o.fulfil} links={{ s: (await import("@/lib/fulfil")).linkFor(o.id, "s"), c: (await import("@/lib/fulfil")).linkFor(o.id, "c") }} />
           <div className="rounded-xl bg-white p-5 text-sm shadow-sm">
             <h2 className="mb-2 font-semibold">Payment</h2>
             <p className="uppercase">{o.paymentMethod}{o.paymentProvider ? ` · ${o.paymentProvider}` : ""}</p>

@@ -37,7 +37,7 @@ export type Contact = {
 
 // ── Automations ─────────────────────────────────────────
 
-export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder" | "giftCardSent" | "subscriptionStarted" | "subscriptionReminder" | "subscriptionUnlocked" | "skinScanResult" | "skinScanFollowUp" | "backInStock";
+export type AutomationKey = "orderPlaced" | "orderConfirmed" | "orderShipped" | "orderDelivered" | "bookingReceived" | "bookingConfirmed" | "bookingReminder" | "welcomeOptIn" | "welcomeCode" | "reviewRequest" | "reorderReminder" | "clubReward" | "birthday" | "cartReminder" | "giftCardSent" | "subscriptionStarted" | "subscriptionReminder" | "subscriptionUnlocked" | "skinScanResult" | "skinScanFollowUp" | "backInStock" | "supplierOrder" | "pickupRequest" | "opsUpdate";
 
 export type Automation = {
   enabled: boolean;
@@ -57,6 +57,9 @@ export const automationInfo: Record<AutomationKey, { label: string; when: string
   welcomeOptIn: { label: "Welcome to offers", when: "When someone first opts in to WhatsApp offers", tokens: ["first_name"], category: "MARKETING" },
   welcomeCode: { label: "Welcome discount code", when: "When someone signs up through the pop-up with their WhatsApp number", tokens: ["first_name", "code", "percent", "days"], category: "MARKETING" },
   reviewRequest: { label: "Review request", when: "A day after an order is set to Delivered", tokens: ["first_name", "order_id", "link"], category: "MARKETING" },
+  supplierOrder: { label: "Order to supplier (NeoVitale)", when: "When an order with the supplier's products is placed: label + pick list link", tokens: ["order_id", "items", "link"], category: "UTILITY" },
+  pickupRequest: { label: "Pickup request to courier", when: "When the supplier marks an order ready for pickup", tokens: ["order_id", "pickup_address", "deliver_to", "collect", "link"], category: "UTILITY" },
+  opsUpdate: { label: "Order update to our team", when: "Picked up by the courier, delivered (with photo), payment due to the supplier", tokens: ["order_id", "update", "link"], category: "UTILITY" },
   backInStock: { label: "Back in stock", when: "When a sold-out product someone asked about is available again", tokens: ["first_name", "product", "link"], category: "UTILITY" },
   reorderReminder: { label: "Time to restock", when: "When a product bought earlier is likely running out", tokens: ["first_name", "product", "link"], category: "MARKETING" },
   clubReward: { label: "Club reward voucher", when: "When a member's points turn into a voucher", tokens: ["first_name", "code", "value", "points"], category: "MARKETING" },
@@ -92,6 +95,9 @@ export const defaultWaConfig: WaConfig = {
     welcomeOptIn: auto("welcome_offers", ["{{first_name}}"], false),
     welcomeCode: auto("welcome_code", ["{{first_name}}", "{{percent}}", "{{code}}", "{{days}}"]),
     reviewRequest: auto("review_request", ["{{first_name}}", "{{order_id}}", "{{link}}"]),
+    supplierOrder: auto("supplier_order", ["{{order_id}}", "{{items}}", "{{link}}"]),
+    pickupRequest: auto("pickup_request", ["{{order_id}}", "{{pickup_address}}", "{{deliver_to}}", "{{collect}}", "{{link}}"]),
+    opsUpdate: auto("ops_update", ["{{order_id}}", "{{update}}", "{{link}}"]),
     backInStock: auto("back_in_stock", ["{{first_name}}", "{{product}}", "{{link}}"]),
     reorderReminder: auto("restock_reminder", ["{{first_name}}", "{{product}}", "{{link}}"]),
     clubReward: auto("club_reward", ["{{first_name}}", "{{value}}", "{{code}}"]),
@@ -130,6 +136,9 @@ export const templatePresets: { name: string; category: "UTILITY" | "MARKETING";
   { name: "welcome_offers", category: "MARKETING", body: "Welcome to SuperYou on WhatsApp, {{1}}! You'll be first to hear about offers and new arrivals. Reply STOP anytime to unsubscribe.", example: ["Rana"] },
   { name: "welcome_code", category: "MARKETING", body: "Welcome to SuperYou, {{1}}! Here is your {{2}}% welcome code: {{3}}. Use it at checkout within {{4}} days.\n\nReply STOP to unsubscribe.", example: ["Rana", "10", "HELLO-7KQ2", "14"] },
   { name: "review_request", category: "MARKETING", body: "Hi {{1}}, how are you finding your SuperYou order {{2}}? Rate your products in 30 seconds: {{3}}\n\nReply STOP to unsubscribe.", example: ["Rana", "SUP-M3K2Q", "https://shopsuperyou.com/review/?o=SUP-M3K2Q"] },
+  { name: "supplier_order", category: "UTILITY", body: "New SuperYou order {{1}}: {{2}}. Print the barcode label and pick list here: {{3}} and tap Ready for pickup on that page once it is packed.", example: ["SUP-M3K2Q", "3 items", "https://shopsuperyou.com/f/SUP-M3K2Q?t=abc&r=s"] },
+  { name: "pickup_request", category: "UTILITY", body: "SuperYou pickup: order {{1}} is ready at {{2}}. Deliver to {{3}}, collect {{4}}. Scan the label or open {{5}} to confirm pickup and delivery.", example: ["SUP-M3K2Q", "NeoVitale, Beirut", "Rana, Jounieh", "$42.50 cash", "https://shopsuperyou.com/f/SUP-M3K2Q?t=abc&r=c"] },
+  { name: "ops_update", category: "UTILITY", body: "SuperYou order {{1}}: {{2}}. Details: {{3}}", example: ["SUP-M3K2Q", "picked up by the courier", "https://shopsuperyou.com/admin/orders/SUP-M3K2Q/"] },
   { name: "back_in_stock", category: "UTILITY", body: "Hi {{1}}, good news: {{2}} is back in stock at SuperYou. Order it here: {{3}}", example: ["Rana", "La Roche-Posay Effaclar Duo+", "https://shopsuperyou.com/products/effaclar-duo/"] },
   { name: "restock_reminder", category: "MARKETING", body: "Hi {{1}}, running low on {{2}}? Reorder in one tap: {{3}}\n\nReply STOP to unsubscribe.", example: ["Rana", "La Roche-Posay Effaclar Duo+", "https://shopsuperyou.com/products/effaclar-duo/"] },
   { name: "club_reward", category: "MARKETING", body: "Congratulations {{1}}! Your SuperYou Club points earned you a {{2}} voucher: {{3}}. Use it on your next order.", example: ["Rana", "$10", "CLUB-4H8K"] },

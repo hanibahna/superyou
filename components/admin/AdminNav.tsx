@@ -11,6 +11,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/admin/inventory/", label: "Inventory" },
       { href: "/admin/orders/pickup/", label: "Pickup sheet" },
+      { href: "/admin/payables/", label: "Payables & courier cash" },
       { href: "/admin/carts/", label: "Abandoned carts" },
       { href: "/admin/giftcards/", label: "Gift cards" },
     ],
