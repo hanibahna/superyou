@@ -166,6 +166,18 @@ function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) 
   );
 }
 
+/** When the last nightly check ran, as "today at 3:00 am" / "2 h ago" (client-side, Beirut 3 am = 01:00 UTC). */
+function useLastCheck() {
+  const t = useT();
+  const [v, setV] = useState("");
+  useEffect(() => {
+    const last = nextCheck() - 86400_000;
+    const h = Math.floor((Date.now() - last) / 3600_000);
+    setV(h < 1 ? t("less than an hour ago") : `${t("today at 3:00 am")} (${h} ${t("h ago")})`);
+  }, [t]);
+  return v;
+}
+
 /** No shop sells it for less: every shop checked ticks off one by one, then the verdict. */
 function NoCheaper() {
   const t = useT();
@@ -174,6 +186,7 @@ function NoCheaper() {
   const [n, setN] = useState(0);
   const [all, setAll] = useState(false);
   const SHOW = 12;
+  const lastCheck = useLastCheck();
   const list = all ? shops : shops.slice(0, SHOW);
   useEffect(() => {
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -200,8 +213,12 @@ function NoCheaper() {
           <p className="text-[15px] font-bold leading-tight text-ink">
             {done ? <span className="sp-pop">🏆 {t("Lowest price in Lebanon")}</span> : <>{t("Checking")} {Math.min(n, list.length)}/{list.length}…</>}
           </p>
-          <p className="text-[11px] text-muted">
-            {t("Checked against")} <b className="text-ink">{shops.length}</b> {t("online shops tonight. None sells it for less.")}
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#d92d20] px-1.5 py-px text-[10px] font-black uppercase tracking-wider text-white">
+              <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" /></span>
+              Live
+            </span>
+            <span>{t("price watch on")} <b className="text-ink">{shops.length}</b> {t("online shops. None sells it for less.")} {lastCheck && <>{t("Last checked")} {lastCheck}.</>}</span>
           </p>
         </div>
       </div>
