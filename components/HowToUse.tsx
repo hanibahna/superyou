@@ -4,8 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
 import { VideoModal } from "./VideoModal";
 
-type V = { id: string; title: string; channel: string; lang?: "en" | "fr" | "ar" };
-const LANGS = [["en", "English"], ["fr", "Français"], ["ar", "العربية"]] as const;
+type V = { id: string; title: string; channel: string; lang?: string };
+const native = (c: string) => { try { return new Intl.DisplayNames([c], { type: "language" }).of(c) ?? c; } catch { return c; } };
+/** The languages the videos are spoken in, English / French / Arabic first. */
+const langsOf = (vs: { lang?: string }[]) => {
+  const order = ["en", "fr", "ar"];
+  const ks = [...new Set(vs.map((v) => v.lang).filter(Boolean) as string[])].sort((a, b) => (order.indexOf(a) + 1 || 9) - (order.indexOf(b) + 1 || 9));
+  return ks.map((k) => [k, native(k)] as [string, string]);
+};
 type Guide = { steps: string[]; when: string; goodFor: string; cautions: string[]; source?: string };
 
 /** "How to use", always open and highlighted on the product page: the stored AI guide for this exact
@@ -75,7 +81,7 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
       <p className="mt-3 text-[11px] text-muted">{steps.length ? (guide?.source ? `${t("Based on the manufacturer's directions")} (${guide.source}), ${t("formatted by SuperYou AI. Always read the label.")}` : t("Formatted by SuperYou AI from this product's details. Always read the label.")) : t("Always read the label; ask our pharmacist if unsure.")}</p>
       </div>
     </section>
-    {playing && <VideoModal id={playing} title={videos?.find((v) => v.id === playing)?.title ?? "Video"} onClose={() => setPlaying("")} />}
+    {playing && <VideoModal id={playing} title={videos?.find((v) => v.id === playing)?.title ?? "Video"} lang={videos?.find((v) => v.id === playing)?.lang} onClose={() => setPlaying("")} />}
     {videos === null && (
       <p className="mt-3 flex items-center gap-2 rounded-2xl border-2 border-line bg-white p-3 text-xs text-muted" aria-live="polite">
         <span className="h-3 w-3 animate-spin rounded-full border-2 border-line border-t-ink" aria-hidden />{t("Looking for videos of this exact product…")}
@@ -87,13 +93,13 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-white" aria-hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
           <span className="flex-1">
             <span id="videos-h" className="block text-lg font-bold">{t("Videos")}</span>
-            <span className="block text-xs text-muted">{videos.length} {videos.length === 1 ? t("video of this product") : t("videos of this product")} · {LANGS.filter(([k]) => videos.some((v) => v.lang === k)).map(([, l]) => l).join(" · ") || t("independent creators")}</span>
+            <span className="block text-xs text-muted">{videos.length} {videos.length === 1 ? t("video of this product") : t("videos of this product")} · {langsOf(videos).map(([, l]) => l).join(" · ") || t("independent creators")}</span>
           </span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className={`shrink-0 transition-transform ${sec === "videos" ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
         </button>
         <div id="videos-body" hidden={sec !== "videos"}>
           {(() => {
-            const langs = LANGS.filter(([k]) => videos.some((v) => v.lang === k));
+            const langs = langsOf(videos);
             const cur = vlang && langs.some(([k]) => k === vlang) ? vlang : langs[0]?.[0] ?? "";
             const shown = cur ? videos.filter((v) => v.lang === cur) : videos;
             return (

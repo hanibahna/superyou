@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useT } from "@/lib/site-context";
 import { VideoModal } from "./VideoModal";
 
-type V = { id: string; title: string; channel: string };
+type V = { id: string; title: string; channel: string; lang?: string };
 
 /** Review and how-to videos right under the product photo. Plays in place; nothing loads from YouTube
  * until tapped. Without videos, a slim card opens the How to use pop-up. */
@@ -28,7 +28,7 @@ export function ImageVideos({ slug, brand, name }: { slug: string; brand: string
 
   return (
     <div className="mt-3">
-      {playing && <VideoModal id={playing} title={videos.find((v) => v.id === playing)?.title ?? "Video"} onClose={() => setPlaying("")} />}
+      {playing && <VideoModal id={playing} title={videos.find((v) => v.id === playing)?.title ?? "Video"} lang={videos.find((v) => v.id === playing)?.lang} onClose={() => setPlaying("")} />}
       <p className="mb-1.5 flex items-center justify-between text-xs font-semibold text-muted">
         <span>{t("Reviews & how-to videos")}</span>
         <button onClick={openHow} className="howto-glow rounded-full px-2 py-1 font-bold text-ink underline-offset-2 hover:underline">▶ {t("How to use")}</button>
