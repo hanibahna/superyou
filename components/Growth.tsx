@@ -323,9 +323,20 @@ export function SignupPopup() {
                   {res.delivered ? (
                     <p className="mt-4 rounded-lg bg-[#ecfdf3] p-3 text-sm text-[#046c4e]">✓ {res.delivered === "whatsapp" ? t("Your code was sent to you on WhatsApp.") : t("Your code was sent to you by text message.")} {t("Use it at checkout.")}</p>
                   ) : res.code ? (
-                    <button onClick={() => { navigator.clipboard?.writeText(res.code!); setCopied(true); }} className="mt-4 w-full rounded-lg border-2 border-dashed border-ink py-3 font-mono text-xl font-bold tracking-widest">
-                      {res.code} <span className="ms-2 text-xs font-sans font-semibold text-muted">{copied ? t("Copied") : t("Copy")}</span>
-                    </button>
+                    <>
+                      <button onClick={() => { navigator.clipboard?.writeText(res.code!); setCopied(true); }} className="mt-4 w-full rounded-lg border-2 border-dashed border-ink py-3 font-mono text-xl font-bold tracking-widest">
+                        {res.code} <span className="ms-2 text-xs font-sans font-semibold text-muted">{copied ? t("Copied") : t("Copy")}</span>
+                      </button>
+                      {/* Keep the code: send it to yourself on the channel you picked. */}
+                      {(() => {
+                        const msg = `SuperYou: my code ${res.code} gives ${res.percent}% off my first order, until ${res.expires.slice(0, 10)}. ${typeof window !== "undefined" ? window.location.origin : ""}`;
+                        return channel === "whatsapp" ? (
+                          <a href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noopener noreferrer" className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-[#25d366] py-3 text-sm font-semibold text-white">{t("Send the code to my WhatsApp")}</a>
+                        ) : (
+                          <a href={`sms:?&body=${encodeURIComponent(msg)}`} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-[#0ea5e9] py-3 text-sm font-semibold text-white">{t("Text the code to myself")}</a>
+                        );
+                      })()}
+                    </>
                   ) : null}
                   <p className="mt-2 text-xs text-muted">{t("Valid until")} {res.expires.slice(0, 10)} · {t("one use, first order, for this phone number.")}</p>
                   <button onClick={close} className="mt-5 w-full rounded-full bg-ink py-3 font-semibold text-white">{t("Shop now")}</button>

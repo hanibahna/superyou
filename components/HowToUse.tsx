@@ -13,7 +13,7 @@ const langsOf = (vs: { lang?: string }[]) => {
   const ks = [...new Set(vs.map((v) => v.lang).filter(Boolean) as string[])].sort((a, b) => (order.indexOf(a) + 1 || 9) - (order.indexOf(b) + 1 || 9));
   return ks.map((k) => [k, native(k)] as [string, string]);
 };
-type Press = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string };
+type Press = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string; liked?: string[]; watch?: string[]; rating?: string };
 const VERDICT: Record<string, string> = { "Loved it": "bg-[#046c4e] text-white", Recommended: "bg-[#e6f4ee] text-[#046c4e]", Mixed: "bg-[#fff4e5] text-[#9a5b00]", "Not recommended": "bg-[#fdecef] text-[#9b2c50]" };
 
 /** One expert review in a pop-up: our short summary, and a link to read it in full on the publication's site. */
@@ -28,7 +28,7 @@ function PressModal({ r, onClose }: { r: Press; onClose: () => void }) {
   }, [onClose]);
   return (
     <div role="dialog" aria-modal="true" aria-label={r.title} onClick={onClose} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-0 md:items-center md:p-6">
-      <div onClick={(e) => e.stopPropagation()} className="sheet-up relative w-full max-w-lg rounded-t-2xl bg-white p-5 shadow-2xl md:rounded-2xl">
+      <div onClick={(e) => e.stopPropagation()} className="sheet-up relative max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl md:rounded-2xl">
         <button onClick={onClose} aria-label={t("Close")} className="absolute end-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-[#f2f2f2]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
@@ -36,11 +36,24 @@ function PressModal({ r, onClose }: { r: Press; onClose: () => void }) {
         <h3 className="mt-1 pe-10 text-lg font-bold leading-snug">{r.title}</h3>
         <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
           {r.verdict && <span className={`rounded-full px-2 py-0.5 font-bold ${VERDICT[r.verdict] ?? "bg-[#f2f2f2]"}`}>{t(r.verdict)}</span>}
+          {r.rating && <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5b00]">★ {r.rating}</span>}
           {r.date && <span className="rounded-full bg-[#f2f2f2] px-2 py-0.5 font-medium text-muted">{r.date}</span>}
         </div>
         {r.summary && <p className="mt-3 text-sm leading-relaxed">{r.summary}</p>}
-        <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-sm font-semibold text-white">{t("Read the full review on")} {r.site} ↗</a>
-        <p className="mt-2 text-center text-[11px] text-muted">{t("Summary by SuperYou. The full article opens on the publication's website.")}</p>
+        {!!r.liked?.length && (
+          <div className="mt-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#046c4e]">{t("What they liked")}</p>
+            <ul className="mt-1.5 space-y-1 text-sm">{r.liked.map((x) => <li key={x} className="flex gap-2"><span className="text-[#046c4e]">✓</span><span>{x}</span></li>)}</ul>
+          </div>
+        )}
+        {!!r.watch?.length && (
+          <div className="mt-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#9a5b00]">{t("Good to know")}</p>
+            <ul className="mt-1.5 space-y-1 text-sm">{r.watch.map((x) => <li key={x} className="flex gap-2"><span className="text-[#9a5b00]">!</span><span>{x}</span></li>)}</ul>
+          </div>
+        )}
+        <button onClick={onClose} className="mt-5 w-full rounded-full bg-ink py-3 text-sm font-semibold text-white">{t("Back to the product")}</button>
+        <p className="mt-2 text-center text-[11px] text-muted">{t("Summary by SuperYou of the review in")} {r.site}. <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="underline">{t("Source")}</a></p>
       </div>
     </div>
   );

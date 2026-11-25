@@ -248,6 +248,12 @@ export function progress(s: Subscription, g: { monthly: number; quarterly: numbe
   return { legacy: false, pct, need: needFor(s, g), done: Object.keys(s.delivered ?? {}).length, unlocked: !!s.unlocked, noRebate: !!s.noRebate, rebate: { earned: r.earned, used: r.used, pending: r.pending, forfeited: r.forfeited } };
 }
 
+/** Text message and email (when we have one) next to WhatsApp, so the customer hears whichever way they read. */
+async function notifyAll(s: Subscription, subject: string, text: string) {
+  await (await import("@/lib/sms")).sendSms(s.customer.phone, `SuperYou: ${text}`).catch(() => null);
+  if (s.customer.email) await (await import("@/lib/email")).sendEmail(s.customer.email, subject, `Hi ${s.customer.firstName},\n\n${text}\n\nThe SuperYou team`).catch(() => false);
+}
+
 /** Daily (cron): reminders 3 days ahead, and today's orders. */
 export async function runSubscriptions() {
   const growth = await (await import("@/lib/growth-store")).getGrowth();
@@ -262,7 +268,9 @@ export async function runSubscriptions() {
     const items = s.items.map((i) => ({ productId: i.productId, qty: i.qty, every: s.every }));
     if (s.nextAt <= soon && s.nextAt > now && s.remindedFor !== s.nextAt) {
       const q = await serverQuote({ items, zone: s.customer.zone, subscriptionId: s.id }).catch(() => null);
-      await wa.trigger("subscriptionReminder", s.customer.phone, { first_name: s.customer.firstName, items: s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900), next_date: prettyDate(s.nextAt), total: q ? `$${q.total.toFixed(2)}` : "", link: manageLink(s) }).catch(() => false);
+      const list = s.items.map((i) => `${i.qty}× ${i.name}`).join(", ").slice(0, 900);
+      await wa.trigger("subscriptionReminder", s.customer.phone, { first_name: s.customer.firstName, items: list, next_date: prettyDate(s.nextAt), total: q ? `$${q.total.toFixed(2)}` : "", link: manageLink(s) }).catch(() => false);
+      await notifyAll(s, `Your SuperYou subscription order is coming on ${prettyDate(s.nextAt)}`, `your Subscribe & save order (${list}) will be placed on ${prettyDate(s.nextAt)} and delivered within 1 to 3 days after${q ? `, total $${q.total.toFixed(2)}, paid on delivery` : ""}. Skip, change or pause it here: ${manageLink(s)}`);
       s.remindedFor = s.nextAt;
       await saveSubscription(s);
       reminded++;
@@ -275,6 +283,7 @@ export async function runSubscriptions() {
         if (!ok.length) throw new Error("Everything in this subscription is out of stock");
         const o = await createOrder({ items: ok, customer: s.customer, paymentMethod: "cod", waUpdates: true, subscriptionId: s.id });
         s.orders.push(o.id);
+        await notifyAll(s, `Your SuperYou subscription order ${o.id} is on its way`, `your Subscribe & save order ${o.id} (${ok.map((i) => `${i.qty}× ${s.items.find((x) => x.productId === i.productId)?.name ?? ""}`).join(", ").slice(0, 600)}) was placed today and will be delivered by ${prettyDate(addDays(now, 3))}. You pay on delivery. Manage your plan: ${manageLink(s)}`);
         await linkOrder(o.id, [s.id]);
         await useRebate(s, o.id, o.discounts?.find((d) => d.name.startsWith("Subscription rebate"))?.amount ?? 0);
         s.lastError = undefined;
