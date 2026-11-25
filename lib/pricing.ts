@@ -80,6 +80,8 @@ export async function liveProducts() {
     if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
     // Already the best price: say which shop we compared with (shown as "price compared").
     const c = pmOn && growth.priceMatch.badge ? pm.cmp.get(p.id) : undefined;
+    // A shop is cheaper and we didn't go below it: no "best price" claim on this product.
+    if (c?.lose) return { ...sold, pmLose: true };
     if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: c.show ? c.s : "", shops: named(c.all), beat: "none" as const };
     return sold;
   });

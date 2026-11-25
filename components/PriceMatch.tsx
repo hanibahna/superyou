@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 
-type SP = { match?: string; matchWas?: number; matchVs?: number; price?: number; spLimit?: number; cmpVs?: number; cmpShop?: string; shops?: [string, number][]; beat?: "full" | "partial" | "none" };
+type SP = { pmLose?: boolean; match?: string; matchWas?: number; matchVs?: number; price?: number; spLimit?: number; cmpVs?: number; cmpShop?: string; shops?: [string, number][]; beat?: "full" | "partial" | "none" };
 
 /** Next nightly price check: 01:00 UTC (3 am in Beirut). */
 function nextCheck(now = Date.now()) {
@@ -77,7 +77,7 @@ export function SuperPriceCard({ p, className = "" }: { p: SP; className?: strin
     const b = setTimeout(() => setStage(2), 1300 + Math.min(p.shops?.length ?? 1, 8) * 280);
     return () => (clearTimeout(a), clearTimeout(b));
   }, [p.price, p.shops?.length]);
-  if (!on || !p.price) return null;
+  if (!on || !p.price || p.pmLose) return null;
   const lowered = !!p.matchWas && p.match !== undefined;
   const vs = lowered ? p.matchVs : p.cmpVs;
   const shop = (lowered ? p.match : p.cmpShop) || t("Another shop");
@@ -294,6 +294,7 @@ export function SuperPriceSticker({ p }: { p: SP }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const cheaper = !!p.matchWas && p.match !== undefined;
+  if (p.pmLose) return null;
   return (
     <span className="absolute -top-3 right-2 z-10">
       <button

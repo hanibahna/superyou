@@ -115,7 +115,7 @@ export async function competitorStats() {
 /** We are already the best price: t = the cheapest other shop, s = that shop. */
 /** Every shop that sells it: [name, price, show name]. */
 export type Shop = [string, number, boolean];
-export type Cmp = { t: number; s: string; show: boolean; all?: Shop[] };
+export type Cmp = { t: number; s: string; show: boolean; all?: Shop[]; lose?: boolean };
 /** What the storefront needs for one product: p = SuperPrice, t = competitor price, s = shop. */
 export type Match = { p: number; t: number; s: string; show: boolean; u: string; est?: boolean; all?: Shop[]; beat?: "full" | "partial" };
 
@@ -352,7 +352,9 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     }
     cheaper++;
     const name = `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`;
-    const flag = (why: Flag["why"], floor = 0) => flags.push({ id, name, ours: p.price, theirs: b.t, floor: r2(floor), site: b.site.label, url: b.u, why });
+    // A shop is cheaper and we can't (or shouldn't) go below it: the storefront must not claim the best price.
+    const lose = () => cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]), lose: true } satisfies Cmp));
+    const flag = (why: Flag["why"], floor = 0) => (lose(), flags.push({ id, name, ours: p.price, theirs: b.t, floor: r2(floor), site: b.site.label, url: b.u, why }));
     // A name match far below our price is more likely a different size or a mistake.
     if (b.how === "name" && b.t < p.price * 0.5) { flag("check match"); continue; }
     const known = !!p.cost && p.cost > 0;
@@ -503,4 +505,16 @@ export async function analyse(beatPct = 5, marginPct = 10, assumeMarginPct = 0) 
     medianGapPct: gaps.length ? Math.round(gaps[Math.floor(gaps.length / 2)] * 10) / 10 : 0,
     avgPriceDrop: r2(out.priceDrop / n), bySite: out.bySite, bySource: out.bySource, examples: out.examples,
   };
+}
+
+/** Names of the shops actually read in the last price check (for the storefront's "checked against" list). */
+const gs = globalThis as unknown as { __pmOk?: { at: number; list: string[] } };
+export async function shopsRead(): Promise<string[] | null> {
+  if (gs.__pmOk && Date.now() - gs.__pmOk.at < 600_000) return gs.__pmOk.list;
+  const raw = await db.cmd<string | null>(["GET", REPORT]).catch(() => null);
+  if (!raw) return null;
+  const r = JSON.parse(raw) as Report;
+  const list = r.sites.filter((x) => x.products > 0 && !x.error).map((x) => x.label);
+  gs.__pmOk = { at: Date.now(), list };
+  return list;
 }

@@ -55,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {marketing.tracking.metaDomain && <meta name="facebook-domain-verification" content={marketing.tracking.metaDomain} />}
       </head>
       <body>
-        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav(), await getTaxonomy()), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(publicGrowth(growth, !!(await (await import("@/lib/extras")).anthropicKey())), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
+        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav(), await getTaxonomy()), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(await withShopsRead(publicGrowth(growth, !!(await (await import("@/lib/extras")).anthropicKey()))), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
           {children}
         </SiteProvider>
         <Tracking t={publicTracking(marketing)} />
@@ -63,4 +63,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </body>
     </html>
   );
+}
+
+/** Only shops the last price check could actually read are named as "checked". */
+async function withShopsRead<T extends { superPriceShops: string[] }>(pg: T): Promise<T> {
+  const ok = await (await import("@/lib/price-match")).shopsRead().catch(() => null);
+  return ok ? { ...pg, superPriceShops: pg.superPriceShops.filter((s) => ok.includes(s)) } : pg;
 }
