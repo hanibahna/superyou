@@ -11,7 +11,7 @@ export type PublicSite = {
   settings: Settings;
   search: { predictive: boolean; popular: string[] };
   routineEnabled: boolean;
-  growth: PublicGrowth;
+  growth: PublicGrowth & { videoCalls?: boolean; eventsOn?: boolean };
   lang: Lang;
 };
 

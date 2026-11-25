@@ -23,7 +23,7 @@ export function QuickHelp({ className = "" }: { className?: string }) {
   return (
     <div className={`no-scrollbar flex gap-2 overflow-x-auto ${className}`}>
       {scanOn && <Link href="/skin-scan/" className={`${base} scan-glow border-transparent text-white`}><ScanIcon size={16} />{t("SuperScan")}<span className="rounded-full bg-white/25 px-1.5 text-[10px] font-bold">NEW</span></Link>}
-      <Link href="/services/?book=video-consult" className={`${base} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>
+      {useGrowth().videoCalls !== false && <Link href="/services/?book=video-consult" className={`${base} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>}
       <a href={`https://wa.me/${s.store.whatsapp}`} target="_blank" rel="noreferrer" className={pill}><Icon d={I.wa} />WhatsApp</a>
       <button onClick={() => window.dispatchEvent(new Event("open-advisor"))} className={pill}><Icon d={I.ai} />{t("Ask AI")}</button>
       <Link href="/routine/" className={pill}><Icon d={I.routine} />{t("Routine finder")}</Link>

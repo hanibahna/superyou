@@ -2,7 +2,7 @@
 
 import { AfterRoutine } from "../clinic/AfterRoutine";
 import type { ClinicItem } from "../clinic/ClinicView";
-import { useT } from "@/lib/site-context";
+import { useGrowth, useT } from "@/lib/site-context";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -109,6 +109,7 @@ function SelfieCamera({ onShot, onClose }: { onShot: (data: string) => void; onC
 }
 
 export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
+  const videoOn = useGrowth().videoCalls !== false;
   const tx = useT();
   const [preview, setPreview] = useState("");
   const [mesh, setMesh] = useState("");
@@ -256,7 +257,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
                 <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm">
                   <p className="font-semibold text-sale">{tx("Please see a doctor or pharmacist first")}</p>
                   <ul className="mt-1 list-disc ps-5">{res.analysis.redFlags.map((f) => <li key={f}>{f}</li>)}</ul>
-                  <Link href="/services/?book=video-consult" className="mt-2 inline-block font-semibold underline">{tx("Book a free video call with our pharmacist")}</Link>
+                  {videoOn && <Link href="/services/?book=video-consult" className="mt-2 inline-block font-semibold underline">{tx("Book a free video call with our pharmacist")}</Link>}
                 </div>
               )}
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

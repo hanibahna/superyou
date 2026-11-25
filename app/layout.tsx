@@ -66,7 +66,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 }
 
 /** Only shops the last price check could actually read are named as "checked". */
-async function withShopsRead<T extends { superPriceShops: string[] }>(pg: T): Promise<T> {
+async function withShopsRead<T extends { superPriceShops: string[] }>(pg: T): Promise<T & { videoCalls: boolean; eventsOn: boolean }> {
   const ok = await (await import("@/lib/price-match")).shopsRead().catch(() => null);
-  return ok ? { ...pg, superPriceShops: pg.superPriceShops.filter((s) => ok.includes(s)) } : pg;
+  const svc = await (await import("@/lib/site-store")).getServices();
+  const on = { videoCalls: svc.enabled && svc.videoCalls !== false, eventsOn: svc.enabled && svc.eventsOn !== false };
+  return ok ? { ...pg, ...on, superPriceShops: pg.superPriceShops.filter((s) => ok.includes(s)) } : { ...pg, ...on };
 }

@@ -20,7 +20,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       {!s.analysis.redFlags?.length && <AfterRoutine items={treatmentsFor({ concerns: s.analysis.concerns, observations: s.analysis.observations, zones: s.analysis.zones, sensitive: s.analysis.sensitive }).map(publicProcedure)} partner={CLINIC.partner} mock={CLINIC.mock} />}
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href={`/skin-scan/?from=${s.id}&t=${s.token}`} className="scan-glow inline-flex min-h-[48px] items-center rounded-full px-6 font-semibold text-white">Rescan and compare</Link>
-        <Link href="/services/?book=video-consult" className="inline-flex min-h-[48px] items-center rounded-full border border-line px-6 font-semibold">Ask a pharmacist</Link>
+        <Link href={(await (await import("@/lib/site-store")).getServices()).videoCalls === false ? "/services/" : "/services/?book=video-consult"} className="inline-flex min-h-[48px] items-center rounded-full border border-line px-6 font-semibold">Ask a pharmacist</Link>
       </div>
       <p className="mt-6 text-xs text-muted">Cosmetic AI assessment from SuperScan (3D AI skin scan), not a medical diagnosis. The photos were not stored.</p>
     </div>

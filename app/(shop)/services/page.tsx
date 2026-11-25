@@ -13,7 +13,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
   const cfg = await translateDeep(cfg0, await getLang(), ["name", "description", "intro", "title", "text", "category", "location", "price_note", "note"]);
   if (!cfg.enabled) notFound();
   const today = new Date().toISOString().slice(0, 10);
-  const events = cfg.events.filter((e) => e.enabled && e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  const events = cfg.eventsOn === false ? [] : cfg.events.filter((e) => e.enabled && e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   return (
     <ServicesView
       tab={(await searchParams).tab === "events" ? "events" : "services"}
@@ -21,7 +21,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
       location={cfg.location || settings.store.address}
       hours={cfg.hours}
       daysAhead={cfg.daysAhead}
-      services={cfg.services.filter((s) => s.enabled)}
+      services={cfg.services.filter((s) => s.enabled && !(cfg.videoCalls === false && s.video === "only")).map((s) => (cfg.videoCalls === false ? { ...s, video: "no" as const } : s))}
       events={events}
       whatsapp={settings.store.whatsapp}
     />

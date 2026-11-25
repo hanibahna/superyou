@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useT } from "@/lib/site-context";
+import { useGrowth, useT } from "@/lib/site-context";
 import { QuickHelp } from "./QuickHelp";
 
 export type SectionBannerData = { banner: { title: string; text: string; cta: string; href: string; image: string; bg: string }; tips: string[]; app: { label: string; href: string } };
@@ -19,7 +19,9 @@ export function SectionBanner({ s }: { s: SectionBannerData }) {
     const t = setInterval(() => setI((n) => (n + 1) % s.tips.length), 7000);
     return () => clearInterval(t);
   }, [s.tips.length]);
-  const b = s.banner;
+  const videoOn = useGrowth().videoCalls !== false;
+  // Video calls switched off: the video-call banner becomes a pointer to the routine finder.
+  const b = !videoOn && /video-consult|video call/i.test(`${s.banner.href} ${s.banner.cta}`) ? { ...s.banner, title: "Not sure what to choose?", text: "Answer a few questions and get a routine from products in stock, or ask our pharmacist on WhatsApp.", cta: "Find my routine", href: "/routine/" } : s.banner;
   return (
     <div className="mb-5 space-y-2.5">
       <QuickHelp />

@@ -39,13 +39,14 @@ export async function POST(req: NextRequest) {
   } else if (d.kind === "service") {
     const s = cfg.services.find((x) => x.id === d.refId && x.enabled);
     if (!s || !d.date || !d.time) return NextResponse.json({ error: "Choose a service, date and time" }, { status: 400 });
+    if (cfg.videoCalls === false && s.video === "only") return NextResponse.json({ error: "Video calls are not available at the moment" }, { status: 400 });
     if (!(await freeSlots(s.id, d.date)).includes(d.time)) return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
-    const mode = s.video === "only" ? "video" : s.video === "yes" && d.mode === "video" ? "video" : "store";
+    const mode = cfg.videoCalls === false ? "store" : s.video === "only" ? "video" : s.video === "yes" && d.mode === "video" ? "video" : "store";
     b = { ...base, kind: "service", refId: s.id, title: s.title, date: d.date, time: d.time, duration: s.duration, guests: 1, mode, access: (await import("@/lib/video")).newAccess() };
     // Video call: create the room now (if a provider is set up); otherwise it's created when the team confirms.
     if (mode === "video") b.video = (await (await import("@/lib/video")).createRoom(b).catch((e) => (console.error("[video]", e), null))) ?? undefined;
   } else {
-    const e = cfg.events.find((x) => x.id === d.refId && x.enabled);
+    const e = cfg.eventsOn === false ? undefined : cfg.events.find((x) => x.id === d.refId && x.enabled);
     if (!e) return NextResponse.json({ error: "Unknown event" }, { status: 404 });
     if (new Date(`${e.date}T${e.end}:00+02:00`).getTime() < Date.now()) return NextResponse.json({ error: "This event has ended" }, { status: 400 });
     const guests = d.guests ?? 1;

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useT } from "@/lib/site-context";
+import { useGrowth, useT } from "@/lib/site-context";
 import { ShareMenu } from "./ShareMenu";
 
 /** Slim ad + rotating tips for THIS product: pause/play, previous/next, copy and share on WhatsApp. */
-export function TipLine({ tips: initial, slug, name, banner }: { tips: string[]; slug?: string; name?: string; banner: { title: string; cta: string; href: string; bg: string } }) {
+export function TipLine({ tips: initial, slug, name, banner: banner0 }: { tips: string[]; slug?: string; name?: string; banner: { title: string; cta: string; href: string; bg: string } }) {
   const t = useT();
+  const banner = useGrowth().videoCalls === false && /video-consult/.test(banner0.href) ? { ...banner0, href: "" } : banner0;
   const [tips, setTips] = useState(initial);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);

@@ -22,6 +22,8 @@ export function ServicesEditor({ initial }: { initial: ServicesConfig }) {
         <Card title="Booking rules">
           <div className="grid gap-4 md:grid-cols-3">
             <Toggle label="Services & events page is live" checked={c.enabled} onChange={(enabled) => up({ enabled })} />
+          <Toggle label="Video calls with a pharmacist (buttons, booking option, links across the site)" checked={c.videoCalls ?? true} onChange={(videoCalls) => up({ videoCalls })} />
+          <Toggle label="Events (listed on the services page)" checked={c.eventsOn ?? true} onChange={(eventsOn) => up({ eventsOn })} />
             <Text label="Location" value={c.location} onChange={(location) => up({ location })} />
             <Area label="Introduction" rows={2} value={c.intro} onChange={(intro) => up({ intro })} />
             <Num label="Start times every (min)" value={c.step} onChange={(step) => up({ step })} />

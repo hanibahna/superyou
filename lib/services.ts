@@ -32,6 +32,8 @@ export type EventItem = {
 
 export type ServicesConfig = {
   enabled: boolean;
+  videoCalls: boolean; // pharmacist video calls offered anywhere on the site
+  eventsOn: boolean; // events listed on the services page
   intro: string;
   location: string;
   hours: { day: number; open: string; close: string }[]; // day 0 = Sunday
@@ -47,6 +49,8 @@ const img = (f: string) => `https://cdn.shopify.com/s/files/1/${f}`;
 
 export const defaultServices: ServicesConfig = {
   enabled: true,
+  videoCalls: true,
+  eventsOn: true,
   intro: "Free consultations and expert services with our pharmacists and beauty advisors. Book online in a minute.",
   location: "SuperYou beauty bar",
   hours: [1, 2, 3, 4, 5, 6].map((day) => ({ day, open: "10:00", close: "19:00" })),
@@ -74,6 +78,8 @@ export const defaultServices: ServicesConfig = {
 const time = z.string().regex(/^\d{2}:\d{2}$/);
 export const servicesSchema = z.object({
   enabled: z.boolean(),
+  videoCalls: z.boolean().default(true),
+  eventsOn: z.boolean().default(true),
   intro: z.string().max(500),
   location: z.string().max(200),
   hours: z.array(z.object({ day: z.number().int().min(0).max(6), open: time, close: time })).max(14),
