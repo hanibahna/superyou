@@ -16,7 +16,6 @@ export function VideoModal({ id, title, lang, onClose }: { id: string; title: st
   const frame = useRef<HTMLIFrameElement>(null);
   const [cc, setCc] = useState<string>(() => { try { return localStorage.getItem("sy:subs") || site; } catch { return site; } });
   const [first] = useState(cc);
-  const [voice, setVoice] = useState(false);
   // Switch subtitles live through YouTube's player API (no restart).
   const send = (func: string, args: unknown[]) => frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
   const pickCc = (v: string) => {
@@ -50,13 +49,7 @@ export function VideoModal({ id, title, lang, onClose }: { id: string; title: st
               {CODES.map((c) => <option key={c} value={c}>{native(c)}</option>)}
             </select>
           </label>
-          <button type="button" onClick={() => setVoice((x) => !x)} aria-expanded={voice} className="rounded-full bg-white px-3 py-1.5 font-semibold text-ink">🎧 {t("Voice in another language")}</button>
         </div>
-        {voice && (
-          <p className="sp-in mt-2 rounded-xl bg-white/10 p-3 text-xs leading-relaxed text-white/90">
-            {t("When YouTube has a dubbed voice for this video: tap the gear icon in the player › Audio track, and pick your language. In Chrome you can also switch on Live Translate (Settings › Accessibility) for on-device translation of any video.")}
-          </p>
-        )}
         <p className="mt-3 line-clamp-2 text-sm text-white/85">{title}</p>
       </div>
     </div>
