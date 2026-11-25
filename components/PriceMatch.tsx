@@ -239,7 +239,7 @@ function NoCheaper() {
       </ul>
       {done && (
         <p className="sp-pop mt-2 rounded-lg bg-[#046c4e] px-2.5 py-1.5 text-[12px] font-semibold text-white">
-          ✓ {t("No shop beats our price.")} {t("If one drops its price, we go")} {g.superPriceBeat ?? 3}% {t("below it after the next nightly check.")}
+          ✓ {t("No shop beats our price.")}
         </p>
       )}
     </div>
