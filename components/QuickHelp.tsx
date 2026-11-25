@@ -18,13 +18,21 @@ export function QuickHelp({ className = "" }: { className?: string }) {
   const t = useT();
   const s = useSettings();
   const scanOn = !!useGrowth().skinScan?.enabled;
+  const video = useGrowth().videoCalls !== false;
   const base = "inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition";
   const pill = `${base} border-line bg-white hover:border-ink`;
   return (
     <div className={`no-scrollbar flex gap-2 overflow-x-auto ${className}`}>
       {scanOn && <Link href="/skin-scan/" className={`${base} scan-glow border-transparent text-white`}><ScanIcon size={16} />{t("SuperScan")}<span className="rounded-full bg-white/25 px-1.5 text-[10px] font-bold">NEW</span></Link>}
-      {useGrowth().videoCalls !== false && <Link href="/services/?book=video-consult" className={`${base} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>}
-      <a href={`https://wa.me/${s.store.whatsapp}`} target="_blank" rel="noreferrer" className={pill}><Icon d={I.wa} />WhatsApp</a>
+      {video ? (
+        <>
+          <Link href="/services/?book=video-consult" className={`${base} border-ink bg-ink text-white hover:bg-black`}><Icon d={I.video} />{t("Video call a pharmacist")}</Link>
+          <a href={`https://wa.me/${s.store.whatsapp}`} target="_blank" rel="noreferrer" className={pill}><Icon d={I.wa} />WhatsApp</a>
+        </>
+      ) : (
+        // Video calls off: the main button opens a WhatsApp chat with our pharmacist instead.
+        <a href={`https://wa.me/${s.store.whatsapp}?text=${encodeURIComponent(t("Hi, I'd like advice from a pharmacist"))}`} target="_blank" rel="noreferrer" className={`${base} border-[#1ebe5b] bg-[#25D366] text-white hover:bg-[#1ebe5b]`}><Icon d={I.wa} />{t("WhatsApp a pharmacist")}</a>
+      )}
       <button onClick={() => window.dispatchEvent(new Event("open-advisor"))} className={pill}><Icon d={I.ai} />{t("Ask AI")}</button>
       <Link href="/routine/" className={pill}><Icon d={I.routine} />{t("Routine finder")}</Link>
       <Link href="/account/" className={pill}><Icon d={I.track} />{t("Track my order")}</Link>
