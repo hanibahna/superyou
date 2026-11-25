@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
 import { VideoModal } from "./VideoModal";
 
-type V = { id: string; title: string; channel: string; lang?: string };
+type V = { id: string; title: string; channel: string; lang?: string; related?: boolean };
 const native = (c: string) => { try { return new Intl.DisplayNames([c], { type: "language" }).of(c) ?? c; } catch { return c; } };
 /** The languages the videos are spoken in, English / French / Arabic first. */
 const langsOf = (vs: { lang?: string }[]) => {
@@ -186,7 +186,7 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
                         <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100" />
                         <span className="absolute inset-0 grid place-items-center"><span className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow"><svg width="12" height="12" viewBox="0 0 24 24" fill="#2e2229" aria-hidden><path d="M8 5v14l11-7z" /></svg></span></span>
                       </span>
-                      <span className="mt-1 line-clamp-2 block min-h-[2.5em] text-[11px] font-medium leading-tight" lang={v.lang}>{v.title}</span>
+                      <span className="mt-1 line-clamp-2 block min-h-[2.5em] text-[11px] font-medium leading-tight" lang={v.lang}>{v.related && <b className="me-1 rounded bg-[#f6f1f3] px-1 text-[9px] uppercase">{t("Related")}</b>}{v.title}</span>
                       {v.channel && <span className="block truncate text-[10px] text-muted">{v.channel}</span>}
                     </button>
                   ))}

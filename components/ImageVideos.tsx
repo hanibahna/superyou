@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useT } from "@/lib/site-context";
 import { VideoModal } from "./VideoModal";
 
-type V = { id: string; title: string; channel: string; lang?: string };
+type V = { id: string; title: string; channel: string; lang?: string; related?: boolean };
 
 /** Review and how-to videos right under the product photo. Plays in place; nothing loads from YouTube
  * until tapped. Without videos, a slim card opens the How to use pop-up. */
@@ -38,6 +38,7 @@ export function ImageVideos({ slug, brand, name }: { slug: string; brand: string
           <button key={v.id} onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group relative aspect-video overflow-hidden rounded-xl bg-black">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100" />
+            {v.related && <span className="absolute start-1 top-1 rounded-full bg-white/90 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-ink">{t("Related")}</span>}
             <span className="absolute inset-0 grid place-items-center"><span className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow"><svg width="12" height="12" viewBox="0 0 24 24" fill="#2e2229" aria-hidden><path d="M8 5v14l11-7z" /></svg></span></span>
           </button>
         ))}
