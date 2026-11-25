@@ -57,7 +57,9 @@ export async function videosForProduct(p: { slug: string; brand: string; name: s
     const j = (await r.json()) as { items?: { id: { videoId: string }; snippet: { title: string; channelTitle: string; description?: string } }[] };
     for (const i of j.items ?? []) {
       const v = { id: i.id.videoId, title: decode(i.snippet.title), channel: decode(i.snippet.channelTitle), desc: decode(i.snippet.description ?? ""), hint: lang as string, from: lang as string };
-      const f = fits(v.title, v.channel) || (lang !== "en" && loose(v.title, v.desc));
+      // Shop names often add a description ("for Dark Circles") the video title leaves out: brand +
+      // product line is enough to reach Claude's check, which decides on the exact product.
+      const f = fits(v.title, v.channel) || loose(v.title, v.desc);
       trace?.push(`[${lang}] ${f ? "PASS" : "drop"}: ${v.title} — ${v.channel}`);
       if (f && !cands.some((x) => x.id === v.id)) cands.push(v);
     }
