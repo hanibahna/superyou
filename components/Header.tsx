@@ -199,7 +199,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
                   onNavigate={() => setMenuOpen(false)}
                   footer={
                     <div className="mt-4 space-y-1 border-t border-line pt-3 text-[15px]">
-                      {[[growthFlags.eventsOn === false ? "Services" : "Services & Events", "/services/"], ["SuperYou Club", "/club/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
+                      {[[growthFlags.eventsOn === false ? "Services" : "Services & Events", "/services/"], ["Wholesale", "/wholesale/"], ["SuperYou Club", "/club/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
                         <Link key={h} href={h} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center">{tx(l)}{h === "/wishlist/" && wishlist.length > 0 ? ` (${wishlist.length})` : ""}</Link>
                       ))}
                       <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="mt-2 flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white">{tx("WhatsApp us")}</a>

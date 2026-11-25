@@ -20,6 +20,7 @@ import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
 import { ShipBadge } from "@/components/ShipBadge";
 import { PriceMatchBadge, SuperPriceCard, SuperPriceSticker, SuperPriceTag } from "@/components/PriceMatch";
+import { BulkOffer } from "@/components/Bulk";
 
 export function BuyBox({
   variants,
@@ -139,6 +140,7 @@ export function BuyBox({
         )}
 
         {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} forMonths={forMonths} onFor={setFor} />}
+        {v.inStock && !plan && !v.matchWas && <BulkOffer price={v.price} qty={qty} onQty={setQty} />}
         <div className="mt-6 flex items-center gap-3">
           {v.inStock ? (
             <>

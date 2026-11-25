@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { DeliverySplit, ShipBadge } from "@/components/ShipBadge";
 import { PriceGuaranteeNote, PriceMatchBadge } from "@/components/PriceMatch";
+import { BulkNote } from "@/components/Bulk";
 import { SuperPrimeBox } from "@/components/SuperPrime";
 import { CouponBox, GiftPicker, Totals } from "@/components/CartPromos";
 import { DEMO_MODE } from "@/lib/config";
@@ -195,7 +196,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
                   <ProductImage product={product} className="h-14 w-14 rounded-lg" />
                   <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-ink text-[10px] text-white">{qty}</span>
                 </span>
-                <span className="flex-1 leading-snug">{cleanName(product.name)}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><PriceMatchBadge p={product} className="ml-1 mt-1" /><LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} readOnly /></span>
+                <span className="flex-1 leading-snug">{cleanName(product.name)}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><PriceMatchBadge p={product} className="ml-1 mt-1" /><LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} readOnly /><BulkNote productId={product.id} qty={qty} every={every} className="mt-1" /></span>
                 <span className="font-medium">{money(lineTotal)}</span>
               </li>
             ))}

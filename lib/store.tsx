@@ -34,7 +34,9 @@ export type CartLine = { productId: string; qty: number; product: ProductSnap; e
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
-  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string; matchWas?: number; matchVs?: number; spLimit?: number }[];
+  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string; matchWas?: number; matchVs?: number; spLimit?: number; bulk?: { units: number; pct: number; saving: number; left: number } }[];
+  /** Bulk buy offer (buy 2–3 of a product, paid now). */
+  bulk?: { pct: number; maxUnits: number };
   subtotal: number;
   discounts: { name: string; code?: string; amount: number }[];
   discountTotal: number;

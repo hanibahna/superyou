@@ -219,12 +219,15 @@ export async function priceOrder(input: CheckoutInput) {
     _prefix: q._settings.store.name,
     _superPrice: q._lines.some((l) => l.superPrice),
     _prime: q.prime?.choice,
+    _bulk: q.lines.flatMap((l) => (l.bulk?.units ? [[l.productId, l.bulk.units] as [string, number]] : [])),
   };
 }
 
 export async function createOrder(input: CheckoutInput, opts: { test?: boolean } = {}): Promise<Order> {
   const test = !!opts.test;
-  const { _prefix, _superPrice, _prime, ...priced } = await priceOrder(input);
+  const { _prefix, _superPrice, _prime, _bulk, ...priced } = await priceOrder(input);
+  // Bulk buy: count today's discounted units for this customer (daily limit per product).
+  if (!test && _bulk.length) for (const [pid, units] of _bulk) await (await import("@/lib/bulk")).addBulkUsed(input.customer.phone, pid, units).catch(() => {});
   if (!test && _superPrice && normPhone(input.customer.phone)) await (await import("@/lib/db")).db.cmd(["SET", spUsedKey(input.customer.phone), "1", "EX", 2 * 86400]).catch(() => {});
   if (priced.code && !test) {
     await countCouponUse(priced.code).catch(() => {});

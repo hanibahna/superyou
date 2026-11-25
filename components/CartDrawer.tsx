@@ -12,6 +12,7 @@ import { CloseIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
 import { DeliverySplit, ShipBadge } from "./ShipBadge";
 import { PriceMatchBadge, SuperPriceReveal } from "./PriceMatch";
+import { BulkNote } from "./Bulk";
 import { SuperPrimeTeaser } from "./SuperPrime";
 
 export function CartDrawer() {
@@ -49,6 +50,7 @@ export function CartDrawer() {
                     <ShipBadge p={product} className="mt-1 self-start" />
                     <PriceMatchBadge p={product} className="mt-1 self-start" />
                     <LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} />
+                    <BulkNote productId={product.id} qty={qty} every={every} className="mt-1 self-start" />
                     <div className="mt-auto flex items-center justify-between">
                       <Qty qty={qty} onChange={(n) => setQty(product.id, n)} />
                       <span className="text-right text-sm font-semibold">
