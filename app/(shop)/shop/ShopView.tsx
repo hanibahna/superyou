@@ -12,6 +12,7 @@ import { VideoStrip } from "@/components/Video";
 import { tagLabels, type Category, type Tag } from "@/lib/data/catalog";
 import type { ShopQuery, ShopResult } from "@/lib/listing";
 import type { VideoItem } from "@/lib/site";
+import { ShareMenu } from "@/components/ShareMenu";
 
 const sorts = {
   featured: "Featured",
@@ -141,7 +142,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
       {section && <SectionBanner s={section} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold">{fullTitle}</h1>
+          <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold">{fullTitle}<ShareMenu align="start" size={34} text={`🛍️ ${fullTitle} · SuperYou (${total.toLocaleString("en-US")} products)\n${typeof window !== "undefined" ? window.location.href.split("#")[0] : ""}`} /></h1>
           {(intro || (category?.description && !query.q)) && <p className="mt-1 max-w-2xl whitespace-pre-line text-sm text-muted">{intro || category?.description}</p>}
           <p className="mt-1 text-sm text-muted">{total.toLocaleString("en-US")} products{pending ? " · updating…" : ""}</p>
         </div>

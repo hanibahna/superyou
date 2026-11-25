@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/site-context";
+import { ShareMenu } from "./ShareMenu";
 import { VideoModal } from "./VideoModal";
 
 type V = { id: string; title: string; channel: string; lang?: string; related?: boolean };
@@ -35,12 +36,15 @@ export function ImageVideos({ slug, brand, name }: { slug: string; brand: string
       </p>
       <div className="grid grid-cols-3 gap-2">
         {videos.slice(0, 3).map((v) => (
-          <button key={v.id} onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group relative aspect-video overflow-hidden rounded-xl bg-black">
+          <div key={v.id} className="relative">
+          <button onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group relative aspect-video overflow-hidden rounded-xl bg-black">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100" />
             {v.related && <span className="absolute start-1 top-1 rounded-full bg-white/90 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-ink">{t("Related")}</span>}
             <span className="absolute inset-0 grid place-items-center"><span className="grid h-8 w-8 place-items-center rounded-full bg-white/95 shadow"><svg width="12" height="12" viewBox="0 0 24 24" fill="#2e2229" aria-hidden><path d="M8 5v14l11-7z" /></svg></span></span>
           </button>
+          <ShareMenu className="absolute end-1 top-1 z-10" size={26} text={`🎬 ${v.title}\nhttps://youtu.be/${v.id}${typeof window !== "undefined" ? `\n${name}: ${window.location.href.split("#")[0]}` : ""}`} />
+          </div>
         ))}
       </div>
     </div>

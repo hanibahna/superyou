@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
+import { ShareMenu } from "./ShareMenu";
 import { VideoModal } from "./VideoModal";
 
 type V = { id: string; title: string; channel: string; lang?: string; related?: boolean };
@@ -180,7 +181,8 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
                 {langs.length === 1 && <p className="mt-2 text-xs font-semibold text-muted" lang={langs[0][0]}>{langs[0][1]}</p>}
                 <div className="mt-3 grid grid-cols-2 items-start gap-2 sm:grid-cols-3">
                   {shown.slice(0, 3).map((v) => (
-                    <button key={v.id} onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group flex flex-col items-stretch justify-start text-start" dir={v.lang === "ar" ? "rtl" : undefined}>
+                    <div key={v.id} className="relative">
+                    <button onClick={() => setPlaying(v.id)} aria-label={`${t("Play")}: ${v.title}`} className="group flex w-full flex-col items-stretch justify-start text-start" dir={v.lang === "ar" ? "rtl" : undefined}>
                       <span className="relative block aspect-video overflow-hidden rounded-xl bg-black">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100" />
@@ -189,6 +191,8 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
                       <span className="mt-1 line-clamp-2 block min-h-[2.5em] text-[11px] font-medium leading-tight" lang={v.lang}>{v.related && <b className="me-1 rounded bg-[#f6f1f3] px-1 text-[9px] uppercase">{t("Related")}</b>}{v.title}</span>
                       {v.channel && <span className="block truncate text-[10px] text-muted">{v.channel}</span>}
                     </button>
+                    <ShareMenu className="absolute end-1 top-1 z-10" size={26} text={`🎬 ${v.title}\nhttps://youtu.be/${v.id}${typeof window !== "undefined" ? `\n${window.location.href.split("#")[0]}` : ""}`} />
+                    </div>
                   ))}
                 </div>
               </>
