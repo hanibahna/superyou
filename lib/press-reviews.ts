@@ -25,15 +25,15 @@ const siteOf = (url: string) => {
   } catch { return null; }
 };
 
-export async function pressReviews(p: { slug: string; brand: string; name: string }): Promise<PressReview[]> {
+export async function pressReviews(p: { slug: string; brand: string; name: string }, trace?: string[]): Promise<PressReview[]> {
   const ck = `press:v1:${p.slug}`;
   const hit = await db.cmd<string | null>(["GET", ck]).catch(() => null);
-  if (hit) return JSON.parse(hit) as PressReview[];
+  if (hit && !trace) return JSON.parse(hit) as PressReview[];
   const { anthropicKey } = await import("@/lib/extras");
   const key = await anthropicKey();
   if (!key) return [];
   // One search at a time per product (two shoppers opening the same page don't both pay for it).
-  if (!(await db.cmd<string | null>(["SET", `${ck}:lock`, "1", "NX", "EX", "120"]).catch(() => "OK"))) return [];
+  if (!trace && !(await db.cmd<string | null>(["SET", `${ck}:lock`, "1", "NX", "EX", "120"]).catch(() => "OK"))) return [];
   const product = fullName(p.brand, p.name);
   const prompt = `Find published reviews or editorial write-ups of this exact product: "${product}".
 Only use articles from these publications: ${Object.values(PRESS_SITES).join(", ")}.
@@ -54,7 +54,8 @@ Reply [] if none.`;
     signal: AbortSignal.timeout(55_000),
   }).catch(() => null);
   if (!r?.ok) {
-    console.error("[press]", r ? `${r.status} ${(await r.text().catch(() => "")).slice(0, 300)}` : "no response");
+    const e = r ? `${r.status} ${(await r.text().catch(() => "")).slice(0, 500)}` : "no response";
+    console.error("[press]", e); trace?.push(e);
     await db.cmd(["DEL", `${ck}:lock`]).catch(() => {});
     return [];
   }
@@ -63,6 +64,7 @@ Reply [] if none.`;
   const seen = new Set<string>();
   for (const c of j.content ?? []) if (c.type === "web_search_tool_result" && Array.isArray(c.content)) for (const x of c.content) if (x.url) seen.add(x.url.replace(/[#?].*$/, "").replace(/\/$/, ""));
   const text = (j.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("");
+  trace?.push(`found: ${[...seen].slice(0, 20).join(" ")}`, `answer: ${text.slice(0, 1500)}`);
   let list: PressReview[] = [];
   try {
     const raw = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1)) as Partial<PressReview>[];
