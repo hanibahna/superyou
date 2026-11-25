@@ -63,6 +63,14 @@ export async function POST(req: NextRequest) {
   const { brandName } = await import("@/lib/brand-names");
   const known = brandName(idx.all);
   for (const row of rows) row.brand = known(String(row.brand));
+  // NeoVitale: our cost comes from their discount per brand.
+  if (sourceName.toLowerCase().includes("neovitale")) {
+    const { discountFor } = await import("@/lib/costs/neovitale");
+    for (const row of rows) {
+      const pct = discountFor(String(row.brand), String(row.name));
+      if (typeof pct === "number" && Number(row.price) > 0) row.cost = +(Number(row.price) * (1 - pct / 100)).toFixed(2);
+    }
+  }
   // Products whose photos were replaced from another store keep those photos.
   for (const row of rows) {
     const id = idx.skuToId.get(String(row.sku).toLowerCase());
