@@ -25,28 +25,26 @@ export function ScrollCue() {
     return () => { removeEventListener("scroll", on); removeEventListener("resize", on); clearInterval(id); };
   }, [path]);
   if (path.startsWith("/checkout")) return null;
-  const down = p < 0.04;
-  const go = () => scrollTo({ top: down ? Math.min(innerHeight * 0.85 + scrollY, document.documentElement.scrollHeight) : 0, behavior: "smooth" });
-  const C = 2 * Math.PI * 21;
+  const atTop = p < 0.02, atEnd = p > 0.98;
+  const step = (d: 1 | -1) => scrollBy({ top: d * innerHeight * 0.85, behavior: "smooth" });
+  const btn = "grid h-10 w-10 place-items-center rounded-full transition disabled:cursor-default disabled:opacity-30";
   return (
     <>
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-[3px]">
         <div className="h-full origin-left bg-gradient-to-r from-[#c0587a] to-[#9b2c50] transition-transform duration-150" style={{ transform: `scaleX(${p})` }} />
       </div>
       {long && (
-        <button
-          type="button"
-          onClick={go}
-          aria-label={down ? t("Scroll down") : t("Back to top")}
-          className={`scroll-cue fixed bottom-24 left-1/2 z-30 -translate-x-1/2 md:bottom-6 ${down ? "scroll-cue-down" : ""}`}
-        >
-          <svg width="48" height="48" viewBox="0 0 48 48" className="drop-shadow-lg">
-            <circle cx="24" cy="24" r="21" fill="white" />
-            <circle cx="24" cy="24" r="21" fill="none" stroke="#f3c4d2" strokeWidth="3" />
-            <circle cx="24" cy="24" r="21" fill="none" stroke="#9b2c50" strokeWidth="3" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - p)} transform="rotate(-90 24 24)" style={{ transition: "stroke-dashoffset .15s linear" }} />
-            <path d={down ? "M17 21l7 7 7-7" : "M17 27l7-7 7 7"} fill="none" stroke="#111" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="scroll-cue-arrow" />
-          </svg>
-        </button>
+        <div className="fixed bottom-40 end-3 z-30 flex flex-col items-center gap-1 rounded-full border border-line bg-white/95 p-1 shadow-lg backdrop-blur md:bottom-32 md:end-5">
+          <button type="button" onClick={() => step(-1)} onDoubleClick={() => scrollTo({ top: 0, behavior: "smooth" })} disabled={atTop} aria-label={t("Scroll up")} className={`${btn} ${atTop ? "text-muted" : "bg-[#9b2c50] text-white hover:bg-[#7d2341]"}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 15l6-6 6 6" /></svg>
+          </button>
+          <span className="relative h-12 w-1 overflow-hidden rounded-full bg-[#f3c4d2]" aria-hidden>
+            <span className="absolute inset-x-0 top-0 rounded-full bg-[#9b2c50] transition-[height] duration-150" style={{ height: `${Math.max(8, p * 100)}%` }} />
+          </span>
+          <button type="button" onClick={() => step(1)} onDoubleClick={() => scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" })} disabled={atEnd} aria-label={t("Scroll down")} className={`${btn} ${atEnd ? "text-muted" : `bg-[#9b2c50] text-white hover:bg-[#7d2341] ${atTop ? "scroll-cue-down" : ""}`}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </div>
       )}
     </>
   );

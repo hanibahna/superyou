@@ -497,7 +497,7 @@ html[data-motion="off"] .sp-scan::after { animation: none; }
 .scroll-cue { transition: opacity .3s, transform .3s; }
 .scroll-cue:hover svg { transform: scale(1.06); }
 .scroll-cue svg { transition: transform .2s; }
-@keyframes scroll-cue-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 8px); } }
+@keyframes scroll-cue-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 .scroll-cue-down { animation: scroll-cue-bob 1.6s ease-in-out infinite; }
 @keyframes scroll-cue-arrow { 0%, 100% { transform: translateY(-1px); opacity: 1; } 50% { transform: translateY(2px); opacity: .6; } }
 .scroll-cue-down .scroll-cue-arrow { animation: scroll-cue-arrow 1.6s ease-in-out infinite; }
