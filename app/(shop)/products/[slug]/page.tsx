@@ -148,7 +148,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         {/* Shortcuts and tips sit above the product on desktop; on phones they move below it so name and price come first. */}
         <div className="hidden md:block">
           <QuickHelp className="mb-3" />
-          {sec.tips.length > 0 && <TipLine tips={sec.tips} banner={sec.banner} />}
+          <TipLine tips={sec.tips} slug={slug} name={fullName(initial.brand, initial.name)} banner={sec.banner} />
         </div>
 
         <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} life={life && life.every ? { days: life.days, every: life.every, basis: life.basis } : null} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
@@ -172,7 +172,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         </BuyBox>
         <div className="mt-8 md:hidden">
           <QuickHelp className="mb-3" />
-          {sec.tips.length > 0 && <TipLine tips={sec.tips} banner={sec.banner} />}
+          <TipLine tips={sec.tips} slug={slug} name={fullName(initial.brand, initial.name)} banner={sec.banner} />
         </div>
       </div>
       {pairs.length > 0 && (
