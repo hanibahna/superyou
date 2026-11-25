@@ -12,6 +12,39 @@ const langsOf = (vs: { lang?: string }[]) => {
   const ks = [...new Set(vs.map((v) => v.lang).filter(Boolean) as string[])].sort((a, b) => (order.indexOf(a) + 1 || 9) - (order.indexOf(b) + 1 || 9));
   return ks.map((k) => [k, native(k)] as [string, string]);
 };
+type Press = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string };
+const VERDICT: Record<string, string> = { "Loved it": "bg-[#046c4e] text-white", Recommended: "bg-[#e6f4ee] text-[#046c4e]", Mixed: "bg-[#fff4e5] text-[#9a5b00]", "Not recommended": "bg-[#fdecef] text-[#9b2c50]" };
+
+/** One expert review in a pop-up: our short summary, and a link to read it in full on the publication's site. */
+function PressModal({ r, onClose }: { r: Press; onClose: () => void }) {
+  const t = useT();
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", k);
+    const o = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", k); document.body.style.overflow = o; };
+  }, [onClose]);
+  return (
+    <div role="dialog" aria-modal="true" aria-label={r.title} onClick={onClose} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-0 md:items-center md:p-6">
+      <div onClick={(e) => e.stopPropagation()} className="sheet-up relative w-full max-w-lg rounded-t-2xl bg-white p-5 shadow-2xl md:rounded-2xl">
+        <button onClick={onClose} aria-label={t("Close")} className="absolute end-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-[#f2f2f2]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d13f74]">{r.site}</p>
+        <h3 className="mt-1 pe-10 text-lg font-bold leading-snug">{r.title}</h3>
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+          {r.verdict && <span className={`rounded-full px-2 py-0.5 font-bold ${VERDICT[r.verdict] ?? "bg-[#f2f2f2]"}`}>{t(r.verdict)}</span>}
+          {r.date && <span className="rounded-full bg-[#f2f2f2] px-2 py-0.5 font-medium text-muted">{r.date}</span>}
+        </div>
+        {r.summary && <p className="mt-3 text-sm leading-relaxed">{r.summary}</p>}
+        <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-sm font-semibold text-white">{t("Read the full review on")} {r.site} ↗</a>
+        <p className="mt-2 text-center text-[11px] text-muted">{t("Summary by SuperYou. The full article opens on the publication's website.")}</p>
+      </div>
+    </div>
+  );
+}
+
 type Guide = { steps: string[]; when: string; goodFor: string; cautions: string[]; source?: string };
 
 /** "How to use", always open and highlighted on the product page: the stored AI guide for this exact
@@ -24,7 +57,9 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
   const [playing, setPlaying] = useState("");
   const [vlang, setVlang] = useState<string>("");
   // One open at a time: videos open by default; opening How to use closes them, and the other way round.
-  const [sec, setSec] = useState<"videos" | "how" | null>("videos");
+  const [sec, setSec] = useState<"videos" | "how" | "press" | null>("videos");
+  const [press, setPress] = useState<Press[] | null>(null);
+  const [reading, setReading] = useState<Press | null>(null);
   const open = sec === "how";
   const setOpen = (f: (o: boolean) => boolean) => setSec((cur) => (f(cur === "how") ? "how" : null));
   useEffect(() => {
@@ -34,11 +69,12 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
   }, []);
   useEffect(() => {
     if (guide === undefined) fetch(`/api/products/guide/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setGuide(d.guide ?? null)).catch(() => setGuide(null));
+    fetch(`/api/products/press/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setPress(d.reviews ?? [])).catch(() => setPress([]));
     fetch(`/api/products/videos/?slug=${encodeURIComponent(slug)}&v=7`).then((r) => r.json()).then((d) => setVideos(d.videos ?? [])).catch(() => setVideos([]));
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const steps = guide?.steps?.length ? guide.steps : [];
-  if (guide !== undefined && !steps.length && !how && !tips.length && videos !== null && !videos.length) return null;
+  if (guide !== undefined && !steps.length && !how && !tips.length && videos !== null && !videos.length && !press?.length) return null;
   return (
     <>
     <section ref={box} id="how-to-use" aria-labelledby="howto-h" className="mt-3 scroll-mt-28 rounded-2xl border-2 border-[#d13f74]/40 bg-gradient-to-br from-[#fdeef3] to-white p-3">
@@ -86,6 +122,34 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
       <p className="mt-3 flex items-center gap-2 rounded-2xl border-2 border-line bg-white p-3 text-xs text-muted" aria-live="polite">
         <span className="h-3 w-3 animate-spin rounded-full border-2 border-line border-t-ink" aria-hidden />{t("Looking for videos of this exact product…")}
       </p>
+    )}
+    {reading && <PressModal r={reading} onClose={() => setReading(null)} />}
+    {press && press.length > 0 && (
+      <section aria-labelledby="press-h" className="mt-3 rounded-2xl border-2 border-line bg-white p-3">
+        <button type="button" onClick={() => setSec((c) => (c === "press" ? null : "press"))} aria-expanded={sec === "press"} aria-controls="press-body" className="flex w-full items-center gap-3 text-start">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#d13f74] text-white" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h12v16H6a2 2 0 01-2-2V4z" /><path d="M16 8h4v10a2 2 0 01-2 2" /><path d="M8 8h4M8 12h4M8 16h4" /></svg>
+          </span>
+          <span className="flex-1">
+            <span id="press-h" className="block text-lg font-bold">{t("Expert reviews")}</span>
+            <span className="block text-xs text-muted">{press.length} · {[...new Set(press.map((r) => r.site))].slice(0, 3).join(" · ")}</span>
+          </span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className={`shrink-0 transition-transform ${sec === "press" ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+        </button>
+        <ul id="press-body" hidden={sec !== "press"} className="mt-3 divide-y divide-line">
+          {press.map((r) => (
+            <li key={r.url}>
+              <button type="button" onClick={() => setReading(r)} className="flex w-full items-start gap-3 py-2.5 text-start hover:bg-[#faf7f8]">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-[#d13f74]">{r.site}</span>
+                  <span className="mt-0.5 line-clamp-2 block text-sm font-semibold leading-snug">{r.title}</span>
+                </span>
+                {r.verdict && <span className={`mt-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${VERDICT[r.verdict] ?? "bg-[#f2f2f2]"}`}>{t(r.verdict)}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
     )}
     {videos && videos.length > 0 && (
       <section aria-labelledby="videos-h" className="mt-3 rounded-2xl border-2 border-line bg-white p-3">
