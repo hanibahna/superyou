@@ -13,12 +13,18 @@ const langsOf = (vs: { lang?: string }[]) => {
   const ks = [...new Set(vs.map((v) => v.lang).filter(Boolean) as string[])].sort((a, b) => (order.indexOf(a) + 1 || 9) - (order.indexOf(b) + 1 || 9));
   return ks.map((k) => [k, native(k)] as [string, string]);
 };
-type Press = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string; liked?: string[]; watch?: string[]; rating?: string };
+type Press = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string; liked?: string[]; watch?: string[]; rating?: string; author?: string; domain?: string; long?: string };
 const VERDICT: Record<string, string> = { "Loved it": "bg-[#046c4e] text-white", Recommended: "bg-[#e6f4ee] text-[#046c4e]", Mixed: "bg-[#fff4e5] text-[#9a5b00]", "Not recommended": "bg-[#fdecef] text-[#9b2c50]" };
 
 /** One expert review in a pop-up: our short summary, and a link to read it in full on the publication's site. */
-function PressModal({ r, onClose }: { r: Press; onClose: () => void }) {
+function PressModal({ r, i, onClose }: { r: Press; i: number; onClose: () => void }) {
   const t = useT();
+  const [full, setFull] = useState(false);
+  // This review on our own page: the product page opens straight on it.
+  const link = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}?review=${i + 1}` : "";
+  const by = [r.author, r.site].filter(Boolean).join(", ");
+  const shortText = `⭐ ${r.title}\n${by}${r.rating ? ` · ${r.rating}` : ""}\n\n${r.summary}\n\n${link}`;
+  const longText = `⭐ ${r.title}\n${by}${r.rating ? ` · ${r.rating}` : ""}${r.date ? ` · ${r.date}` : ""}\n\n${r.long || r.summary}${r.liked?.length ? `\n\n✓ ${r.liked.join("\n✓ ")}` : ""}${r.watch?.length ? `\n\n! ${r.watch.join("\n! ")}` : ""}\n\n${t("Summary by SuperYou")} · ${link}`;
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", k);
@@ -34,12 +40,27 @@ function PressModal({ r, onClose }: { r: Press; onClose: () => void }) {
         </button>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d13f74]">{r.site}</p>
         <h3 className="mt-1 pe-10 text-lg font-bold leading-snug">{r.title}</h3>
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+          <dt className="text-muted">{t("Publication")}</dt><dd className="font-semibold">{r.site}</dd>
+          {r.author && <><dt className="text-muted">{t("Written by")}</dt><dd className="font-semibold">{r.author}</dd></>}
+          {r.domain && <><dt className="text-muted">{t("Website")}</dt><dd className="font-semibold">{r.domain}</dd></>}
+        </dl>
         <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
           {r.verdict && <span className={`rounded-full px-2 py-0.5 font-bold ${VERDICT[r.verdict] ?? "bg-[#f2f2f2]"}`}>{t(r.verdict)}</span>}
           {r.rating && <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5b00]">★ {r.rating}</span>}
           {r.date && <span className="rounded-full bg-[#f2f2f2] px-2 py-0.5 font-medium text-muted">{r.date}</span>}
         </div>
-        {r.summary && <p className="mt-3 text-sm leading-relaxed">{r.summary}</p>}
+        {r.long && (
+          <div className="mt-3 inline-flex rounded-full bg-[#f2f2f2] p-1 text-xs font-semibold">
+            <button type="button" onClick={() => setFull(false)} className={`rounded-full px-3 py-1 ${!full ? "bg-white shadow" : ""}`}>{t("Short")}</button>
+            <button type="button" onClick={() => setFull(true)} className={`rounded-full px-3 py-1 ${full ? "bg-white shadow" : ""}`}>{t("Full review")}</button>
+          </div>
+        )}
+        {full && r.long ? (
+          <div className="sp-in mt-3 space-y-2 text-sm leading-relaxed">{r.long.split(/\n+/).map((x, k) => <p key={k}>{x}</p>)}</div>
+        ) : (
+          r.summary && <p className="mt-3 text-sm leading-relaxed">{r.summary}</p>
+        )}
         {!!r.liked?.length && (
           <div className="mt-4">
             <p className="text-xs font-bold uppercase tracking-wider text-[#046c4e]">{t("What they liked")}</p>
@@ -52,8 +73,13 @@ function PressModal({ r, onClose }: { r: Press; onClose: () => void }) {
             <ul className="mt-1.5 space-y-1 text-sm">{r.watch.map((x) => <li key={x} className="flex gap-2"><span className="text-[#9a5b00]">!</span><span>{x}</span></li>)}</ul>
           </div>
         )}
-        <button onClick={onClose} className="mt-5 w-full rounded-full bg-ink py-3 text-sm font-semibold text-white">{t("Back to the product")}</button>
-        <p className="mt-2 text-center text-[11px] text-muted">{t("Summary by SuperYou of the review in")} {r.site}. <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="underline">{t("Source")}</a></p>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <ShareMenu text={shortText} label={t("Share short")} align="start" />
+          <ShareMenu text={longText} label={t("Share full")} align="end" />
+        </div>
+        {r.long && !full && <button onClick={() => setFull(true)} className="mt-2 w-full rounded-full border-2 border-ink py-2.5 text-sm font-semibold">{t("Read the full review here")}</button>}
+        <button onClick={onClose} className="mt-2 w-full rounded-full bg-ink py-3 text-sm font-semibold text-white">{t("Back to the product")}</button>
+        <p className="mt-2 text-center text-[11px] text-muted">{t("Written by SuperYou from the review by")} {by}. <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="underline">{t("Source")}</a></p>
       </div>
     </div>
   );
@@ -83,7 +109,13 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
   }, []);
   useEffect(() => {
     if (guide === undefined) fetch(`/api/products/guide/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setGuide(d.guide ?? null)).catch(() => setGuide(null));
-    fetch(`/api/products/press/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => setPress(d.reviews ?? [])).catch(() => setPress([]));
+    fetch(`/api/products/press/?slug=${encodeURIComponent(slug)}`).then((r) => r.json()).then((d) => {
+      const list: Press[] = d.reviews ?? [];
+      setPress(list);
+      // A shared link (?review=2) opens that review straight away.
+      const n = Number(new URLSearchParams(window.location.search).get("review"));
+      if (n > 0 && list[n - 1]) { setReading(list[n - 1]); setSec("press"); }
+    }).catch(() => setPress([]));
     fetch(`/api/products/videos/?slug=${encodeURIComponent(slug)}&v=7`).then((r) => r.json()).then((d) => setVideos(d.videos ?? [])).catch(() => setVideos([]));
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -137,7 +169,7 @@ export function HowToUse({ slug, how, tips, initialGuide }: { slug: string; name
         <span className="h-3 w-3 animate-spin rounded-full border-2 border-line border-t-ink" aria-hidden />{t("Looking for videos of this exact product…")}
       </p>
     )}
-    {reading && <PressModal r={reading} onClose={() => setReading(null)} />}
+    {reading && <PressModal r={reading} i={Math.max(0, press?.indexOf(reading) ?? 0)} onClose={() => setReading(null)} />}
     {press && press.length > 0 && (
       <section aria-labelledby="press-h" className="mt-3 rounded-2xl border-2 border-line bg-white p-3">
         <button type="button" onClick={() => setSec((c) => (c === "press" ? null : "press"))} aria-expanded={sec === "press"} aria-controls="press-body" className="flex w-full items-center gap-3 text-start">

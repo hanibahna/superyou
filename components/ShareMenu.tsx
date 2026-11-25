@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
 
 /** A colourful share button that opens a small menu: WhatsApp, Copy, and the phone's own share sheet. */
-export function ShareMenu({ text, className = "", size = 32, align = "end", onOpen }: { text: string; className?: string; size?: number; align?: "start" | "end"; onOpen?: () => void }) {
+export function ShareMenu({ text, className = "", size = 32, align = "end", onOpen, label }: { text: string; className?: string; size?: number; align?: "start" | "end"; onOpen?: () => void; label?: string }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -21,7 +21,13 @@ export function ShareMenu({ text, className = "", size = 32, align = "end", onOp
   const native = typeof navigator !== "undefined" && "share" in navigator;
   const item = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-sm font-semibold hover:bg-[#f6f1f3]";
   return (
-    <span ref={box} className={`relative inline-flex ${className}`} onClick={(e) => e.stopPropagation()}>
+    <span ref={box} className={`relative ${label ? "block" : "inline-flex"} ${className}`} onClick={(e) => e.stopPropagation()}>
+      {label ? (
+        <button type="button" onClick={() => { setOpen((o) => !o); onOpen?.(); }} aria-expanded={open} className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#ff7aa8] to-[#9b2c50] py-2.5 text-sm font-semibold text-white shadow-md">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
+          {label}
+        </button>
+      ) : (
       <button
         type="button"
         onClick={() => { setOpen((o) => !o); onOpen?.(); }}
@@ -32,6 +38,7 @@ export function ShareMenu({ text, className = "", size = 32, align = "end", onOp
       >
         <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
       </button>
+      )}
       {open && (
         <span role="menu" className={`sp-in absolute top-full z-50 mt-2 w-48 rounded-xl border border-line bg-white p-1.5 shadow-xl ${align === "end" ? "end-0" : "start-0"}`}>
           <a role="menuitem" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className={item}>

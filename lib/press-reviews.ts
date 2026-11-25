@@ -6,7 +6,7 @@ import { fullName } from "@/lib/data/catalog";
 // Expert reviews of a product from leading beauty and health publications, found with Claude's web
 // search (limited to the sites below) the first time a product page is opened, then cached.
 // Summaries are written in our own words (one or two sentences); the full review stays on its site.
-export type PressReview = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string; liked?: string[]; watch?: string[]; rating?: string };
+export type PressReview = { site: string; title: string; url: string; summary: string; verdict?: string; date?: string; liked?: string[]; watch?: string[]; rating?: string; author?: string; domain?: string; long?: string };
 
 export const PRESS_SITES: Record<string, string> = {
   "allure.com": "Allure", "byrdie.com": "Byrdie", "vogue.com": "Vogue", "vogue.co.uk": "British Vogue", "vogue.fr": "Vogue France",
@@ -29,7 +29,7 @@ const siteOf = (url: string) => {
 };
 
 export async function pressReviews(p: { slug: string; brand: string; name: string }, trace?: string[]): Promise<PressReview[]> {
-  const ck = `press:v2:${p.slug}`;
+  const ck = `press:v3:${p.slug}`;
   const hit = await db.cmd<string | null>(["GET", ck]).catch(() => null);
   if (hit && !trace) return JSON.parse(hit) as PressReview[];
   const { anthropicKey } = await import("@/lib/extras");
@@ -43,14 +43,14 @@ Only use articles from these publications: ${Object.values(PRESS_SITES).join(", 
 Keep an article only if it reviews or clearly recommends THIS exact product (same brand, same product line and variant). A list article ("best eye creams") counts only if it has a section on this exact product. Skip anything about a different product of the same range.
 
 Reply with JSON only, no other text: an array (max 6) of objects:
-{"url": "...", "title": "article title", "summary": "2-3 sentences in your own words on what the reviewer said about this product (no quotes, max 60 words)", "liked": ["up to 4 short points the reviewer liked, your own words"], "watch": ["up to 3 short drawbacks or who it may not suit, your own words; [] if none"], "rating": "the reviewer's score if they gave one, e.g. 9/10, else empty", "verdict": "Loved it" | "Recommended" | "Mixed" | "Not recommended", "date": "YYYY-MM or empty"}
+{"url": "...", "title": "article title", "summary": "2-3 sentences in your own words on what the reviewer said about this product (no quotes, max 60 words)", "liked": ["up to 4 short points the reviewer liked, your own words"], "watch": ["up to 3 short drawbacks or who it may not suit, your own words; [] if none"], "rating": "the reviewer's score if they gave one, e.g. 9/10, else empty", "author": "the writer's name as shown on the article, else empty", "long": "a fuller write-up of the review in YOUR OWN WORDS, 120-200 words, in 2-3 short paragraphs: what was tested and how, results, texture/feel, who it suits, any drawbacks, overall verdict. Never copy sentences or quote the article.", "verdict": "Loved it" | "Recommended" | "Mixed" | "Not recommended", "date": "YYYY-MM or empty"}
 Reply [] if none.`;
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model: process.env.ANTHROPIC_PRESS_MODEL || "claude-sonnet-5-5",
-      max_tokens: 3500,
+      max_tokens: 6000,
       // No domain filter on the search itself (several publishers can't be named there); results are
       // kept only when they come from the publications above.
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
@@ -80,7 +80,7 @@ Reply [] if none.`;
       const norm = url.replace(/[#?].*$/, "").replace(/\/$/, "");
       if (!d || !seen.has(norm) || urls.has(norm)) continue;
       urls.add(norm);
-      list.push({ site: PRESS_SITES[d], url, title: String(x.title ?? "").slice(0, 160), summary: String(x.summary ?? "").slice(0, 300), verdict: x.verdict ? String(x.verdict).slice(0, 20) : undefined, date: x.date ? String(x.date).slice(0, 7) : undefined, liked: Array.isArray(x.liked) ? x.liked.map((y) => String(y).slice(0, 120)).slice(0, 4) : [], watch: Array.isArray(x.watch) ? x.watch.map((y) => String(y).slice(0, 120)).slice(0, 3) : [], rating: x.rating ? String(x.rating).slice(0, 12) : undefined });
+      list.push({ site: PRESS_SITES[d], url, title: String(x.title ?? "").slice(0, 160), summary: String(x.summary ?? "").slice(0, 300), verdict: x.verdict ? String(x.verdict).slice(0, 20) : undefined, date: x.date ? String(x.date).slice(0, 7) : undefined, author: x.author ? String(x.author).slice(0, 80) : undefined, domain: d, long: x.long ? String(x.long).slice(0, 1600) : undefined, liked: Array.isArray(x.liked) ? x.liked.map((y) => String(y).slice(0, 120)).slice(0, 4) : [], watch: Array.isArray(x.watch) ? x.watch.map((y) => String(y).slice(0, 120)).slice(0, 3) : [], rating: x.rating ? String(x.rating).slice(0, 12) : undefined });
     }
   } catch { list = []; }
   list = list.slice(0, 6);
