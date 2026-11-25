@@ -239,7 +239,7 @@ function NoCheaper() {
       </ul>
       {done && (
         <p className="sp-pop mt-2 rounded-lg bg-[#046c4e] px-2.5 py-1.5 text-[12px] font-semibold text-white">
-          ✓ {t("No shop beats our price.")}
+          ✓ {t("No online shop in Lebanon beats our price, guaranteed.")}
         </p>
       )}
     </div>
