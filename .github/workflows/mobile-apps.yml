@@ -39,8 +39,6 @@ jobs:
     defaults: { run: { working-directory: ios-native } }
     steps:
       - uses: actions/checkout@v4
-      - run: brew install xcodegen
-      - run: xcodegen generate
       - name: Build for the simulator
         run: |
           set -o pipefail
