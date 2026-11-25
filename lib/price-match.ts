@@ -297,6 +297,7 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
 
   try {
     await apply(sites, g, st.sites);
+    await (await import("@/lib/stock-alerts")).sendStockAlerts().catch(() => 0); // nightly, besides the daily run
   } catch (e) {
     // Keep the state so the next call retries the final step (at most 3 times).
     const tries = (st.tries ?? 0) + 1;

@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });
   }
+  // Import finished: tell anyone waiting for a product that is now back in stock.
+  if (!products.length) await (await import("@/lib/stock-alerts")).sendStockAlerts().catch(() => 0);
   if (!products.length) return NextResponse.json({ done: true, fetched: 0, rows: 0, created: 0, updated: 0, errors: [], skus: [], categories: {} });
 
   const sourceName = origin.hostname.replace(/^www\./, "");
