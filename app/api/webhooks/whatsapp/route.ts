@@ -37,9 +37,11 @@ export async function POST(req: NextRequest) {
       for (const ch of e.changes ?? []) {
         const v = ch.value ?? {};
         const names = new Map(((v.contacts as { wa_id: string; profile?: { name?: string } }[]) ?? []).map((c) => [c.wa_id, c.profile?.name]));
-        for (const m of (v.messages as { from: string; type: string; text?: { body: string }; button?: { text: string }; interactive?: { button_reply?: { title: string } }; image?: { id: string; caption?: string } }[]) ?? [])
+        for (const m of (v.messages as { from: string; type: string; text?: { body: string }; button?: { text: string; payload?: string }; interactive?: { button_reply?: { title: string } }; image?: { id: string; caption?: string } }[]) ?? [])
           // A photo from our courier = proof of delivery (order number in the caption).
-          if (m.type === "image" && m.image?.id && (await (await import("@/lib/fulfil")).podFromWhatsApp(m.from, m.image.id, m.image.caption ?? "").catch((e) => (console.error("[pod]", e), false)))) continue;
+          // Supplier / courier tapping "Ready for pickup" / "Picked up" (or writing "READY PO-…").
+          if ((m.button?.payload || m.text?.body) && (await (await import("@/lib/fulfil")).fulfilReply(m.from, m.button?.payload ?? "", m.text?.body ?? m.button?.text ?? "").catch((e) => (console.error("[fulfil reply]", e), false)))) continue;
+          else if (m.type === "image" && m.image?.id && (await (await import("@/lib/fulfil")).podFromWhatsApp(m.from, m.image.id, m.image.caption ?? "").catch((e) => (console.error("[pod]", e), false)))) continue;
           else await handleInbound(m.from, m.text?.body ?? m.button?.text ?? m.interactive?.button_reply?.title ?? `[${m.type}]`, names.get(m.from));
         for (const s of (v.statuses as { id: string; status: string; errors?: { title?: string; message?: string }[] }[]) ?? [])
           await handleStatus(s.id, s.status, s.errors?.[0]?.message ?? s.errors?.[0]?.title);

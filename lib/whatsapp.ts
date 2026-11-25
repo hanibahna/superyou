@@ -115,7 +115,7 @@ async function updateLog(id: string, patch: Partial<LogEntry>) {
 
 // ── Sending ─────────────────────────────────────────────
 
-export type SendInput = { to: string; name?: string; template: string; language: string; params: string[]; headerImage?: string; kind: string };
+export type SendInput = { to: string; name?: string; template: string; language: string; params: string[]; headerImage?: string; kind: string; buttons?: string[] /* quick-reply payloads, in button order */ };
 
 /** Send one template message (or log it in test mode). Never throws. */
 export async function sendTemplate(m: SendInput): Promise<LogEntry> {
@@ -149,6 +149,7 @@ export async function sendTemplate(m: SendInput): Promise<LogEntry> {
       const components: unknown[] = [];
       if (m.headerImage) components.push({ type: "header", parameters: [{ type: "image", image: { link: m.headerImage } }] });
       if (m.params.length) components.push({ type: "body", parameters: m.params.map((t) => ({ type: "text", text: t || "-" })) });
+      m.buttons?.forEach((payload, i) => components.push({ type: "button", sub_type: "quick_reply", index: String(i), parameters: [{ type: "payload", payload }] }));
       const body = { messaging_product: "whatsapp", recipient_type: "individual", to, type: "template", template: { name: m.template, language: { code: m.language || "en" }, components } };
       const r = p === "360dialog"
         ? await fetch(`${D360}/messages`, { method: "POST", headers: { "D360-API-KEY": process.env.D360_API_KEY!, "Content-Type": "application/json" }, body: JSON.stringify(body) })
@@ -169,7 +170,7 @@ export async function sendTemplate(m: SendInput): Promise<LogEntry> {
 
 /** Fire an automation (order / booking events). Respects the contact's choices. */
 /** Sends an automation; true when the WhatsApp message went out (lets SMS step in when it didn't). */
-export async function trigger(key: AutomationKey, phone: string, vars: Record<string, string>): Promise<boolean> {
+export async function trigger(key: AutomationKey, phone: string, vars: Record<string, string>, extra: { headerImage?: string; buttons?: string[] } = {}): Promise<boolean> {
   try {
     const cfg = await getWaConfig();
     const a = cfg.automations[key];
@@ -177,7 +178,7 @@ export async function trigger(key: AutomationKey, phone: string, vars: Record<st
     const c = await getContact(normPhone(phone));
     const marketing = automationInfo[key].category === "MARKETING";
     if (marketing ? !c?.offers : c && !c.updates) return false;
-    const r = await sendTemplate({ to: phone, name: vars.first_name, template: a.template, language: a.language, params: a.params.map((s) => fill(s, vars)), kind: key });
+    const r = await sendTemplate({ to: phone, name: vars.first_name, template: a.template, language: a.language, params: a.params.map((s) => fill(s, vars)), kind: key, ...extra });
     return r.status !== "failed";
   } catch (e) {
     console.error("[whatsapp]", key, e);
@@ -315,13 +316,14 @@ export async function listTemplates(): Promise<{ templates: TemplateInfo[]; erro
   }
 }
 
-export async function createTemplate(t: { name: string; category: string; language: string; body: string; example: string[]; header?: "IMAGE" }) {
+export async function createTemplate(t: { name: string; category: string; language: string; body: string; example: string[]; header?: "IMAGE"; buttons?: string[] }) {
   const p = provider();
   if (p === "wati") throw new Error("With WATI, create templates in your WATI dashboard (Broadcast → Template messages). Copy the text from here.");
   if (p === "none") throw new Error("Connect a WhatsApp provider first.");
   const components: unknown[] = [];
   if (t.header === "IMAGE") components.push({ type: "HEADER", format: "IMAGE", example: { header_handle: ["https://cdn.shopify.com/s/files/1/0295/0545/4173/files/3614273863360.jpg"] } });
   components.push({ type: "BODY", text: t.body, ...(t.example.length ? { example: { body_text: [t.example] } } : {}) });
+  if (t.buttons?.length) components.push({ type: "BUTTONS", buttons: t.buttons.map((text) => ({ type: "QUICK_REPLY", text })) });
   const payload = { name: t.name, category: t.category, language: t.language, allow_category_change: true, components };
   const r = p === "360dialog"
     ? await fetch(`${D360}/v1/configs/templates`, { method: "POST", headers: { "D360-API-KEY": process.env.D360_API_KEY!, "Content-Type": "application/json" }, body: JSON.stringify(payload) })

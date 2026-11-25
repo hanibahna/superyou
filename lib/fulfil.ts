@@ -23,6 +23,8 @@ export const poNumber = (id: string) => `PO-${id.replace(/^SUP-/, "")}`;
 export const labelLink = (id: string) => `${siteUrl()}/f/${encodeURIComponent(id)}/`;
 /** The courier's phone is remembered with this key (cookie), set when they open any courier link. */
 export const courierKey = () => createHmac("sha256", SECRET).update("courier-device").digest("base64url").slice(0, 24);
+/** The parcel label as a picture (sent with the WhatsApp message, printable from the phone). */
+export const labelImage = (id: string) => `${siteUrl()}/api/fulfil/${encodeURIComponent(id)}/label/?t=${tokenFor(id, "s")}`;
 export const linkFor = (id: string, role: Role) => `${siteUrl()}/f/${encodeURIComponent(id)}/?t=${tokenFor(id, role)}&r=${role}`;
 export const PAYABLES = "fulfil:payables"; // orderId → JSON { amount, at, paidAt? }
 export const CASH = "fulfil:cash"; // orderId → JSON { amount, at, courier, settledAt? }: cash the courier collected for us
@@ -42,11 +44,11 @@ export async function supplierLines(o: Order, source: string): Promise<FLine[]> 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const collectOf = (o: Order) => (o.paymentMethod === "cod" ? `${money(o.total)} cash` : "nothing (paid)");
 
-async function tell(to: { email?: string; whatsapp?: string }, subject: string, text: string, wa?: { key: "supplierOrder" | "pickupRequest" | "opsUpdate"; vars: Record<string, string> }) {
+async function tell(to: { email?: string; whatsapp?: string }, subject: string, text: string, wa?: { key: "supplierOrder" | "pickupRequest" | "opsUpdate"; vars: Record<string, string>; headerImage?: string; buttons?: string[] }) {
   const sent: string[] = [];
   if (to.email && (await (await import("@/lib/email")).sendEmail(to.email, subject, text).catch(() => false))) sent.push("email");
   if (to.whatsapp && wa) {
-    const ok = await (await import("@/lib/whatsapp")).trigger(wa.key, to.whatsapp, wa.vars).catch(() => false);
+    const ok = await (await import("@/lib/whatsapp")).trigger(wa.key, to.whatsapp, wa.vars, { headerImage: wa.headerImage, buttons: wa.buttons }).catch(() => false);
     if (ok) sent.push("whatsapp");
     else if ((await (await import("@/lib/sms")).sendSms(to.whatsapp, `${subject}. ${text.split("\n").find((l) => l.startsWith("http")) ?? ""}`).then((r) => r.ok).catch(() => false))) sent.push("sms");
   }
@@ -74,8 +76,8 @@ export async function sendToSupplier(o: Order, force = false) {
   const sent = await tell(
     o.test ? team : { email: f.supplierEmail, whatsapp: f.supplierWhatsapp },
     `${o.test ? "[TEST] " : ""}SuperYou purchase order ${poNumber(o.id)} — ${count} item${count === 1 ? "" : "s"} to prepare`,
-    `Hello ${f.supplierName},\n\nPlease prepare SuperYou purchase order ${poNumber(o.id)}:\n${items}\n\nPrint the tracking label and stick it on the parcel, then tap "Ready for pickup":\n${link}\n\nThank you,\nSuperYou`,
-    { key: "supplierOrder", vars: { order_id: poNumber(o.id), items: `${count} item${count === 1 ? "" : "s"}`, link } },
+    `Hello ${f.supplierName},\n\nPlease prepare SuperYou purchase order ${poNumber(o.id)}:\n${items}\n\nParcel label (print and stick it on the box): ${labelImage(o.id)}\nPurchase order and label, with the "Ready for pickup" button: ${link}\n\nYou can also reply "READY ${poNumber(o.id)}" on WhatsApp.\n\nThank you,\nSuperYou`,
+    { key: "supplierOrder", vars: { order_id: poNumber(o.id), items: `${count} item${count === 1 ? "" : "s"}`, link }, headerImage: labelImage(o.id), buttons: [`READY|${o.id}`] },
   );
   await updateOrder(o.id, { fulfil: { stage: "sent", sentAt: new Date().toISOString() } }, "fulfil", `Sent to ${f.supplierName} (${sent.join(", ") || "not sent: add the supplier's email/WhatsApp"})`);
   return sent;
@@ -94,7 +96,7 @@ export async function markReady(id: string, by = "supplier") {
     o.test ? team : { email: f.courierEmail, whatsapp: f.courierWhatsapp },
     `${o.test ? "[TEST] " : ""}Pickup: SuperYou parcel ${poNumber(o.id)} is ready`,
     `Hello ${f.courierName || ""},\n\nSuperYou parcel ${poNumber(o.id)} (order ${o.id}) is ready for pickup at:\n${f.supplierName} — ${f.supplierAddress}\n\nScan the parcel's QR code with your phone: the customer's name, address and phone are then sent to your WhatsApp. Confirm pickup and delivery (with a photo) here:\n${link}\n\nThank you,\nSuperYou`,
-    { key: "pickupRequest", vars: { order_id: poNumber(o.id), pickup_address: `${f.supplierName}, ${f.supplierAddress}`.slice(0, 200), deliver_to: o.customer.city, collect: collectOf(o), link } },
+    { key: "pickupRequest", vars: { order_id: poNumber(o.id), pickup_address: `${f.supplierName}, ${f.supplierAddress}`.slice(0, 200), deliver_to: o.customer.city, collect: collectOf(o), link }, buttons: [`PICKED|${o.id}`] },
   );
   const next = await updateOrder(o.id, { fulfil: { ...(o.fulfil ?? { stage: "sent" }), stage: "ready", readyAt: new Date().toISOString() }, ...(["pending_cod", "paid", "confirmed"].includes(o.status) ? { status: "packed" as const } : {}) }, by, `Ready for pickup — courier told (${sent.join(", ") || "not sent: add the courier's email/WhatsApp"})`);
   await tellTeam(o, `ready for pickup at ${f.supplierName}`);
@@ -208,4 +210,29 @@ export async function settleCash(ids: string[]) {
     const raw = await db.cmd<string | null>(["HGET", CASH, id]);
     if (raw) await db.cmd(["HSET", CASH, id, JSON.stringify({ ...JSON.parse(raw), settledAt: at })]);
   }
+}
+
+/** WhatsApp replies: the supplier taps "Ready for pickup" (or writes "READY PO-…"), the courier taps "Picked up".
+ *  Only from the supplier's / courier's own numbers (or our team's, for test orders). */
+export async function fulfilReply(from: string, payload: string, text: string) {
+  const f = (await getOps()).fulfil;
+  const { normPhone } = await import("@/lib/wa");
+  const who = normPhone(from);
+  const is = (n: string) => !!n && normPhone(n) === who;
+  let action = "", ref = "";
+  const p = payload.match(/^(READY|PICKED)\|(.+)$/);
+  if (p) (action = p[1], ref = p[2]);
+  else {
+    const m = text.toUpperCase().match(/\b(READY|PICKED UP|PICKED|جاهز)\b.*?\b((?:PO|SUP|TST)-[A-Z0-9-]+)/);
+    if (m) (action = m[1].startsWith("PICK") ? "PICKED" : "READY", ref = m[2]);
+  }
+  if (!action) return false;
+  const id = ref.replace(/^PO-(?=TST-)/, "").replace(/^PO-/, "SUP-");
+  const o = await getOrder(id);
+  if (!o) return false;
+  const supplierOk = is(f.supplierWhatsapp) || (o.test && is(f.teamWhatsapp));
+  const courierOk = is(f.courierWhatsapp) || (o.test && is(f.teamWhatsapp));
+  if (action === "READY" && supplierOk) return (await markReady(id, `supplier (WhatsApp)`), true);
+  if (action === "PICKED" && courierOk) return (await markPicked(id, `courier (WhatsApp)`), true);
+  return false;
 }
