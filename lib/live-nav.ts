@@ -214,11 +214,11 @@ export function liveHrefsDeep<T>(v: T, nav: LiveNav): T {
 }
 
 /** Menus, footer links and announcement for the shop, trimmed to what's on sale right now. */
-export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy) {
+export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy, wholesale = false) {
   const auto = autoCategories(tax, nav);
   return {
     // Wholesale: always in the menu (after the shop sections), unless the admin menu already has it.
-    menu: ((m) => (m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(s.menu, nav, auto)),
+    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(s.menu, nav, auto)),
     footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav, auto) })).filter((c) => c.links.length),
     announcement: liveHrefsDeep(s.announcement, nav),
   };

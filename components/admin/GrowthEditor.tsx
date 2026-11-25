@@ -223,6 +223,7 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
           <Card title="Bulk buy" sub="Buy 2 or more of the same product in one order, paid now, and get the same % as Subscribe & save every 3 months (or your own %). Never below cost + your minimum margin. SuperPrice and subscribed items are excluded.">
             <div className="grid gap-4 md:grid-cols-3">
               <Toggle label="Bulk buy discount" checked={g.bulk.enabled} onChange={(enabled) => up("bulk", { enabled })} />
+              <Toggle label="Wholesale page, form and menu link (/wholesale/)" checked={g.bulk.wholesale} onChange={(wholesale) => up("bulk", { wholesale })} />
               <Num label="Discount % (0 = same as Subscribe & save every 3 months)" value={g.bulk.pct} onChange={(pct) => up("bulk", { pct })} />
               <Num label="Discounted units per product, per customer a day" value={g.bulk.maxUnits} onChange={(maxUnits) => up("bulk", { maxUnits })} />
             </div>

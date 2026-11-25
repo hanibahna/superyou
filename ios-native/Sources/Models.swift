@@ -80,7 +80,7 @@ struct Config: Codable {
     struct SuperPriceCfg: Codable { let beatPct: Double; let shops: [String] }
     struct BulkCfg: Codable { let pct: Double; let maxUnits: Int }
     struct Prime: Codable { let name: String; let monthlyPrice: Double; let trialMonths: Int; let trialMinOrder: Double; let freeMin: Double; let unlimitedSuperPrice: Bool; let promoLive: Bool }
-    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil; var wheel: Wheel? = nil; var game: Game? = nil; var superPrice: SuperPriceCfg? = nil; var prime: Prime? = nil; var bulk: BulkCfg? = nil; var videoCalls: Bool? = nil; var eventsOn: Bool? = nil }
+    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil; var wheel: Wheel? = nil; var game: Game? = nil; var superPrice: SuperPriceCfg? = nil; var prime: Prime? = nil; var bulk: BulkCfg? = nil; var wholesale: Bool? = nil; var videoCalls: Bool? = nil; var eventsOn: Bool? = nil }
     struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
     struct Theme: Codable { var primary: String?; var ink: String?; var sale: String?; var background: String?; var headingFont: String?; var buttons: String?; var cards: String?; var preset: String? }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double

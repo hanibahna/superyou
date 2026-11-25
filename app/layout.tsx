@@ -32,10 +32,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export const dynamic = "force-dynamic";
 
 // Page bodies stay on the server; the browser only needs the titles of footer pages.
-function publicSettings(s: Awaited<ReturnType<typeof getSettings>>, nav: Awaited<ReturnType<typeof liveNav>>, tax: Awaited<ReturnType<typeof getTaxonomy>>) {
+function publicSettings(s: Awaited<ReturnType<typeof getSettings>>, nav: Awaited<ReturnType<typeof liveNav>>, tax: Awaited<ReturnType<typeof getTaxonomy>>, wholesale: boolean) {
   const pages = Object.fromEntries(Object.entries(s.pages).filter(([, p]) => p.footer !== false).map(([k, p]) => [k, { title: p.title, body: "" }]));
   // Menus only show categories that have products on sale (see lib/live-nav.ts).
-  return { ...s, pages, ...shopNav(s, nav, tax) };
+  return { ...s, pages, ...shopNav(s, nav, tax, wholesale) };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -55,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {marketing.tracking.metaDomain && <meta name="facebook-domain-verification" content={marketing.tracking.metaDomain} />}
       </head>
       <body>
-        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav(), await getTaxonomy()), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(await withShopsRead(publicGrowth(growth, !!(await (await import("@/lib/extras")).anthropicKey()))), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
+        <SiteProvider value={{ settings: await translateDeep(publicSettings(settings, await liveNav(), await getTaxonomy(), growth.bulk.wholesale), lang, ["label", "title", "text", "tagline", "estimate", "description"]), search: { predictive: search.predictive, popular: search.popular }, routineEnabled: routine.enabled, growth: await translateDeep(await withShopsRead(publicGrowth(growth, !!(await (await import("@/lib/extras")).anthropicKey()))), lang, ["title", "text", "tabLabel", "cartExitText", "label", "hours", "perks", "lines", "returnsSummary"]), lang }}>
           {children}
         </SiteProvider>
         <Tracking t={publicTracking(marketing)} />

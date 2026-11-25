@@ -5,6 +5,7 @@ import { addWholesale } from "@/lib/wholesale";
 
 // Wholesale enquiry form: saved for Admin › Wholesale, emailed to the orders inbox and sent to the team's WhatsApp.
 export async function POST(req: NextRequest) {
+  if (!(await (await import("@/lib/growth-store")).getGrowth()).bulk.wholesale) return NextResponse.json({ error: "Wholesale enquiries are closed for now." }, { status: 404 });
   const tooMany = await limited(req, "wholesale", 10);
   if (tooMany) return tooMany;
   const t = (n: number) => z.string().trim().max(n);

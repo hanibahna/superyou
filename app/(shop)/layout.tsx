@@ -23,7 +23,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const nav = await liveNav();
   const tax = await getTaxonomy();
   // Only categories with something on sale (switching a source off hides its empty categories).
-  const menus = await translateDeep(shopNav(await getSettings(), nav, tax), lang, ["label", "title", "text"]);
+  const menus = await translateDeep(shopNav(await getSettings(), nav, tax, (await (await import("@/lib/growth-store")).getGrowth()).bulk.wholesale), lang, ["label", "title", "text"]);
   const taxonomy = shopImgDeep(await translateDeep({ ...tax, categories: tax.categories.filter((c) => nav.categories.has(c.slug)), concerns: tax.concerns.filter((c) => nav.concerns.has(c.slug)) }, lang, ["name"]));
   const ai = (await getExtras()).advisor;
   const aiCfg = ai.enabled && (await anthropicKey()) ? await translateDeep({ name: ai.name, greeting: ai.greeting, suggestions: ai.suggestions }, lang, ["greeting", "suggestions"]) : null;

@@ -68,7 +68,7 @@ struct AccountView: View {
                     NavigationLink { SitePage(title: "Gift cards", path: "/gift-cards/") } label: { Label("Gift cards", systemImage: "giftcard") }
                     NavigationLink { SitePage(title: "Advent calendar", path: "/advent/") } label: { Label("Advent calendar", systemImage: "calendar.badge.plus") }
                     NavigationLink { SitePage(title: "SuperYou Club", path: "/club/") } label: { Label("SuperYou Club", systemImage: "star") }
-                    NavigationLink { WholesaleView() } label: { Label("Wholesale (for businesses)", systemImage: "shippingbox") }
+                    if config?.features?.wholesale == true { NavigationLink { WholesaleView() } label: { Label("Wholesale (for businesses)", systemImage: "shippingbox") } }
                 }
                 Section("About SuperYou") {
                     ForEach(config?.pages ?? [], id: \.slug) { pg in

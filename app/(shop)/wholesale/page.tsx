@@ -1,8 +1,11 @@
+import { notFound } from "next/navigation";
+import { getGrowth } from "@/lib/growth-store";
 import { WholesaleForm } from "./WholesaleForm";
 
 export const metadata = { title: "Wholesale", description: "Pharmacies, salons, clinics, gyms and resellers in Lebanon: buy original beauty, parapharmacy and supplements at wholesale prices from SuperYou." };
 
-export default function Wholesale() {
+export default async function Wholesale() {
+  if (!(await getGrowth()).bulk.wholesale) notFound();
   return (
     <div className="container-x max-w-3xl py-10">
       <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-600">SuperYou for business</p>
