@@ -90,7 +90,7 @@ export async function sendOrderSheet(o: Order) {
   const s = await buildSheet(o);
   await db.cmd(["SET", `order:internal:${o.id}`, JSON.stringify(s)]);
   const { sendEmail } = await import("@/lib/email");
-  const sent = await sendEmail(ORDERS_INBOX, `New order ${o.id} · ${m(o.total)} · profit ${m(s.profit)}`, sheetText(s));
+  const sent = await sendEmail(ORDERS_INBOX, `${o.test ? "[TEST] " : ""}New order ${o.id} · ${m(o.total)} · profit ${m(s.profit)}`, sheetText(s));
   await db.cmd(["SET", `order:internal:${o.id}:mail`, sent ? "sent" : "not sent (email not set up)"]);
   return { sheet: s, sent };
 }

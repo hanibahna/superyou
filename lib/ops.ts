@@ -12,6 +12,8 @@ export type Ops = {
   giftCards: { enabled: boolean; validMonths: number };
   carts: { enabled: boolean; afterHours: number; maxAgeHours: number };
   /** Supplier → courier → customer: labels to the supplier, pickup request to the courier, proof of delivery. */
+  /** Test orders: orders placed while signed in to the admin go to a separate test list. */
+  testMode: { enabled: boolean };
   fulfil: { enabled: boolean; source: string; supplierName: string; supplierEmail: string; supplierWhatsapp: string; supplierAddress: string; courierName: string; courierEmail: string; courierWhatsapp: string; teamEmail: string; teamWhatsapp: string };
 };
 
@@ -28,6 +30,7 @@ export const defaultOps: Ops = {
   invoice: { title: "Invoice", businessName: "", taxId: "", footer: "Thank you for shopping with SuperYou. Questions? WhatsApp us on +961 70 777 608." },
   giftCards: { enabled: true, validMonths: 12 },
   carts: { enabled: true, afterHours: 2, maxAgeHours: 48 },
+  testMode: { enabled: true },
   fulfil: { enabled: false, source: "neovitale.com", supplierName: "NeoVitale", supplierEmail: "", supplierWhatsapp: "", supplierAddress: "", courierName: "", courierEmail: "", courierWhatsapp: "", teamEmail: "", teamWhatsapp: "" },
 };
 
@@ -43,6 +46,7 @@ export const opsSchema = z.object({
   invoice: z.object({ title: t(40), businessName: t(120), taxId: t(60), footer: t(400) }),
   giftCards: z.object({ enabled: z.boolean(), validMonths: z.number().int().min(0).max(60) }),
   carts: z.object({ enabled: z.boolean(), afterHours: z.number().min(0.5).max(72), maxAgeHours: z.number().min(1).max(336) }),
+  testMode: z.object({ enabled: z.boolean() }).default(defaultOps.testMode),
   fulfil: z.object({
     enabled: z.boolean(), source: t(80), supplierName: t(80), supplierEmail: z.union([z.literal(""), z.string().email("Supplier email: not valid")]), supplierWhatsapp: t(30), supplierAddress: t(300),
     courierName: t(80), courierEmail: z.union([z.literal(""), z.string().email("Courier email: not valid")]), courierWhatsapp: t(30), teamEmail: z.union([z.literal(""), z.string().email("Team email: not valid")]), teamWhatsapp: t(30),
@@ -58,6 +62,7 @@ export function withOpsDefaults(v: Partial<Ops> | null): Ops {
     giftCards: { ...d.giftCards, ...v?.giftCards },
     carts: { ...d.carts, ...v?.carts },
     fulfil: { ...d.fulfil, ...v?.fulfil },
+    testMode: { ...d.testMode, ...v?.testMode },
   };
 }
 

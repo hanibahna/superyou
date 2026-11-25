@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
 
   let order;
   try {
-    order = await createOrder(parsed.data);
+    // Signed in to the admin with test mode on: the order goes to the test orders.
+    const test = (await (await import("@/lib/ops-store")).getOps()).testMode.enabled && (await (await import("@/lib/admin-auth")).isAdmin());
+    order = await createOrder(parsed.data, { test });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 409 });
   }
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
     url: req.headers.get("referer") ?? undefined,
   };
   const placed = order;
-  if (placed.paymentMethod !== "card") after(() => sendServerConversions(placed, ctx).catch((e) => console.error("[conversions]", e)));
+  if (placed.paymentMethod !== "card" && !placed.test) after(() => sendServerConversions(placed, ctx).catch((e) => console.error("[conversions]", e)));
 
   // Fully paid by gift card: nothing to collect.
   if (order.total === 0) {

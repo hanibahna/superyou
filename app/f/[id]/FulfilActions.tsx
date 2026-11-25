@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Buttons on the parcel page: supplier → Print + Ready for pickup; courier → Picked up, then Delivered with a photo. */
-export function FulfilActions({ id, t, role, stage: initial, pod }: { id: string; t: string; role: "s" | "c"; stage: string; pod?: string }) {
+export function FulfilActions({ id, t, role, stage: initial, pod, po, remember }: { id: string; t: string; role: "s" | "c"; stage: string; pod?: string; po: string; remember?: boolean }) {
   const [stage, setStage] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
+  // The courier opened their link: remember this phone, so scanning any label later opens the delivery details.
+  useEffect(() => {
+    if (!remember) return;
+    const fd = new FormData();
+    fd.set("t", t); fd.set("r", "c"); fd.set("action", "remember");
+    fetch(`/api/fulfil/${encodeURIComponent(id)}/`, { method: "POST", body: fd }).catch(() => {});
+  }, [remember, id, t]);
   const send = async (action: string, file?: File) => {
     setBusy(true);
     setErr("");
@@ -46,7 +53,7 @@ export function FulfilActions({ id, t, role, stage: initial, pod }: { id: string
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
               </label>
               <button disabled={busy || !photo} onClick={() => photo && send("delivered", photo)} className={`${big} bg-[#046c4e] text-white`}>{busy ? "Sending…" : "✓ Delivered"}</button>
-              <p className="text-center text-xs text-muted">No signal? Send the photo on WhatsApp to SuperYou with &quot;{id}&quot; in the message.</p>
+              <p className="text-center text-xs text-muted">No signal? Send the photo on WhatsApp to SuperYou with &quot;{po}&quot; in the message.</p>
             </div>
           )}
           {stage === "delivered" && (

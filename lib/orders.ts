@@ -103,6 +103,8 @@ export type Order = {
   /** A gift card bought on the site: issued and sent to the recipient once paid. */
   giftCardPurchase?: { amount: number; recipient: string; phone: string; email: string; message: string; from: string; code?: string; sentAt?: string };
   history?: { at: string; status: OrderStatus; by: string; note?: string }[];
+  /** Test order (placed from the admin or while signed in with test mode on): kept apart from real orders. */
+  test?: boolean;
   /** Supplier → courier → customer (lib/fulfil). */
   fulfil?: { stage: "sent" | "ready" | "picked" | "delivered"; sentAt?: string; readyAt?: string; pickedAt?: string; deliveredAt?: string; pod?: string; podFrom?: "page" | "whatsapp"; payable?: number; paidAt?: string };
 };
@@ -220,16 +222,17 @@ export async function priceOrder(input: CheckoutInput) {
   };
 }
 
-export async function createOrder(input: CheckoutInput): Promise<Order> {
+export async function createOrder(input: CheckoutInput, opts: { test?: boolean } = {}): Promise<Order> {
+  const test = !!opts.test;
   const { _prefix, _superPrice, _prime, ...priced } = await priceOrder(input);
-  if (_superPrice && normPhone(input.customer.phone)) await (await import("@/lib/db")).db.cmd(["SET", spUsedKey(input.customer.phone), "1", "EX", 2 * 86400]).catch(() => {});
-  if (priced.code) {
+  if (!test && _superPrice && normPhone(input.customer.phone)) await (await import("@/lib/db")).db.cmd(["SET", spUsedKey(input.customer.phone), "1", "EX", 2 * 86400]).catch(() => {});
+  if (priced.code && !test) {
     await countCouponUse(priced.code).catch(() => {});
     await (await import("@/lib/growth-store")).useVoucher(priced.code).catch(() => {});
   }
-  const id = `${_prefix.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase() || "ORD"}-${Date.now().toString(36).toUpperCase()}`;
+  const id = `${test ? "TST" : _prefix.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase() || "ORD"}-${Date.now().toString(36).toUpperCase()}`;
   // Gift card first: if the balance has gone meanwhile, nothing else has happened yet.
-  if (priced.giftCard) await (await import("@/lib/giftcards")).spendGiftCard(priced.giftCard.code, priced.giftCard.amount, id);
+  if (priced.giftCard && !test) await (await import("@/lib/giftcards")).spendGiftCard(priced.giftCard.code, priced.giftCard.amount, id);
   const status: OrderStatus = priced.total === 0 ? "paid" : input.paymentMethod === "cod" ? "pending_cod" : "awaiting_payment";
   const order: Order = {
     id,
@@ -242,12 +245,14 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     customer: input.customer,
     ...(input.attribution && Object.keys(input.attribution).length ? { attribution: input.attribution } : {}),
     ...(input.subscriptionId ? { subscriptionId: input.subscriptionId } : {}),
-    history: [{ at: new Date().toISOString(), status, by: "customer" }],
+    history: [{ at: new Date().toISOString(), status, by: test ? "test" : "customer" }],
+    ...(test ? { test: true } : {}),
   };
-  const moves = await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => ({ productId: l.productId, delta: -l.qty })), `Order ${order.id}`).catch((e) => (console.error("[stock]", e), []));
+  // Test orders don't touch stock, coupons, gift cards, club points, subscriptions or referral credit.
+  const moves = test ? [] : await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => ({ productId: l.productId, delta: -l.qty })), `Order ${order.id}`).catch((e) => (console.error("[stock]", e), []));
   order.stockTaken = moves.length > 0;
   await saveOrder(order);
-  await (await import("@/lib/carts")).cartConverted(order.customer.phone, order.id).catch(() => {});
+  if (!test) await (await import("@/lib/carts")).cartConverted(order.customer.phone, order.id).catch(() => {});
   const c = order.customer;
   await (await import("@/lib/address-store")).rememberServerAddress(c.phone, { zone: c.zone, city: c.city, address: c.address, notes: c.notes || undefined, lat: c.lat, lng: c.lng }).catch(() => {});
   await onOrderCreated(order, input).catch((e) => console.error("[whatsapp] order", e));
@@ -255,6 +260,7 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
   await (await import("@/lib/order-internal")).sendOrderSheet(order).catch((e) => console.error("[order sheet]", e));
   // Supplier's products: barcode label + pick list to the supplier (Admin › Operations › Fulfilment).
   if (order.status !== "awaiting_payment") await (await import("@/lib/fulfil")).sendToSupplier(order).catch((e) => console.error("[fulfil]", e));
+  if (test) return order;
   if (order.code) await (await import("@/lib/influencers")).creditOrder(order).catch((e) => console.error("[influencer]", e));
   // New subscriptions (not for orders a subscription placed itself).
   if (!input.subscriptionId && order.lines.some((l) => l.every)) await (await import("@/lib/subscriptions")).startSubscriptions(order, input).catch((e) => console.error("[subscriptions]", e));
@@ -269,6 +275,13 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
 /** Save the customer as a WhatsApp contact and send "order received". */
 async function onOrderCreated(order: Order, input: CheckoutInput) {
   const [{ getIndex }, wa] = await Promise.all([import("@/lib/catalog"), import("@/lib/whatsapp")]);
+  // Test order: only the "order received" message (to the number typed), no contact list, club or offers.
+  if (order.test) {
+    const v = orderVars(order);
+    const ok = await wa.trigger("orderPlaced", order.customer.phone, v);
+    await (await import("@/lib/sms")).smsForOrder("orderPlaced", order.customer.phone, v, ok).catch(() => {});
+    return;
+  }
   const idx = await getIndex();
   const paid = order.lines.filter((l) => !l.gift);
   const res = await wa.upsertContact({
@@ -303,7 +316,7 @@ function orderVars(o: Order): Record<string, string> {
 export async function saveOrder(order: Order) {
   await db.pipeline([
     ["SET", `order:${order.id}`, JSON.stringify(order)],
-    ["ZADD", "orders", Date.parse(order.createdAt), order.id],
+    ["ZADD", order.test ? "orders:test" : "orders", Date.parse(order.createdAt), order.id],
   ]);
 }
 
@@ -313,10 +326,11 @@ export async function getOrder(id: string): Promise<Order | null> {
 }
 
 /** Newest first. */
-export async function listOrders(offset = 0, limit = 50): Promise<{ orders: Order[]; total: number }> {
+export async function listOrders(offset = 0, limit = 50, test = false): Promise<{ orders: Order[]; total: number }> {
+  const key = test ? "orders:test" : "orders";
   const [ids, total] = await Promise.all([
-    db.cmd<string[]>(["ZREVRANGE", "orders", offset, offset + limit - 1]),
-    db.cmd<number>(["ZCARD", "orders"]),
+    db.cmd<string[]>(["ZREVRANGE", key, offset, offset + limit - 1]),
+    db.cmd<number>(["ZCARD", key]),
   ]);
   const raws = ids.length ? await db.pipeline(ids.map((id) => ["GET", `order:${id}`])) : [];
   return { orders: raws.filter(Boolean).map((r) => JSON.parse(r as string) as Order), total };

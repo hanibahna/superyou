@@ -54,6 +54,10 @@ export function OperationsEditor({ initial, emailReady }: { initial: Ops; emailR
         </div>
       </Card>
 
+      <Card title="Test orders" sub="With test mode on, orders you place on the shop while signed in to the admin go to Orders › Test orders: no stock taken, no coupons, club points or ad tracking, and supplier/courier messages go to our team instead.">
+        <Toggle label="Test mode for admins" checked={o.testMode.enabled} onChange={(enabled) => up("testMode", { enabled })} />
+      </Card>
+
       <Card title="Fulfilment: supplier → courier → customer" sub="Orders with the supplier's products: the supplier gets the barcode label and pick list (email + WhatsApp) and taps Ready; the courier gets a pickup request, scans the label to confirm pickup and sends a photo at delivery; the order is set to Delivered and the supplier's payment becomes due (Admin › Payables).">
         <div className="grid gap-4 md:grid-cols-3">
           <Toggle label="Send new orders to the supplier automatically" checked={o.fulfil.enabled} onChange={(enabled) => up("fulfil", { enabled })} />

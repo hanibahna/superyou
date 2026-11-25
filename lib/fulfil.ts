@@ -17,6 +17,12 @@ import { siteUrl } from "@/lib/site-url";
 const SECRET = process.env.FULFIL_SECRET || process.env.CRON_SECRET || process.env.ADMIN_PASSWORD || "superyou-fulfil";
 export type Role = "s" | "c"; // supplier, courier
 export const tokenFor = (id: string, role: Role) => createHmac("sha256", SECRET).update(`${id}|${role}`).digest("base64url").slice(0, 20);
+/** Purchase order number the supplier sees (never the customer's details). */
+export const poNumber = (id: string) => `PO-${id.replace(/^SUP-/, "")}`;
+/** The label's QR: the parcel page with no key. It shows the delivery details only on the courier's phone. */
+export const labelLink = (id: string) => `${siteUrl()}/f/${encodeURIComponent(id)}/`;
+/** The courier's phone is remembered with this key (cookie), set when they open any courier link. */
+export const courierKey = () => createHmac("sha256", SECRET).update("courier-device").digest("base64url").slice(0, 24);
 export const linkFor = (id: string, role: Role) => `${siteUrl()}/f/${encodeURIComponent(id)}/?t=${tokenFor(id, role)}&r=${role}`;
 export const PAYABLES = "fulfil:payables"; // orderId → JSON { amount, at, paidAt? }
 export const CASH = "fulfil:cash"; // orderId → JSON { amount, at, courier, settledAt? }: cash the courier collected for us
@@ -57,17 +63,19 @@ async function tellTeam(o: Order, update: string, extra = "") {
 /** 1. New order: send the supplier its label and pick list. */
 export async function sendToSupplier(o: Order, force = false) {
   const f = (await getOps()).fulfil;
-  if (!f.enabled || (o.fulfil && !force)) return null;
+  if ((!f.enabled && !o.test) || (o.fulfil && !force)) return null;
   const lines = await supplierLines(o, f.source);
   if (!lines.length) return null;
   const link = linkFor(o.id, "s");
   const items = lines.map((l) => `${l.qty} × ${l.brand} ${l.name}${l.variant ? ` (${l.variant})` : ""} [${l.sku}]`).join("\n");
   const count = lines.reduce((s, l) => s + l.qty, 0);
+  // Test orders never reach the real supplier or courier: their messages go to our team instead.
+  const team = { email: f.teamEmail || (await import("@/lib/order-internal")).ORDERS_INBOX, whatsapp: f.teamWhatsapp };
   const sent = await tell(
-    { email: f.supplierEmail, whatsapp: f.supplierWhatsapp },
-    `SuperYou order ${o.id} — ${count} item${count === 1 ? "" : "s"} to prepare`,
-    `Hello ${f.supplierName},\n\nPlease prepare SuperYou order ${o.id}:\n${items}\n\nPrint the barcode label and stick it on the parcel, then tap "Ready for pickup":\n${link}\n\nThank you,\nSuperYou`,
-    { key: "supplierOrder", vars: { order_id: o.id, items: `${count} item${count === 1 ? "" : "s"}`, link } },
+    o.test ? team : { email: f.supplierEmail, whatsapp: f.supplierWhatsapp },
+    `${o.test ? "[TEST] " : ""}SuperYou purchase order ${poNumber(o.id)} — ${count} item${count === 1 ? "" : "s"} to prepare`,
+    `Hello ${f.supplierName},\n\nPlease prepare SuperYou purchase order ${poNumber(o.id)}:\n${items}\n\nPrint the tracking label and stick it on the parcel, then tap "Ready for pickup":\n${link}\n\nThank you,\nSuperYou`,
+    { key: "supplierOrder", vars: { order_id: poNumber(o.id), items: `${count} item${count === 1 ? "" : "s"}`, link } },
   );
   await updateOrder(o.id, { fulfil: { stage: "sent", sentAt: new Date().toISOString() } }, "fulfil", `Sent to ${f.supplierName} (${sent.join(", ") || "not sent: add the supplier's email/WhatsApp"})`);
   return sent;
@@ -81,11 +89,12 @@ export async function markReady(id: string, by = "supplier") {
   const f = (await getOps()).fulfil;
   const link = linkFor(o.id, "c");
   const to = `${o.customer.firstName} ${o.customer.lastName}, ${o.customer.city} (${o.customer.zone})`;
+  const team = { email: f.teamEmail || (await import("@/lib/order-internal")).ORDERS_INBOX, whatsapp: f.teamWhatsapp };
   const sent = await tell(
-    { email: f.courierEmail, whatsapp: f.courierWhatsapp },
-    `Pickup: SuperYou order ${o.id} is ready`,
-    `Hello ${f.courierName || ""},\n\nSuperYou order ${o.id} is ready for pickup at:\n${f.supplierName} — ${f.supplierAddress}\n\nDeliver to: ${to}\nAddress: ${o.customer.address}\nPhone: ${o.customer.phone}\nCollect: ${collectOf(o)}\n\nScan the label's QR code (or open this link) to confirm pickup, then delivery with a photo:\n${link}\n\nThank you,\nSuperYou`,
-    { key: "pickupRequest", vars: { order_id: o.id, pickup_address: `${f.supplierName}, ${f.supplierAddress}`.slice(0, 200), deliver_to: to, collect: collectOf(o), link } },
+    o.test ? team : { email: f.courierEmail, whatsapp: f.courierWhatsapp },
+    `${o.test ? "[TEST] " : ""}Pickup: SuperYou parcel ${poNumber(o.id)} is ready`,
+    `Hello ${f.courierName || ""},\n\nSuperYou parcel ${poNumber(o.id)} (order ${o.id}) is ready for pickup at:\n${f.supplierName} — ${f.supplierAddress}\n\nDeliver to: ${to}\nAddress: ${o.customer.address}\nPhone: ${o.customer.phone}\nCollect: ${collectOf(o)}\n\nScan the label's QR code (or open this link) to confirm pickup, then delivery with a photo:\n${link}\n\nThank you,\nSuperYou`,
+    { key: "pickupRequest", vars: { order_id: poNumber(o.id), pickup_address: `${f.supplierName}, ${f.supplierAddress}`.slice(0, 200), deliver_to: to, collect: collectOf(o), link } },
   );
   const next = await updateOrder(o.id, { fulfil: { ...(o.fulfil ?? { stage: "sent" }), stage: "ready", readyAt: new Date().toISOString() }, ...(["pending_cod", "paid", "confirmed"].includes(o.status) ? { status: "packed" as const } : {}) }, by, `Ready for pickup — courier told (${sent.join(", ") || "not sent: add the courier's email/WhatsApp"})`);
   await tellTeam(o, `ready for pickup at ${f.supplierName}`);
@@ -115,10 +124,10 @@ export async function markDelivered(id: string, pod: string, from: "page" | "wha
   const payable = Math.round(lines.reduce((s, l) => s + l.cost, 0) * 100) / 100;
   const at = new Date().toISOString();
   const next = await updateOrder(o.id, { status: "delivered", fulfil: { ...(o.fulfil ?? { stage: "sent" }), stage: "delivered", pickedAt: o.fulfil?.pickedAt ?? at, deliveredAt: at, pod, podFrom: from, payable } }, by, `Delivered — proof of delivery photo (${from})`);
-  if (lines.length) await db.cmd(["HSET", PAYABLES, o.id, JSON.stringify({ amount: payable, at, supplier: f.supplierName })]);
-  if (o.paymentMethod === "cod" && o.total > 0) await db.cmd(["HSET", CASH, o.id, JSON.stringify({ amount: o.total, at, courier: f.courierName || "Courier" })]);
+  if (lines.length && !o.test) await db.cmd(["HSET", PAYABLES, o.id, JSON.stringify({ amount: payable, at, supplier: f.supplierName })]);
+  if (!o.test && o.paymentMethod === "cod" && o.total > 0) await db.cmd(["HSET", CASH, o.id, JSON.stringify({ amount: o.total, at, courier: f.courierName || "Courier" })]);
   await tellTeam(o, `delivered. Payment due to ${f.supplierName}: ${money(payable)}`, `Proof of delivery: ${pod}`);
-  if (lines.length && f.supplierEmail) await (await import("@/lib/email")).sendEmail(f.supplierEmail, `SuperYou order ${o.id} delivered — ${money(payable)} due`, `Hello ${f.supplierName},\n\nOrder ${o.id} was delivered to the customer on ${new Date(at).toLocaleDateString("en-GB", { timeZone: "Asia/Beirut" })}.\nAmount due to ${f.supplierName}: ${money(payable)}\n${lines.map((l) => `${l.qty} × ${l.brand} ${l.name} [${l.sku}] — ${money(l.cost)}`).join("\n")}\n\nThank you,\nSuperYou`).catch(() => false);
+  if (lines.length && f.supplierEmail && !o.test) await (await import("@/lib/email")).sendEmail(f.supplierEmail, `SuperYou purchase order ${poNumber(o.id)} delivered — ${money(payable)} due`, `Hello ${f.supplierName},\n\nPurchase order ${poNumber(o.id)} was delivered to the customer on ${new Date(at).toLocaleDateString("en-GB", { timeZone: "Asia/Beirut" })}.\nAmount due to ${f.supplierName}: ${money(payable)}\n${lines.map((l) => `${l.qty} × ${l.brand} ${l.name} [${l.sku}] — ${money(l.cost)}`).join("\n")}\n\nThank you,\nSuperYou`).catch(() => false);
   return next;
 }
 
@@ -144,7 +153,8 @@ export async function podFromWhatsApp(from: string, mediaId: string, caption: st
   const f = (await getOps()).fulfil;
   const { normPhone } = await import("@/lib/wa");
   if (!f.enabled || !f.courierWhatsapp || normPhone(from) !== normPhone(f.courierWhatsapp)) return false;
-  const id = caption.toUpperCase().match(/SUP-[A-Z0-9]+/)?.[0] ?? (await db.cmd<string | null>(["GET", "fulfil:lastpicked"]));
+  const ref = caption.toUpperCase().match(/(?:SUP|PO)-[A-Z0-9]+/)?.[0];
+  const id = (ref ? ref.replace(/^PO-/, "SUP-") : null) ?? (await db.cmd<string | null>(["GET", "fulfil:lastpicked"]));
   if (!id) return false;
   // Download the photo from WhatsApp and keep it.
   const token = process.env.WHATSAPP_TOKEN;

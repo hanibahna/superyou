@@ -2,9 +2,11 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { money } from "@/lib/format";
 import { listOrders, refunded, statusLabels, type OrderStatus } from "@/lib/orders";
+import { TestOrderButtons } from "@/components/admin/TestOrderButtons";
 
 const TABS: [string, string, OrderStatus[] | null][] = [
   ["all", "All", null],
+  ["test", "Test orders", null],
   ["todo", "To handle", ["pending_cod", "paid", "confirmed"]],
   ["packed", "Packed", ["packed"]],
   ["shipped", "Out for delivery", ["shipped"]],
@@ -20,14 +22,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const tab = TABS.find((t) => t[0] === sp.tab) ?? TABS[0];
   const q = (sp.q ?? "").trim().toLowerCase();
   const filtering = !!tab[2] || !!q;
+  const test = tab[0] === "test";
   // Filters look through the latest 1,000 orders.
-  const res = await listOrders(filtering ? 0 : page * 50, filtering ? 1000 : 50);
+  const res = await listOrders(filtering ? 0 : page * 50, filtering ? 1000 : 50, test);
   let orders = res.orders;
   if (tab[2]) orders = orders.filter((o) => tab[2]!.includes(o.status));
   if (q) orders = orders.filter((o) => `${o.id} ${o.customer.firstName} ${o.customer.lastName} ${o.customer.phone} ${o.shipment?.tracking ?? ""}`.toLowerCase().includes(q));
   const total = filtering ? orders.length : res.total;
   if (filtering) orders = orders.slice(page * 50, page * 50 + 50);
-  const qs = (p: number) => `/admin/orders/?page=${p}${tab[2] ? `&tab=${tab[0]}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+  const qs = (p: number) => `/admin/orders/?page=${p}${tab[2] || test ? `&tab=${tab[0]}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
 
   return (
     <div>
@@ -36,6 +39,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <div className="flex gap-2 text-sm">
           <Link href="/admin/orders/pickup/" className="rounded-lg border border-line bg-white px-3 py-2 font-semibold">Pickup sheet</Link>
           <Link href="/admin/carts/" className="rounded-lg border border-line bg-white px-3 py-2 font-semibold">Abandoned carts</Link>
+          <TestOrderButtons />
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
