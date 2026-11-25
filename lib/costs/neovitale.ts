@@ -37,6 +37,8 @@ export const NEOVITALE_DISCOUNTS: [string, number | null][] = [
   ["URIAGE", 30], ["VAGIDERM", 25], ["VENIECE", 20], ["VICHY", 35], ["VITA AGE", 30], ["VITAL DERM", 8], ["VIVICEL", 20], ["VIVIER", 25],
   ["XERMATIS", 25], ["XEROLYS", 25], ["XELLENCE", 25], ["ZARTAUX", 25], ["ZOMBIE BEAUTY", 20], ["ZWITSAL", 25], ["ASCE", 25], ["NOVEXPERT", 20],
   ["CELIMAX", 22.5],
+  // Same brands under the names NeoVitale's site uses.
+  ["PHILIPS AVENT", 20], ["ESTHEDERM", 30], ["CICABIAFINE", 30], ["ELVIVE", 20],
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9&]+/g, " ").trim();
@@ -50,7 +52,7 @@ export function discountFor(brand: string, name: string): number | null | undefi
     let ok = false;
     if (k === b) ok = true;
     else if (k.startsWith(`${b} `)) ok = n.includes(` ${k.slice(b.length + 1)} `);
-    else if (b.startsWith(`${k} `) || b === k.replace(/ /g, "")) ok = true; // "RENE FURTERER PARIS" → "RENE FURTERER"
+    else if (b.startsWith(`${k} `) || b.replace(/[^A-Z0-9]/g, "") === k.replace(/[^A-Z0-9]/g, "")) ok = true; // "RENE FURTERER PARIS" → "RENE FURTERER", "A-Derma" → "ADERMA", "Palmer's" → "PALMERS"
     if (ok && (!best || k.length > best.len)) best = { len: k.length, pct };
   }
   return best?.pct;
