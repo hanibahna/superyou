@@ -35,11 +35,13 @@ final class Bag: ObservableObject {
     }
 
     /// Live prices, discounts and delivery from the shop.
-    func refresh(zone: String?, code: String?) async {
+    func refresh(zone: String?, code: String?, phone: String? = nil, prime: String? = nil) async {
         guard !lines.isEmpty else { quote = nil; return }
         var body: [String: Any] = ["items": lines.map { l -> [String: Any] in var d: [String: Any] = ["productId": l.productId, "qty": l.qty]; if let e = l.every { d["every"] = e }; return d }]
         if let z = zone, !z.isEmpty { body["zone"] = z }
         if let c = code, !c.isEmpty { body["code"] = c }
+        if let p = phone, p.count >= 6 { body["phone"] = p }
+        if let p = prime, !p.isEmpty { body["prime"] = p }
         quote = try? await API.post("/api/app/v1/quote", body: body, as: Quote.self)
         if let q = quote { for l in q.lines { if let i = lines.firstIndex(where: { $0.productId == l.productId }), lines[i].price != l.price { lines[i].price = l.price } } }
     }

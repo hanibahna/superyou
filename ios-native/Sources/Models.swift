@@ -17,6 +17,11 @@ struct Card: Codable, Identifiable, Hashable {
     let shipFrom: String?
     let daysMin: Int?
     let daysMax: Int?
+    /// SuperPrice: our usual price before it went below another shop's (cards show the usual price, like the website).
+    var matchWas: Double? = nil
+    var match: String? = nil
+    /// The price shown on grids: the usual price (the SuperPrice discount is revealed on the product page).
+    var shownPrice: Double { matchWas ?? price }
 }
 
 struct Banner: Codable, Hashable { let eyebrow: String; let title: String; let text: String; let cta: String; let href: String; let image: String }
@@ -36,6 +41,12 @@ struct ProductPage: Codable { let items: [Card]; let total: Int; let page: Int; 
 struct Variant: Codable, Identifiable, Hashable {
     let id: String; let name: String; let price: Double; let compareAt: Double?; let inStock: Bool; let image: String
     let origin: String; let shipFrom: String; let daysMin: Int; let daysMax: Int
+    var superPrice: SuperPrice? = nil
+}
+/// SuperPrice for one product: lowered below another shop (was → price), or already the best price, with every shop compared.
+struct SuperPrice: Codable, Hashable {
+    struct Shop: Codable, Hashable { let name: String; let price: Double }
+    let lowered: Bool; let was: Double?; let vs: Double?; let shop: String?; let shops: [Shop]; let partial: Bool
 }
 struct Product: Codable {
     let slug: String; let name: String; let brand: String; let images: [String]
@@ -66,7 +77,9 @@ struct Config: Codable {
     struct Wheel: Codable { let title: String; let text: String; let slices: [String] }
     struct Checkin: Codable { let days: Int; let points: Int }
     struct Game: Codable { let celebrate: Bool; let checkin: Checkin? }
-    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil; var wheel: Wheel? = nil; var game: Game? = nil }
+    struct SuperPriceCfg: Codable { let beatPct: Double; let shops: [String] }
+    struct Prime: Codable { let name: String; let monthlyPrice: Double; let trialMonths: Int; let trialMinOrder: Double; let freeMin: Double; let unlimitedSuperPrice: Bool; let promoLive: Bool }
+    struct Features: Codable { let superScan: Bool; let advisor: Advisor?; let subscribe: Subscribe?; var club: Club? = nil; var wheel: Wheel? = nil; var game: Game? = nil; var superPrice: SuperPriceCfg? = nil; var prime: Prime? = nil }
     struct Service: Codable, Identifiable, Hashable { let id: String; let title: String; let category: String; let description: String; let duration: Int; let price: Double; let priceNote: String; let video: String }
     struct Theme: Codable { var primary: String?; var ink: String?; var sale: String?; var background: String?; var headingFont: String?; var buttons: String?; var cards: String?; var preset: String? }
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double
@@ -75,7 +88,10 @@ struct Config: Codable {
 }
 
 struct Quote: Codable {
-    struct Line: Codable { let productId: String; let price: Double; let compareAt: Double?; let available: Bool }
+    struct Line: Codable { let productId: String; let price: Double; let compareAt: Double?; let available: Bool; var matchWas: Double? = nil; var match: String? = nil; var spLimit: Int? = nil }
+    /// SuperPrime for this shopper (by phone) and this bag.
+    struct PrimeQ: Codable { let status: String; let until: String?; let trialUsed: Bool; let trialOk: Bool; let choice: String?; let fee: Double; let free: Bool; let known: Bool }
+    var prime: PrimeQ? = nil
     struct Discount: Codable { let name: String; let amount: Double }
     let lines: [Line]; let subtotal: Double; let discounts: [Discount]; let discountTotal: Double; let delivery: Double; let total: Double
     let couponError: String?

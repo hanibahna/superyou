@@ -28,6 +28,9 @@ struct BagView: View {
                                     Text(l.brand.uppercased()).font(.caption2).foregroundStyle(.secondary)
                                     Text(l.name).font(.footnote).lineLimit(2)
                                     if !l.variant.isEmpty { Text(l.variant).font(.caption).foregroundStyle(.secondary) }
+                                    if let ql = bag.quote?.lines.first(where: { $0.productId == l.productId }), let was = ql.matchWas {
+                                        HStack(spacing: 4) { SuperPricePill(); Text("−\(money((was - ql.price) * Double(l.qty)))").font(.caption2.bold()).foregroundStyle(Color(hex: "#9b2c50")) }
+                                    }
                                     Text(l.origin == "international" ? "✈ Imported · 10–14 days" : "● Lebanon · 1–3 days").font(.caption2).foregroundStyle(l.origin == "international" ? Color.indigoShip : Color.greenShip)
                                 }
                                 Spacer()
@@ -151,6 +154,7 @@ struct CheckoutView: View {
     @State private var method = "cod"
     @State private var payURL: URL?
     @State private var note: String?
+    @AppStorage("sy.prime") private var prime = ""
 
     var body: some View {
         Form {
@@ -179,7 +183,14 @@ struct CheckoutView: View {
                     TextField("Notes for the driver (optional)", text: $notes)
                     Toggle("Order updates on WhatsApp", isOn: $waUpdates)
                 }
+                if let pc = config?.features?.prime {
+                    Section { PrimeChoice(cfg: pc, q: bag.quote?.prime, choice: $prime) }
+                }
                 Section {
+                    if let q = bag.quote {
+                        LineRow("Delivery", q.delivery == 0 ? "Free" : money(q.delivery))
+                        if let p = q.prime, p.fee > 0 { LineRow("\(config?.features?.prime?.name ?? "SuperPrime") (30 days)", money(p.fee)) }
+                    }
                     LineRow("Total", money(bag.quote?.total ?? bag.subtotal)).font(.headline)
                     let methods = config?.payments ?? []
                     if methods.count > 1 {
@@ -195,6 +206,8 @@ struct CheckoutView: View {
             }
         }
         .navigationTitle(done == nil ? "Checkout" : "Order placed")
+        // Live total with SuperPrime (membership is checked by mobile number).
+        .task(id: "\(phone)|\(prime)|\(zone)") { await bag.refresh(zone: zone, code: code, phone: phone, prime: prime) }
         .overlay { Confetti(fire: $party) }
     }
 
@@ -207,6 +220,9 @@ struct CheckoutView: View {
             "attribution": ["source": "ios-app", "medium": "app"],
         ]
         if !code.isEmpty { body["code"] = code }
+        // SuperPrime: start the free trial or join with this order (members are recognised by their number).
+        let member = bag.quote?.prime?.status == "trial" || bag.quote?.prime?.status == "active"
+        if !member, !prime.isEmpty { body["prime"] = prime }
         do {
             let r = try await API.post("/api/app/v1/checkout", body: body, as: CheckoutReply.self)
             if let id = r.orderId, let u = r.confirmUrl {

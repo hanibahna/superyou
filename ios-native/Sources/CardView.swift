@@ -15,9 +15,10 @@ struct CardView: View {
             Text(card.name).font(.footnote).foregroundStyle(Color.ink).lineLimit(2).multilineTextAlignment(.leading)
             ShipBadge(origin: card.origin, shipFrom: card.shipFrom, daysMin: card.daysMin, daysMax: card.daysMax)
             HStack(spacing: 6) {
-                Text(((card.variantCount ?? 1) > 1 ? "From " : "") + money(card.price)).font(.subheadline.bold()).foregroundStyle(card.compareAt != nil ? Color.rose : Color.ink)
-                if let c = card.compareAt, c > card.price { Text(money(c)).font(.caption).strikethrough().foregroundStyle(.secondary) }
+                Text(((card.variantCount ?? 1) > 1 ? "From " : "") + money(card.shownPrice)).font(.subheadline.bold()).foregroundStyle(card.compareAt != nil ? Color.rose : Color.ink)
+                if let c = card.compareAt, c > card.shownPrice { Text(money(c)).font(.caption).strikethrough().foregroundStyle(.secondary) }
             }
+            if card.matchWas != nil { SuperPricePill() }
             if !card.inStock { Text("Out of stock").font(.caption2).foregroundStyle(.secondary) }
         }
     }

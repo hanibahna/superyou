@@ -10,6 +10,7 @@ struct ProductView: View {
     @State private var howTo = false
     @State private var every: Int? = nil
     @State private var subscribe: Config.Subscribe?
+    @State private var spCfg: Config.SuperPriceCfg?
     @State private var product: Product?
     @State private var selected: Variant?
     @State private var added = false
@@ -46,9 +47,13 @@ struct ProductView: View {
                             }.accessibilityLabel(wishlist.has(p.slug) ? "Remove from wishlist" : "Save to wishlist")
                         }
                         if let r = p.rating, p.reviewCount >= 3 { Label(String(format: "%.1f · %d reviews", r, p.reviewCount), systemImage: "star.fill").font(.footnote).foregroundStyle(Color.rose) }
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(money(v.price)).font(.display(22)).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
-                            if let c = v.compareAt, c > v.price { Text(money(c)).strikethrough().foregroundStyle(.secondary) }
+                        if let sp = v.superPrice, sp.lowered, let was = sp.was, spCfg != nil {
+                            SuperPriceTag(was: was, price: v.price).id(v.id)
+                        } else {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(money(v.price)).font(.display(22)).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
+                                if let c = v.compareAt, c > v.price { Text(money(c)).strikethrough().foregroundStyle(.secondary) }
+                            }
                         }
                         ShipBadge(origin: v.origin, shipFrom: v.shipFrom, daysMin: v.daysMin, daysMax: v.daysMax)
                         if v.origin == "international" {
@@ -94,6 +99,7 @@ struct ProductView: View {
                         Text(v.inStock ? (added ? "Added ✓  ·  Add another" : "Add to bag") : "Out of stock").font(.headline).frame(maxWidth: .infinity).padding()
                     }
                     .buttonStyle(.borderedProminent).tint(Color.ink).disabled(!v.inStock).padding(.horizontal)
+                    if let sp = v.superPrice, let cfg = spCfg, v.inStock { SuperPriceCard(sp: sp, price: v.price, cfg: cfg).id(v.id).padding(.horizontal) }
                     HowToBox(product: p, videos: videos) { playing = $0 }.padding(.horizontal)
                     if added { Button("Go to bag") { router.tab = 3 }.frame(maxWidth: .infinity) }
 
@@ -132,7 +138,9 @@ struct ProductView: View {
         do {
             let p = try await API.product(slug)
             product = p; selected = p.variants.first(where: { $0.inStock }) ?? p.variants.first; failed = false
-            subscribe = await API.sharedConfig()?.features?.subscribe
+            let cfg = await API.sharedConfig()
+            subscribe = cfg?.features?.subscribe
+            spCfg = cfg?.features?.superPrice
             videos = (try? await API.videos(slug))?.videos ?? []
         } catch { failed = true }
     }
