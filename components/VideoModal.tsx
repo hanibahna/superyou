@@ -34,8 +34,12 @@ export function VideoModal({ id, title, lang, onClose }: { id: string; title: st
   const pickVoice = (v: string) => {
     setStart(Math.floor(now.current));
     setVoice(v);
-    setHint(true);
-    setTimeout(() => setHint(false), 6000);
+    // Most videos only have their original voice: captions in the chosen language follow it, so the
+    // shopper can still follow along when no dubbed voice exists.
+    const original = !!lang && v.startsWith(lang);
+    if (!original) setTimeout(() => pickCc(v), 1800);
+    setHint(!original);
+    setTimeout(() => setHint(false), 9000);
     try { localStorage.setItem("sy:voice", v); } catch {}
   };
   // Switch subtitles live through YouTube's player API (no restart).
@@ -64,24 +68,25 @@ export function VideoModal({ id, title, lang, onClose }: { id: string; title: st
           {hint && (
             <span className="sp-in pointer-events-none absolute end-3 top-14 z-10 max-w-[15rem] rounded-xl bg-white px-3 py-2 text-xs font-semibold text-ink shadow-lg">
               <span className="absolute -top-1.5 end-6 h-3 w-3 rotate-45 bg-white" aria-hidden />
-              {t("Not hearing it? Tap ⚙ › Audio track to pick the voice. Only videos with dubbed voices offer it.")}
+              {t("If this video has a dubbed voice in that language, YouTube plays it (or pick it in ⚙ › Audio track). If not, it keeps its original voice and we've turned on captions in your language.")}
             </span>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white">
-          <label className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-semibold text-ink">
-            <span aria-hidden>🔊</span>
-            <select aria-label={t("Voice-over language")} value={voice} onChange={(e) => pickVoice(e.target.value)} className="max-w-[11rem] bg-transparent outline-none">
-              {CODES.map((c) => <option key={c} value={c}>{t("Voice")}: {native(c)}{lang && c.startsWith(lang) ? ` (${t("original")})` : ""}</option>)}
+        <div className="mt-3 flex flex-wrap items-end gap-3 text-xs text-white">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/80">🔊 {t("Choose voice-over language")}</span>
+            <select aria-label={t("Choose voice-over language")} value={voice} onChange={(e) => pickVoice(e.target.value)} className="min-w-[12rem] rounded-full bg-white px-3 py-2 text-sm font-semibold text-ink outline-none">
+              {CODES.map((c) => <option key={c} value={c}>{native(c)}{lang && c.startsWith(lang) ? ` · ${t("original voice")}` : ""}</option>)}
             </select>
           </label>
-          <label className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-semibold text-ink">
-            <span aria-hidden>CC</span>
-            <select aria-label={t("Subtitles")} value={cc} onChange={(e) => pickCc(e.target.value)} className="max-w-[10rem] bg-transparent outline-none">
-              <option value="off">{t("Subtitles off")}</option>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/80">CC {t("Closed caption language")}</span>
+            <select aria-label={t("Closed caption language")} value={cc} onChange={(e) => pickCc(e.target.value)} className="min-w-[12rem] rounded-full bg-white px-3 py-2 text-sm font-semibold text-ink outline-none">
+              <option value="off">{t("Captions off")}</option>
               {CODES.map((c) => <option key={c} value={c}>{native(c)}</option>)}
             </select>
           </label>
+          {lang && <span className="mb-2 rounded-full bg-white/15 px-3 py-1 font-semibold">{t("Spoken in")} {inEnglish(lang)}</span>}
         </div>
         <p className="mt-3 line-clamp-2 text-sm text-white/85">{title}</p>
       </div>
