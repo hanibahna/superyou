@@ -219,12 +219,10 @@ function StockAlert({ productId }: { productId: string }) {
   if (state === "done") return <p className="sp-in flex-1 rounded-lg bg-[#ecfdf3] px-4 py-3 text-sm font-semibold text-[#046c4e]">✓ {t("Done! We'll message you as soon as it's back in stock.")}</p>;
   if (!open)
     return (
-      <span className="flex flex-1 flex-col gap-1">
-        <button onClick={() => setOpen(true)} className="tap flex w-full items-center justify-center gap-2 rounded-lg bg-ink py-3 font-semibold text-white hover:bg-black">
-          🔔 {t("Notify me when it's back")}
-        </button>
-        <span className="text-center text-xs text-muted">{t("Sold out for now")}</span>
-      </span>
+      <button onClick={() => setOpen(true)} className="tap flex flex-1 items-center justify-center gap-2 rounded-lg bg-ink py-3 font-semibold text-white hover:bg-black">
+        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide">{t("Sold out")}</span>
+        🔔 {t("Notify me when it's back")}
+      </button>
     );
   return (
     <form onSubmit={send} className="sp-in flex flex-1 flex-col gap-2 rounded-xl border border-line p-3">
