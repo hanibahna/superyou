@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { getIndex, getProductsDetailed, saveProducts } from "@/lib/catalog";
-import { discountFor } from "@/lib/costs/neovitale";
+import { discountFor, NEOVITALE_DISCOUNTS } from "@/lib/costs/neovitale";
 
 export const maxDuration = 300;
 
@@ -14,9 +14,10 @@ export async function GET(req: NextRequest) {
   const idx = await getIndex();
   const neo = idx.all.filter((p) => p.source === "neovitale.com");
   const set = new Map<string, number>();
+  const hit = new Set<string>();
   const byBrand = new Map<string, { n: number; pct: number | null | undefined }>();
   for (const p of neo) {
-    const pct = discountFor(p.brand, p.name);
+    const pct = discountFor(p.brand, p.name, hit);
     const prev = byBrand.get(p.brand);
     byBrand.set(p.brand, { n: (prev?.n ?? 0) + 1, pct: typeof prev?.pct === "number" ? prev.pct : pct });
     if (typeof pct === "number" && p.price > 0) set.set(p.id, +(p.price * (1 - pct / 100)).toFixed(2));
@@ -32,6 +33,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     applied: apply, neovitaleProducts: neo.length, withCost: set.size,
     brandsMatched: brands.filter(([, v]) => typeof v.pct === "number").length,
+    listNotFound: NEOVITALE_DISCOUNTS.map(([k]) => k).filter((k) => !hit.has(k)),
+    allBrands: brands.map(([b, v]) => `${b} (${v.n})`),
     noCost: brands.filter(([, v]) => typeof v.pct !== "number").map(([b, v]) => `${b} (${v.n})`),
   });
 }

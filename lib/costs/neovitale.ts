@@ -44,16 +44,17 @@ export const NEOVITALE_DISCOUNTS: [string, number | null][] = [
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9&]+/g, " ").trim();
 
 /** The discount for one product: a row naming its brand, or brand + words found in its name (the most specific wins). */
-export function discountFor(brand: string, name: string): number | null | undefined {
+export function discountFor(brand: string, name: string, hit?: Set<string>): number | null | undefined {
   const b = norm(brand), n = ` ${norm(name)} `;
-  let best: { len: number; pct: number | null } | undefined;
+  let best: { len: number; pct: number | null; key: string } | undefined;
   for (const [key, pct] of NEOVITALE_DISCOUNTS) {
     const k = norm(key);
     let ok = false;
     if (k === b) ok = true;
     else if (k.startsWith(`${b} `)) ok = n.includes(` ${k.slice(b.length + 1)} `);
     else if (b.startsWith(`${k} `) || b.replace(/[^A-Z0-9]/g, "") === k.replace(/[^A-Z0-9]/g, "")) ok = true; // "RENE FURTERER PARIS" → "RENE FURTERER", "A-Derma" → "ADERMA", "Palmer's" → "PALMERS"
-    if (ok && (!best || k.length > best.len)) best = { len: k.length, pct };
+    if (ok && (!best || k.length > best.len)) best = { len: k.length, pct, key };
   }
+  if (best && hit) hit.add(best.key);
   return best?.pct;
 }
