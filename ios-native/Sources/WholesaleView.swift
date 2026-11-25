@@ -2,7 +2,15 @@ import SwiftUI
 
 /// Wholesale enquiry, same form as shopsuperyou.com/wholesale/.
 struct WholesaleView: View {
-    @State private var business = "", type = "", contact = "", phone = "", email = "", city = "", volume = "", brands = "", message = ""
+    @State private var business = ""
+    @State private var type = ""
+    @State private var contact = ""
+    @State private var phone = ""
+    @State private var email = ""
+    @State private var city = ""
+    @State private var volume = ""
+    @State private var brands = ""
+    @State private var message = ""
     @State private var cats: Set<String> = []
     @State private var state = ""
     @State private var err = ""
