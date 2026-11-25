@@ -52,7 +52,7 @@ export function FulfilActions({ id, t, role, stage: initial, pod, po, remember }
                 📷 {photo ? `Photo ready: ${photo.name.slice(0, 24)}` : "Take photo"}
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
               </label>
-              <button disabled={busy || !photo} onClick={() => photo && send("delivered", photo)} className={`${big} bg-[#046c4e] text-white`}>{busy ? "Sending…" : "✓ Delivered"}</button>
+              <button disabled={busy || !photo} onClick={async () => photo && send("delivered", await shrink(photo))} className={`${big} bg-[#046c4e] text-white`}>{busy ? "Sending…" : "✓ Delivered"}</button>
               <p className="text-center text-xs text-muted">No signal? Send the photo on WhatsApp to SuperYou with &quot;{po}&quot; in the message.</p>
             </div>
           )}
@@ -68,4 +68,20 @@ export function FulfilActions({ id, t, role, stage: initial, pod, po, remember }
       {err && <p className="text-center text-sm text-[#b42318]">{err}</p>}
     </div>
   );
+}
+
+/** Phone photos are several MB: resize to 1280 px JPEG before sending (fast on mobile data, small to keep). */
+async function shrink(f: File): Promise<File> {
+  try {
+    const img = await createImageBitmap(f);
+    const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+    const b = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.72));
+    return b ? new File([b], "delivery.jpg", { type: "image/jpeg" }) : f;
+  } catch {
+    return f;
+  }
 }

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { limited } from "@/lib/ratelimit";
-import { courierKey, markDelivered, markPicked, markReady, tokenFor, type Role } from "@/lib/fulfil";
+import { courierKey, markDelivered, markPicked, markReady, storePod, tokenFor, type Role } from "@/lib/fulfil";
 
 // The supplier and the courier update an order from the label link (no login: the link carries a key).
 export const maxDuration = 60;
@@ -26,10 +26,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const photo = form.get("photo");
       if (!(photo instanceof File) || !photo.size) return NextResponse.json({ error: "Take a photo of the parcel with the customer" }, { status: 400 });
       if (photo.size > 12 * 1024 * 1024) return NextResponse.json({ error: "Photo too large (max 12 MB)" }, { status: 400 });
-      if (!process.env.BLOB_READ_WRITE_TOKEN) return NextResponse.json({ error: "Photo storage is not set up yet: send the photo on WhatsApp with the order number" }, { status: 501 });
-      const { put } = await import("@vercel/blob");
-      const blob = await put(`pod/${id}.jpg`, photo, { access: "public", addRandomSuffix: true, contentType: photo.type || "image/jpeg" });
-      return NextResponse.json({ ok: true, stage: (await markDelivered(id, blob.url, "page", "courier"))?.fulfil?.stage });
+      const url = await storePod(id, await photo.arrayBuffer(), photo.type || "image/jpeg");
+      return NextResponse.json({ ok: true, stage: (await markDelivered(id, url, "page", "courier"))?.fulfil?.stage });
     }
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });

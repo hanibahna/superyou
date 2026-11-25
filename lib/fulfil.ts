@@ -148,6 +148,18 @@ export async function markPaid(ids: string[]) {
   }
 }
 
+/** Keep a proof-of-delivery photo: Vercel Blob when set up, otherwise in the database (photos are shrunk first). */
+export async function storePod(id: string, data: ArrayBuffer | Buffer, type = "image/jpeg") {
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const { put } = await import("@vercel/blob");
+    return (await put(`pod/${id}.jpg`, Buffer.from(data as ArrayBuffer), { access: "public", addRandomSuffix: true, contentType: type })).url;
+  }
+  const buf = Buffer.from(data as ArrayBuffer);
+  if (buf.length > 900_000) throw new Error("Photo too large: please retake it");
+  await db.cmd(["SET", `fulfil:pod:${id}`, `${type};${buf.toString("base64")}`]);
+  return `${siteUrl()}/api/fulfil/${encodeURIComponent(id)}/pod/?k=${tokenFor(id, "c").slice(0, 10)}`;
+}
+
 /** A photo sent on WhatsApp by the courier, with the order number in the caption (or the last order they picked up). */
 export async function podFromWhatsApp(from: string, mediaId: string, caption: string) {
   const f = (await getOps()).fulfil;
@@ -158,13 +170,12 @@ export async function podFromWhatsApp(from: string, mediaId: string, caption: st
   if (!id) return false;
   // Download the photo from WhatsApp and keep it.
   const token = process.env.WHATSAPP_TOKEN;
-  if (!token || !process.env.BLOB_READ_WRITE_TOKEN) return false;
+  if (!token) return false;
   const meta = (await (await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, { headers: { Authorization: `Bearer ${token}` } })).json()) as { url?: string; mime_type?: string };
   if (!meta.url) return false;
   const img = await fetch(meta.url, { headers: { Authorization: `Bearer ${token}` } });
-  const { put } = await import("@vercel/blob");
-  const blob = await put(`pod/${id}.jpg`, Buffer.from(await img.arrayBuffer()), { access: "public", addRandomSuffix: true, contentType: meta.mime_type || "image/jpeg" });
-  await markDelivered(id, blob.url, "whatsapp", `courier ${from}`);
+  const url = await storePod(id, await img.arrayBuffer(), meta.mime_type || "image/jpeg");
+  await markDelivered(id, url, "whatsapp", `courier ${from}`);
   return true;
 }
 
