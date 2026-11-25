@@ -11,6 +11,8 @@ struct ProductView: View {
     @State private var every: Int? = nil
     @State private var subscribe: Config.Subscribe?
     @State private var spCfg: Config.SuperPriceCfg?
+    @State private var bulkCfg: Config.BulkCfg?
+    @State private var qty = 1
     @State private var product: Product?
     @State private var selected: Variant?
     @State private var added = false
@@ -93,8 +95,9 @@ struct ProductView: View {
                             if let e = every { Text("After \(e == 1 ? (s.unlockMonthly ?? 3) : (s.unlockQuarterly ?? 2)) deliveries you get \(Int(e == 1 ? s.monthly : s.quarterly))% back on them, then \(Int(e == 1 ? s.monthly : s.quarterly))% off every order. \(s.note)").font(.caption).foregroundStyle(.secondary) }
                         }.padding(.horizontal)
                     }
+                    if let b = bulkCfg, v.inStock, every == nil, v.superPrice?.lowered != true { BulkOffer(cfg: b, price: v.price, qty: $qty).padding(.horizontal) }
                     Button {
-                        bag.add(p, v, every: every); added = true
+                        bag.add(p, v, qty: qty, every: every); added = true
                     } label: {
                         Text(v.inStock ? (added ? "Added ✓  ·  Add another" : "Add to bag") : "Out of stock").font(.headline).frame(maxWidth: .infinity).padding()
                     }
@@ -141,6 +144,7 @@ struct ProductView: View {
             let cfg = await API.sharedConfig()
             subscribe = cfg?.features?.subscribe
             spCfg = cfg?.features?.superPrice
+            bulkCfg = cfg?.features?.bulk
             videos = (try? await API.videos(slug))?.videos ?? []
         } catch { failed = true }
     }

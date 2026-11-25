@@ -31,6 +31,9 @@ struct BagView: View {
                                     if let ql = bag.quote?.lines.first(where: { $0.productId == l.productId }), let was = ql.matchWas {
                                         HStack(spacing: 4) { SuperPricePill(); Text("−\(money((was - ql.price) * Double(l.qty)))").font(.caption2.bold()).foregroundStyle(Color(hex: "#9b2c50")) }
                                     }
+                                    if l.every == nil, let b = config?.features?.bulk, bag.quote?.lines.first(where: { $0.productId == l.productId })?.matchWas == nil {
+                                        BulkNote(cfg: b, line: bag.quote?.lines.first(where: { $0.productId == l.productId })?.bulk, qty: l.qty)
+                                    }
                                     Text(l.origin == "international" ? "✈ Imported · 10–14 days" : "● Lebanon · 1–3 days").font(.caption2).foregroundStyle(l.origin == "international" ? Color.indigoShip : Color.greenShip)
                                 }
                                 Spacer()

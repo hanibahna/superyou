@@ -27,6 +27,8 @@ export async function GET() {
       superPrice: g.priceMatch.enabled && g.priceMatch.badge ? { beatPct: g.priceMatch.beatPct, shops: (await (await import("@/lib/price-match")).shopsRead().catch(() => null))?.filter((x) => x !== "NeoVitale") ?? g.priceMatch.sites.filter((x) => x.enabled && x.showName && x.domain !== "neovitale.com").map((x) => x.label) } : null,
       // SuperPrime: monthly membership with free delivery; joined (or trial started) at checkout.
       prime: g.prime.enabled ? { name: g.prime.name, monthlyPrice: g.prime.monthlyPrice, trialMonths: g.prime.trialMonths, trialMinOrder: g.prime.trialMinOrder, freeMin: g.prime.freeMin, unlimitedSuperPrice: g.prime.unlimitedSuperPrice, promoLive: (await import("@/lib/growth")).primePromoLive(g.prime) } : null,
+      // Bulk buy: 2+ of a product paid now get this % (same as Subscribe & save every 3 months by default).
+      bulk: g.bulk.enabled && (await import("@/lib/growth")).bulkPct(g) > 0 ? { pct: (await import("@/lib/growth")).bulkPct(g), maxUnits: g.bulk.maxUnits } : null,
       subscribe: g.subscribe.enabled ? { monthly: g.subscribe.monthly, quarterly: g.subscribe.quarterly, note: g.subscribe.note, unlockMonthly: g.subscribe.unlockMonthly, unlockQuarterly: g.subscribe.unlockQuarterly } : null,
     },
     services: svc.enabled ? svc.services.filter((v) => v.enabled).map((v) => ({ id: v.id, title: v.title, category: v.category, description: v.description, duration: v.duration, price: v.price, priceNote: v.priceNote, video: v.video ?? "no" })) : [],
