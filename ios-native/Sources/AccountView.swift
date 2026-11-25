@@ -11,6 +11,7 @@ struct AccountView: View {
     @AppStorage("sy.ownerMode") private var ownerMode = false
     @State private var ownerTaps = 0
     @AppStorage("sy.myref") private var referral: String?
+    @State private var config: Config?
 
     var body: some View {
         NavigationStack {
@@ -47,11 +48,31 @@ struct AccountView: View {
                 Section("More") {
                     NavigationLink { WishlistView() } label: { Label("Wishlist", systemImage: "heart") }
                     NavigationLink { AdvisorView() } label: { Label("Ask our AI advisor", systemImage: "sparkles") }
-                    NavigationLink { ServicesView() } label: { Label("Book a pharmacist video call", systemImage: "video") }
+                    if config?.features?.videoCalls == false {
+                        Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("WhatsApp a pharmacist", systemImage: "message") }
+                        NavigationLink { ServicesView() } label: { Label("Services", systemImage: "calendar") }
+                    } else {
+                        NavigationLink { ServicesView() } label: { Label(config?.features?.eventsOn == false ? "Book a pharmacist video call" : "Services & events", systemImage: "video") }
+                    }
                     NavigationLink { ClinicView() } label: { Label("Clinic treatments", systemImage: "cross.case") }
                     if account != nil { NavigationLink { MyScansView(phone: phone, order: order) } label: { Label("My SuperScans", systemImage: "faceid") } }
                     if let r = referral, !r.isEmpty {
                         ShareLink(item: URL(string: "https://www.shopsuperyou.com/?ref=\(r)")!, message: Text("Shop original beauty and pharmacy at SuperYou with my link:")) { Label("Invite friends (your code \(r))", systemImage: "gift") }
+                    }
+                }
+                Section("Discover") {
+                    NavigationLink { SitePage(title: "Brands", path: "/brands/") } label: { Label("All brands A–Z", systemImage: "textformat") }
+                    NavigationLink { SitePage(title: "Routine finder", path: "/routine/") } label: { Label("Build my routine", systemImage: "sparkles.rectangle.stack") }
+                    NavigationLink { SitePage(title: "Shade finder", path: "/shade-finder/") } label: { Label("Find my shade", systemImage: "paintpalette") }
+                    NavigationLink { FindersView() } label: { Label("Product finders", systemImage: "questionmark.circle") }
+                    NavigationLink { SitePage(title: "Gift cards", path: "/gift-cards/") } label: { Label("Gift cards", systemImage: "giftcard") }
+                    NavigationLink { SitePage(title: "Advent calendar", path: "/advent/") } label: { Label("Advent calendar", systemImage: "calendar.badge.plus") }
+                    NavigationLink { SitePage(title: "SuperYou Club", path: "/club/") } label: { Label("SuperYou Club", systemImage: "star") }
+                    NavigationLink { WholesaleView() } label: { Label("Wholesale (for businesses)", systemImage: "shippingbox") }
+                }
+                Section("About SuperYou") {
+                    ForEach(config?.pages ?? [], id: \.slug) { pg in
+                        NavigationLink { SitePage(title: pg.title, path: "/pages/\(pg.slug)/") } label: { Text(pg.title) }
                     }
                 }
                 if ownerMode {
@@ -61,7 +82,6 @@ struct AccountView: View {
                 }
                 Section {
                     Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("Ask a pharmacist on WhatsApp", systemImage: "message") }
-                    Link(destination: URL(string: "https://www.shopsuperyou.com/club/")!) { Label("Join SuperYou Club", systemImage: "star") }
                     Link(destination: URL(string: "https://www.shopsuperyou.com/pages/privacy-policy/")!) { Label("Privacy policy", systemImage: "lock") }
                 } header: { Text("Help") } footer: {
                     // Owner sign-in stays out of customers' way: tap the version line 7 times to show it.
@@ -72,6 +92,7 @@ struct AccountView: View {
                 }
             }
             .navigationTitle("Account")
+            .task { if config == nil { config = await API.sharedConfig() } }
             .overlay { Confetti(fire: $party) }
             .confirmationDialog("Delete your account?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { Task { await deleteAccount() } }

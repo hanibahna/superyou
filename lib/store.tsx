@@ -34,9 +34,9 @@ export type CartLine = { productId: string; qty: number; product: ProductSnap; e
 
 /** What the server says the cart costs (sale prices, coupon, gifts, delivery). */
 export type ServerQuote = {
-  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string; matchWas?: number; matchVs?: number; spLimit?: number; bulk?: { units: number; pct: number; saving: number; left: number } }[];
+  lines: { productId: string; price: number; compareAt?: number; available: boolean; match?: string; matchWas?: number; matchVs?: number; spLimit?: number; bulk?: { units: number; pct: number; saving: number; left: number; business?: string } }[];
   /** Bulk buy offer (buy 2–3 of a product, paid now). */
-  bulk?: { pct: number; maxUnits: number };
+  bulk?: { pct: number; maxUnits: number; business?: string; minQty?: number };
   subtotal: number;
   discounts: { name: string; code?: string; amount: number }[];
   discountTotal: number;
@@ -108,6 +108,15 @@ function save(key: string, value: unknown) {
   } catch {
     /* storage unavailable — keep in memory only */
   }
+}
+
+// Inside the iPhone app, "Add to bag" on a web page goes to the app's own bag.
+function toApp(product: AnyProduct | ProductSnap, qty: number) {
+  const h = (globalThis as unknown as { webkit?: { messageHandlers?: { superyouBag?: { postMessage: (m: unknown) => void } } } }).webkit?.messageHandlers?.superyouBag;
+  if (!h) return false;
+  const s = snap(product);
+  h.postMessage({ id: s.id, slug: s.slug, name: s.name, brand: s.brand, price: s.price, compareAt: s.compareAt ?? null, image: s.image ?? null, origin: s.origin ?? "local", qty });
+  return true;
 }
 
 export function ShopProvider({ children }: { children: ReactNode }) {
@@ -208,12 +217,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       wishlist,
       setEvery: (productId, every, start, forMonths) => setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, every, start: every ? (start ?? l.start) : undefined, forMonths: every ? (forMonths ?? l.forMonths) : undefined } : l))),
       add: (product, qty = 1, every, start, forMonths) => {
+        if (toApp(product, qty)) return;
         add(product, qty, every, start, forMonths);
         setLastAdded({ id: product.id, at: Date.now() });
         track({ type: "add_to_cart", item: { id: product.id, name: product.name, brand: product.brand, price: product.price, qty } });
         setDrawerOpen(true);
       },
       addMany: (products) => {
+        if (products.every((p) => toApp(p, 1))) return;
         products.forEach((p) => add(p, 1));
         setDrawerOpen(true);
       },

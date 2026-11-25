@@ -35,6 +35,7 @@ struct ProductView: View {
                                             Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(.white).shadow(radius: 3)
                                         }.clipShape(RoundedRectangle(cornerRadius: 10))
                                     }.accessibilityLabel("Play video: \(vid.title)")
+                                    .contextMenu { Button { shareOnWhatsApp("\(vid.title)\nhttps://youtu.be/\(vid.id)") } label: { Label("Share on WhatsApp", systemImage: "message") }; Button { UIPasteboard.general.string = "https://youtu.be/\(vid.id)" } label: { Label("Copy link", systemImage: "doc.on.doc") } }
                                 }
                             }.padding(.horizontal)
                         }
@@ -102,7 +103,10 @@ struct ProductView: View {
                         Text(v.inStock ? (added ? "Added ✓  ·  Add another" : "Add to bag") : "Out of stock").font(.headline).frame(maxWidth: .infinity).padding()
                     }
                     .buttonStyle(.borderedProminent).tint(Color.ink).disabled(!v.inStock).padding(.horizontal)
+                    if !v.inStock { StockAlertBox(productId: v.id).padding(.horizontal) }
                     if let sp = v.superPrice, let cfg = spCfg, v.inStock { SuperPriceCard(sp: sp, price: v.price, cfg: cfg).id(v.id).padding(.horizontal) }
+                    TipsCarousel(slug: p.slug, productName: "\(p.brand) \(p.name)").padding(.horizontal)
+                    PressSection(slug: p.slug, productName: "\(p.brand) \(p.name)").padding(.horizontal)
                     HowToBox(product: p, videos: videos) { playing = $0 }.padding(.horizontal)
                     if added { Button("Go to bag") { router.tab = 3 }.frame(maxWidth: .infinity) }
 
@@ -172,10 +176,22 @@ private func card(_ p: Product, _ v: Variant) -> Card {
 struct YouTubeSheet: View {
     let video: Video
     @Environment(\.dismiss) private var dismiss
+    @State private var cc = ""
+    private static let langs: [(String, String)] = [("", "Off"), ("en", "English"), ("ar", "العربية"), ("fr", "Français"), ("es", "Español"), ("de", "Deutsch"), ("it", "Italiano"), ("pt", "Português"), ("tr", "Türkçe"), ("ru", "Русский"), ("hy", "Հայերեն"), ("fa", "فارسی"), ("hi", "हिन्दी"), ("zh-Hans", "中文"), ("ja", "日本語"), ("ko", "한국어")]
     var body: some View {
         NavigationStack {
-            WebView(url: URL(string: "https://www.youtube-nocookie.com/embed/\(video.id)?autoplay=1&playsinline=1&rel=0")!)
+            VStack(spacing: 0) {
+            WebView(url: URL(string: "https://www.youtube-nocookie.com/embed/\(video.id)?autoplay=1&playsinline=1&rel=0" + (cc.isEmpty ? "" : "&cc_load_policy=1&cc_lang_pref=\(cc)&hl=\(cc)"))!).id(cc)
                 .background(Color.black)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack { Text("Voice-over language").font(.caption.bold()); Spacer(); Text(video.langName.isEmpty ? "Original" : video.langName).font(.caption).foregroundStyle(.secondary) }
+                HStack {
+                    Text("Closed caption language").font(.caption.bold()); Spacer()
+                    Picker("Closed caption language", selection: $cc) { ForEach(Self.langs, id: \.0) { Text($0.1).tag($0.0) } }.pickerStyle(.menu)
+                }
+                HStack { Spacer(); ShareMenu(text: "\(video.title)\nhttps://youtu.be/\(video.id)") }
+            }.padding().background(Color(.systemBackground))
+            }
                 .navigationTitle(video.title).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Close") } }
         }

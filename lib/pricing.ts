@@ -210,31 +210,35 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   // Bulk buy: 2 to maxUnits of the same product (not subscribed, not SuperPrice), paid now, get the
   // Subscribe & save 3-month %, never below cost + the minimum margin. At most maxUnits discounted units
   // per product per customer a day.
-  const bulkInfo = new Map<string, { units: number; pct: number; saving: number; left: number }>();
-  if (growth.bulk.enabled && !input.subscriptionId) {
+  const bulkInfo = new Map<string, { units: number; pct: number; saving: number; left: number; business?: string }>();
+  // Authorized bulk buyers (Admin › Bulk buyers) get their own %, minimum and daily cap.
+  const buyer = !input.subscriptionId ? await (await import("@/lib/bulk")).getBulkBuyer(input.phone) : null;
+  if ((growth.bulk.enabled || buyer) && !input.subscriptionId) {
     const { bulkPct } = await import("@/lib/growth");
-    const pct0 = bulkPct(growth);
+    const pct0 = buyer && buyer.pct > 0 ? buyer.pct : bulkPct(growth);
+    const cap = buyer ? (buyer.maxUnits > 0 ? buyer.maxUnits : Infinity) : growth.bulk.maxUnits;
+    const minQ = buyer ? Math.max(1, buyer.minQty || 1) : 2;
     const subIds = new Set(input.items.filter((i) => i.every).map((i) => i.productId));
     const { getBulkUsed } = await import("@/lib/bulk");
     let total = 0, count = 0;
     for (const l of ok) {
-      if (l.qty < 2 || subIds.has(l.productId) || l.superPrice) continue;
-      const used = input.phone ? await getBulkUsed(input.phone, l.productId) : 0;
-      const left = Math.max(0, growth.bulk.maxUnits - used);
+      if (l.qty < minQ || subIds.has(l.productId) || l.superPrice) continue;
+      const used = input.phone && cap !== Infinity ? await getBulkUsed(input.phone, l.productId) : 0;
+      const left = cap === Infinity ? 999 : Math.max(0, cap - used);
       const units = Math.min(l.qty, left);
-      if (units < 2 && used === 0) continue;
+      if (units < minQ && used === 0) continue;
       if (units <= 0) { bulkInfo.set(l.productId, { units: 0, pct: 0, saving: 0, left: 0 }); continue; }
       const cost = idx.byId.get(l.productId)?.cost ?? 0;
       const floor = cost > 0 ? cost * (1 + growth.priceMatch.marginPct / 100) : 0;
       const pct = floor > 0 ? Math.max(0, Math.min(pct0, (1 - floor / l.price) * 100)) : pct0;
       const saving = +((l.price * units * pct) / 100).toFixed(2);
       if (saving <= 0) continue;
-      bulkInfo.set(l.productId, { units, pct: Math.round(pct * 10) / 10, saving, left });
+      bulkInfo.set(l.productId, { units, pct: Math.round(pct * 10) / 10, saving, left, ...(buyer ? { business: buyer.company || buyer.name } : {}) });
       total += saving; count += units;
     }
     if (total > 0) {
       const amount = +Math.min(total, q.subtotal - q.discountTotal).toFixed(2);
-      q.discounts.push({ name: `Bulk buy: ${pct0}% off ${count} items (paid now)`, amount });
+      q.discounts.push({ name: buyer ? `Business price${buyer.company ? ` (${buyer.company})` : ""}: ${pct0}% off ${count} items` : `Bulk buy: ${pct0}% off ${count} items (paid now)`, amount });
       q.discountTotal = +(q.discountTotal + amount).toFixed(2);
       const { deliveryFor } = await import("@/lib/site");
       q.delivery = deliveryFor(settings, q.subtotal - q.discountTotal, input.zone);
@@ -265,7 +269,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     giftCard: gc && "amount" in gc ? gc : undefined,
     giftCardError: gc && "error" in gc ? gc.error : undefined,
     lines: lines.filter((l): l is NonNullable<typeof l> => !!l).map((l) => ({ productId: l.productId, price: l.price, compareAt: l.compareAt, available: l.available, ...(l.match !== undefined ? { match: l.match } : {}), ...(l.matchWas ? { matchWas: l.matchWas, matchVs: l.matchVs } : {}), ...(l.spLimit ? { spLimit: l.spLimit } : {}), ...(bulkInfo.get(l.productId) ? { bulk: bulkInfo.get(l.productId) } : {}) })),
-    bulk: growth.bulk.enabled ? { pct: (await import("@/lib/growth")).bulkPct(growth), maxUnits: growth.bulk.maxUnits } : undefined,
+    bulk: buyer ? { pct: buyer.pct > 0 ? buyer.pct : (await import("@/lib/growth")).bulkPct(growth), maxUnits: buyer.maxUnits > 0 ? buyer.maxUnits : 999, business: buyer.company || buyer.name, minQty: Math.max(1, buyer.minQty || 1) } : growth.bulk.enabled ? { pct: (await import("@/lib/growth")).bulkPct(growth), maxUnits: growth.bulk.maxUnits } : undefined,
     subtotal: q.subtotal,
     discounts: q.discounts,
     discountTotal: q.discountTotal,

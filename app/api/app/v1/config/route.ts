@@ -29,8 +29,12 @@ export async function GET() {
       prime: g.prime.enabled ? { name: g.prime.name, monthlyPrice: g.prime.monthlyPrice, trialMonths: g.prime.trialMonths, trialMinOrder: g.prime.trialMinOrder, freeMin: g.prime.freeMin, unlimitedSuperPrice: g.prime.unlimitedSuperPrice, promoLive: (await import("@/lib/growth")).primePromoLive(g.prime) } : null,
       // Bulk buy: 2+ of a product paid now get this % (same as Subscribe & save every 3 months by default).
       bulk: g.bulk.enabled && (await import("@/lib/growth")).bulkPct(g) > 0 ? { pct: (await import("@/lib/growth")).bulkPct(g), maxUnits: g.bulk.maxUnits } : null,
+      videoCalls: svc.videoCalls !== false,
+      eventsOn: svc.eventsOn !== false,
       subscribe: g.subscribe.enabled ? { monthly: g.subscribe.monthly, quarterly: g.subscribe.quarterly, note: g.subscribe.note, unlockMonthly: g.subscribe.unlockMonthly, unlockQuarterly: g.subscribe.unlockQuarterly } : null,
     },
+    // Info pages (About, Delivery, Privacy…) the app lists under Account.
+    pages: Object.entries((await (await import("@/lib/site-store")).getSettings()).pages).filter(([, v]) => v.body.trim() || v.title).map(([slug, v]) => ({ slug, title: v.title })),
     services: svc.enabled ? svc.services.filter((v) => v.enabled).map((v) => ({ id: v.id, title: v.title, category: v.category, description: v.description, duration: v.duration, price: v.price, priceNote: v.priceNote, video: v.video ?? "no" })) : [],
   }, { headers: { "Cache-Control": "public, s-maxage=300" } });
 }

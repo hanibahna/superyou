@@ -37,7 +37,7 @@ struct BulkNote: View {
     let cfg: Config.BulkCfg; let line: Quote.BulkLine?; let qty: Int
     var body: some View {
         if let b = line, b.saving > 0 {
-            Text("📦 Bulk buy −\(Int(b.pct))% on \(b.units) · you save \(money(b.saving))").font(.caption2.bold()).foregroundStyle(Color(hex: "#046c4e"))
+            Text("📦 \(b.business == nil ? "Bulk buy" : "Business price") −\(Int(b.pct))% on \(b.units) · you save \(money(b.saving))").font(.caption2.bold()).foregroundStyle(Color(hex: "#046c4e"))
                 .padding(.horizontal, 6).padding(.vertical, 2).background(RoundedRectangle(cornerRadius: 6).fill(Color(hex: "#e6f4ee")))
         } else if let b = line, b.left == 0 {
             Text("Bulk discount already used today for this product").font(.caption2).foregroundStyle(.secondary)

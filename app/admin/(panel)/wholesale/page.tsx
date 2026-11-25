@@ -18,7 +18,10 @@ export default async function WholesaleAdmin() {
                 <p className="font-semibold">{w.business} <span className="font-normal text-muted">· {w.type || "—"} · {w.city || "—"}</span></p>
                 <p>{w.contact} · <a href={`tel:${w.phone}`} className="text-brand-700">{w.phone}</a> · <a href={`https://wa.me/${w.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-brand-700">WhatsApp</a>{w.email && <> · <a href={`mailto:${w.email}`} className="text-brand-700">{w.email}</a></>}</p>
               </div>
-              <WholesaleStatus id={w.id} status={w.status} />
+              <div className="flex items-center gap-2">
+                <a href={`/admin/bulk-buyers/?${new URLSearchParams({ phone: w.phone, name: w.contact, company: w.business, enquiry: w.id })}`} className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white">Approve as bulk buyer</a>
+                <WholesaleStatus id={w.id} status={w.status} />
+              </div>
             </div>
             <p className="mt-2 text-muted">Volume: {w.volume || "—"} · Needs: {w.categories.join(", ") || "—"}{w.brands ? ` · Brands: ${w.brands}` : ""}</p>
             {w.message && <p className="mt-2 whitespace-pre-line">{w.message}</p>}
