@@ -49,6 +49,7 @@ export default async function Parcel({ params, searchParams }: { params: Promise
           <p className="text-right text-[11px] leading-tight">shopsuperyou.com<br />+961 70 777 608</p>
         </div>
         <div className="mt-2 flex justify-center [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-[320px]" dangerouslySetInnerHTML={{ __html: bar }} />
+        <p className="mt-1 text-center font-mono text-lg font-bold tracking-[0.25em]">{o.id}</p>
         <div className="mt-3 grid grid-cols-[1fr_auto] gap-3">
           <div className="text-sm leading-snug">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Deliver to</p>
