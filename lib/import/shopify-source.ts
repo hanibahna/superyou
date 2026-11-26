@@ -230,8 +230,14 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
   return p.variants
     .filter((v) => Number(v.price) > 0)
     .map((v) => {
-      const srcPrice = Number(v.price);
-      const srcCompare = v.compare_at_price ? Number(v.compare_at_price) : 0;
+      const rawPrice = Number(v.price);
+      const rawCompare = v.compare_at_price ? Number(v.compare_at_price) : 0;
+      // NeoVitale: we sell at their regular price (the crossed-out price when they run a sale) and
+      // run our own discounts; their sale prices are never copied. Our cost is that regular price
+      // less the brand discount (set by the import route).
+      const regularOnly = /neovitale/i.test(opts.sourceName);
+      const srcPrice = regularOnly && rawCompare > rawPrice ? rawCompare : rawPrice;
+      const srcCompare = regularOnly ? 0 : rawCompare;
       const price = opts.landed ? roundPrice(landed(srcPrice, opts.landed).price, opts.round) : roundPrice(srcPrice * (1 + opts.adjustPct / 100), opts.round);
       // Abroad the supplier's "was" price is a US price, not a SuperYou one: no strike-through for imports.
       const compareAt = !opts.landed && srcCompare > price ? srcCompare : undefined;
