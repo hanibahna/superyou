@@ -36,7 +36,13 @@ struct HomeSection: Codable, Identifiable {
     var cta: String?; var href: String?; var cta2: String?; var href2: String?; var endsAt: String?
     var items: [Item]?; var cards: [Card]?
 }
-struct ProductPage: Codable { let items: [Card]; let total: Int; let page: Int; let pages: Int }
+struct ProductPage: Codable { let items: [Card]; let total: Int; let page: Int; let pages: Int; var facets: Facets? = nil }
+/// Filters for a product list (brands, concerns, categories, price range), sent with page 1.
+struct Facets: Codable {
+    struct Brand: Codable, Hashable { let name: String; let count: Int }
+    struct Term: Codable, Hashable { let slug: String; let name: String; let count: Int }
+    let brands: [Brand]; let concerns: [Term]; let categories: [Term]; let price: [Double]
+}
 
 struct Variant: Codable, Identifiable, Hashable {
     let id: String; let name: String; let price: Double; let compareAt: Double?; let inStock: Bool; let image: String
@@ -55,6 +61,13 @@ struct Product: Codable {
     let category: String?; let tips: [String]?; let subscribable: Bool?; let url: String?
     var guide: Guide? = nil
     var life: Life? = nil
+    var related: [Card]? = nil
+    var reviews: [Review]? = nil
+}
+/// A shopper's review (approved ones only).
+struct Review: Codable, Identifiable, Hashable {
+    let id: String; let rating: Int; let title: String; let body: String; let name: String
+    let skinType: String?; let verified: Bool; let createdAt: String; let reply: String?; let photo: String?
 }
 /// How long the product lasts (AI estimate) and how often to deliver it, in months.
 struct Life: Codable { let days: Int; let every: Int; let basis: String }
@@ -93,6 +106,7 @@ struct Config: Codable {
     var pages: [PageLink]? = nil
     /// The website's header menu (☰ in the app).
     var menu: [MenuItem]? = nil
+    var deliveryPolicy: String? = nil
 }
 
 struct MenuItem: Codable, Hashable, Identifiable {
@@ -128,7 +142,23 @@ struct CheckoutReply: Codable {
 struct OrderLine: Codable, Hashable { let name: String; let qty: Int; let lineTotal: Double }
 struct Order: Codable, Identifiable, Hashable {
     let id: String; let createdAt: String; let status: String; let total: Double; let lines: [OrderLine]
+    var subtotal: Double? = nil; var delivery: Double? = nil; var discount: Double? = nil
+    var paymentMethod: String? = nil
+    var shipment: Shipment? = nil
+    struct Shipment: Codable, Hashable {
+        let courierName: String?; let tracking: String?; let link: String?; let status: String?
+        var events: [Event]? = nil; var checkedAt: String? = nil
+        struct Event: Codable, Hashable { let at: String; let text: String; var place: String? = nil }
+    }
 }
+/// A shopper's auto-replenish plan.
+struct Subscription: Codable, Identifiable, Hashable {
+    struct Item: Codable, Hashable { let productId: String; let qty: Int; let name: String }
+    struct Progress: Codable, Hashable { let pct: Double; let need: Int; let done: Int; let unlocked: Bool }
+    let id: String; let status: String; let every: Int; let items: [Item]; let nextAt: String; let endsAt: String?; let orders: Int
+    var progress: Progress? = nil
+}
+struct SubscriptionList: Codable { let subscriptions: [Subscription] }
 struct Member: Codable { let name: String; let points: Int; let tier: String; let ref: String? }
 struct Account: Codable { let member: Member?; let orders: [Order]; var game: GameState? = nil }
 /// Badges, review quest, referral race and progress (from the website's Club engine).

@@ -17,13 +17,17 @@ struct ProductView: View {
     @State private var selected: Variant?
     @State private var added = false
     @State private var failed = false
+    @State private var zoomAt: Int?
 
     var body: some View {
         ScrollView {
             if let p = product, let v = selected ?? p.variants.first {
                 VStack(alignment: .leading, spacing: 16) {
                     TabView {
-                        ForEach(p.images, id: \.self) { RemoteImage(url: $0).padding() }
+                        ForEach(Array(p.images.enumerated()), id: \.offset) { i, u in
+                            RemoteImage(url: u).padding().contentShape(Rectangle()).onTapGesture { zoomAt = i }
+                                .accessibilityAddTraits(.isButton).accessibilityHint("Opens the photo full screen")
+                        }
                     }.tabViewStyle(.page).frame(height: 340).background(Color.white)
                     if !videos.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -49,7 +53,9 @@ struct ProductView: View {
                                 Image(systemName: wishlist.has(p.slug) ? "heart.fill" : "heart").font(.title3).foregroundStyle(Color.rose)
                             }.accessibilityLabel(wishlist.has(p.slug) ? "Remove from wishlist" : "Save to wishlist")
                         }
-                        if let r = p.rating, p.reviewCount >= 3 { Label(String(format: "%.1f · %d reviews", r, p.reviewCount), systemImage: "star.fill").font(.footnote).foregroundStyle(Color.rose) }
+                        if let r = p.rating, p.reviewCount > 0 {
+                            HStack(spacing: 6) { StarsRow(value: r); Text(String(format: "%.1f · %d review%@", r, p.reviewCount, p.reviewCount == 1 ? "" : "s")).font(.footnote).foregroundStyle(Color.rose) }
+                        }
                         if let sp = v.superPrice, sp.lowered, let was = sp.was, spCfg != nil {
                             SuperPriceTag(was: was, price: v.price).id(v.id)
                         } else {
@@ -115,6 +121,7 @@ struct ProductView: View {
                         }.padding(.horizontal)
                     }
                     if let b = bulkCfg, v.inStock, every == nil, v.superPrice?.lowered != true { BulkOffer(cfg: b, price: v.price, qty: $qty).padding(.horizontal) }
+                    if v.inStock { QtyStepper(qty: $qty).padding(.horizontal) }
                     Button {
                         bag.add(p, v, qty: qty, every: every); added = true
                     } label: {
@@ -137,12 +144,17 @@ struct ProductView: View {
                     Section(title: "Description", text: p.description)
                     Section(title: "How to use", text: p.howToUse)
                     Section(title: "Ingredients", text: p.ingredients)
+                    DeliveryReturns(variant: v).padding(.horizontal)
+                    Divider().padding(.horizontal)
 
                     Button {
                         let msg = "Hello, I have a question about \(p.brand) \(p.name)"
                         if let u = URL(string: "https://wa.me/96170777608?text=\(msg.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") { UIApplication.shared.open(u) }
                     } label: { Label("Ask a pharmacist on WhatsApp", systemImage: "message").frame(maxWidth: .infinity).padding(12) }
                         .buttonStyle(.bordered).padding(.horizontal)
+                    ReviewsSection(product: p).padding(.horizontal).padding(.top, 8)
+                    CardCarousel(title: "Related products", eyebrow: "You may also like", cards: p.related ?? [])
+                    RecentlyViewedRow(except: p.slug)
                 }.padding(.bottom, 30)
             } else if failed {
                 ContentUnavailable(text: "This product isn't available right now.") { Task { await load() } }
@@ -156,6 +168,7 @@ struct ProductView: View {
         }
         .task { if product == nil { await load() } }
         .sheet(item: $playing) { vid in YouTubeSheet(video: vid) }
+        .fullScreenCover(item: Binding(get: { zoomAt.map { ZoomAt(i: $0) } }, set: { zoomAt = $0?.i })) { z in ZoomGallery(images: product?.images ?? [], index: z.i) }
         .sheet(isPresented: $howTo) { if let p = product { HowToSheet(product: p, videos: videos) { vid in howTo = false; playing = vid } } }
     }
 
@@ -163,6 +176,7 @@ struct ProductView: View {
         do {
             let p = try await API.product(slug)
             product = p; selected = p.variants.first(where: { $0.inStock }) ?? p.variants.first; failed = false
+            if let v = selected { RecentStore.shared.add(card(p, v)) }
             let cfg = await API.sharedConfig()
             subscribe = cfg?.features?.subscribe
             spCfg = cfg?.features?.superPrice
@@ -171,6 +185,8 @@ struct ProductView: View {
         } catch { failed = true }
     }
 }
+
+private struct ZoomAt: Identifiable { let i: Int; var id: Int { i } }
 
 private struct Section: View {
     let title: String; let text: String

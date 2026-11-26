@@ -6,6 +6,8 @@ import { siteUrl } from "@/lib/site-url";
 import { productTips } from "@/lib/tips";
 import { isSubscribable } from "@/lib/subscribable";
 import { genderOf } from "@/lib/gender";
+import { liveCards } from "@/lib/listing";
+import { productReviews } from "@/lib/growth-store";
 
 // Native app: one product with its variants, pictures, description and delivery info. No supplier data.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -17,7 +19,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   const d = await getProductDetail(first.id);
   const abs = (u?: string) => (!u ? "" : u.startsWith("http") ? u : `${siteUrl()}${u}`);
   const images = Array.from(new Set([...(d?.images ?? []).map((x) => abs(shopImg(x))), ...variants.map((v) => abs(shopImg(v.image)))].filter(Boolean)));
+  // "You may also like": same brand or category, in stock (as on the website).
+  const cards = await liveCards();
+  const related = cards.filter((c) => c.slug !== slug && c.inStock && (c.brand === first.brand || c.category === first.category)).slice(0, 12).map((c) => ({ ...c, image: abs(c.image) }));
+  const reviews = (await productReviews(slug)).slice(0, 30).map((r) => ({ id: r.id, rating: r.rating, title: r.title, body: r.body, name: r.name, skinType: r.skinType ?? null, verified: r.verified, createdAt: r.createdAt, reply: r.reply ?? null, photo: r.photo ?? null }));
   return NextResponse.json({
+    related, reviews,
     slug, name: first.name, brand: first.brand, images,
     description: d?.description ?? "", howToUse: d?.howToUse ?? "", ingredients: d?.ingredients ?? "",
     rating: first.rating ?? null, reviewCount: first.reviewCount ?? 0,

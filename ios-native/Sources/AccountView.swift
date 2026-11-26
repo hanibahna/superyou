@@ -26,12 +26,17 @@ struct AccountView: View {
                     if let g = a.game { GameSections(game: g, party: $party) }
                     Section("Your orders") {
                         ForEach(a.orders) { o in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack { Text(o.id).font(.subheadline.bold()); Spacer(); Text(money(o.total)).font(.subheadline) }
-                                Text(o.status.replacingOccurrences(of: "_", with: " ").capitalized).font(.caption).foregroundStyle(Color.rose)
-                                Text(o.lines.map { "\($0.qty)× \($0.name)" }.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            NavigationLink { OrderDetailView(order: o) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack { Text(o.id).font(.subheadline.bold()); Spacer(); Text(money(o.total)).font(.subheadline) }
+                                    Text(orderStatusText(o.status)).font(.caption).foregroundStyle(Color.rose)
+                                    Text(o.lines.map { "\($0.qty)× \($0.name)" }.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                }
                             }
                         }
+                    }
+                    Section {
+                        NavigationLink { SubscriptionsView(phone: phone, order: order) } label: { Label("My auto-replenish plans", systemImage: "arrow.triangle.2.circlepath") }
                     }
                     Section {
                         Button("Sign out") { account = nil }

@@ -23,6 +23,8 @@ export async function GET() {
     store: { name: s.store.name, tagline: s.store.tagline, whatsapp: s.store.whatsapp, phone: s.store.phone, email: s.store.email },
     social: s.social,
     menu,
+    // Shown under "Delivery & returns" on product pages, as on the website.
+    deliveryPolicy: s.pages.delivery?.body ?? "",
     delivery: { fee: s.delivery.fee, freeThreshold: s.delivery.freeThreshold, estimate: s.delivery.estimate, zones: s.delivery.zones },
     payments: methods,
     minOrder: s.checkout.minOrder,
