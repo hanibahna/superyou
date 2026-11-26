@@ -3,6 +3,7 @@ import { adminGuard } from "@/lib/admin-auth";
 import { getIndex } from "@/lib/catalog";
 import { discountFor } from "@/lib/costs/neovitale";
 import { fetchSourcePage } from "@/lib/import/shopify-source";
+import { db } from "@/lib/db-core";
 
 export const maxDuration = 300;
 
@@ -10,16 +11,35 @@ export const maxDuration = 300;
 // NeoVitale's advertised base price = its "was" price when on sale, otherwise its price.
 // Correct cost = that base × (1 − the brand's discount on NeoVitale's sheet). Nothing is changed.
 // GET → summary by brand; GET ?csv=1 → one row per product.
+type Live = Map<string, { price: number; compare: number; available: boolean }>;
+const KEY = "neo-audit:live";
+// NeoVitale's live catalog, kept for 6 hours so repeated reports don't re-crawl their site.
+async function liveNeo(fresh: boolean): Promise<Live> {
+  if (!fresh) {
+    const hit = await db.cmd<string | null>(["GET", KEY]).catch(() => null);
+    if (hit) return new Map(Object.entries(JSON.parse(hit) as Record<string, [number, number, number]>).map(([k, [p, c, a]]) => [k, { price: p, compare: c, available: !!a }]));
+  }
+  const origin = new URL("https://neovitale.com");
+  const live: Live = new Map();
+  for (let page = 1; page < 200; page++) {
+    let list: Awaited<ReturnType<typeof fetchSourcePage>> = [];
+    for (let attempt = 0; ; attempt++) {
+      try { list = await fetchSourcePage(origin, page); break; } catch (e) { if (attempt >= 3) throw e; await new Promise((r) => setTimeout(r, 2000 * (attempt + 1))); }
+    }
+    if (!list.length) break;
+    for (const p of list) for (const v of p.variants) live.set(String(v.id), { price: Number(v.price), compare: v.compare_at_price ? Number(v.compare_at_price) : 0, available: !!v.available });
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  const compact: Record<string, [number, number, number]> = {};
+  for (const [k, v] of live) compact[k] = [v.price, v.compare, v.available ? 1 : 0];
+  await db.cmd(["SET", KEY, JSON.stringify(compact), "EX", 21600]).catch(() => null);
+  return live;
+}
+
 export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
-  const origin = new URL("https://neovitale.com");
-  const live = new Map<string, { price: number; compare: number; available: boolean }>();
-  for (let page = 1; page < 200; page++) {
-    const list = await fetchSourcePage(origin, page);
-    if (!list.length) break;
-    for (const p of list) for (const v of p.variants) live.set(String(v.id), { price: Number(v.price), compare: v.compare_at_price ? Number(v.compare_at_price) : 0, available: !!v.available });
-  }
+  const live = await liveNeo(req.nextUrl.searchParams.has("fresh"));
   const idx = await getIndex();
   const neo = idx.all.filter((p) => p.source === "neovitale.com");
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -42,9 +62,11 @@ export async function GET(req: NextRequest) {
     };
   });
   if (req.nextUrl.searchParams.has("csv")) {
+    const only = req.nextUrl.searchParams.get("only");
+    const out = only === "issues" ? rows.filter((r) => r.correctCost !== null && (r.ourCost === null || Math.abs(r.ourCost - r.correctCost) > 0.01 || r.ourPrice < r.correctCost)) : rows;
     const cols = Object.keys(rows[0] ?? {});
     const esc = (v: unknown) => { const s = v === null || v === undefined ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc((r as Record<string, unknown>)[c])).join(","))].join("\n");
+    const csv = [cols.join(","), ...out.map((r) => cols.map((c) => esc((r as Record<string, unknown>)[c])).join(","))].join("\n");
     return new NextResponse(csv, { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": 'attachment; filename="neovitale-price-audit.csv"' } });
   }
   type Agg = { n: number; found: number; onSale: number; pct: number | string | null; costLow: number; belowCost: number; baseOff: number; sumMargin: number; mN: number };
