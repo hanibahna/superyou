@@ -32,6 +32,9 @@ export async function GET() {
   for (const p of live.list) {
     if (!p.image || !p.price) continue;
     const cat = catName.get(p.category) ?? p.category ?? "";
+    // Meta's commerce policies don't allow these in Shops: ingestible supplements, medicines and
+    // medical/health devices, and sexual wellness products. Listing them gets the whole catalog flagged.
+    if (/supplement|vitamin|nutrition|health|medical|pharma/i.test(cat) || /\b(condoms?|lubricant|lube|pregnancy test|ovulation test|durex)\b/i.test(`${p.brand} ${p.name}`)) continue;
     const gpc = GPC.find(([re]) => re.test(cat))?.[1] ?? 469; // 469 = Health & Beauty
     // Photos through SuperYou's own /img/ address, so no supplier server or file name shows.
     const own = shopImg(p.image) ?? p.image;
