@@ -31,7 +31,7 @@ export default async function InstagramLinks() {
   return (
     <div className="mx-auto max-w-md px-4 py-8">
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">@shop_super_you</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">@superyoulb</p>
         <h1 className="mt-2 text-3xl font-black">SuperYou</h1>
         <p className="mt-2 text-sm text-muted">Original beauty and parapharmacy · lowest price in Lebanon · pay on delivery</p>
       </div>
