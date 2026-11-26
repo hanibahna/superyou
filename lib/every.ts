@@ -1,6 +1,6 @@
 // How often a subscribed product is delivered, in months. Client-safe.
 // Each product gets its own frequency from how long it lasts (lib/lifespan.ts). The discount has
-// two tiers: monthly plans get the "monthly" %, longer ones the "every 3 months" %.
+// one % whatever the frequency (monthly plans unlock it after more deliveries).
 import { z } from "zod";
 
 export const EVERY = [1, 2, 3, 4, 5, 6] as const;
@@ -23,6 +23,10 @@ export function monthsFrom(n: number, from = new Date()) {
 }
 /** A picked date is accepted from tomorrow up to 13 months ahead. */
 export const startOk = (d?: string) => !!d && d > monthsFrom(0) && d <= monthsFrom(MAX_MONTHS);
+/** Frequencies offered on the product page (like Sephora: same discount whichever is picked). */
+export const OFFERED: Every[] = [1, 2, 3, 4, 6];
+/** Same % whatever the frequency (both fields are kept equal from the admin). */
+export const subPct = (sub: { monthly: number; quarterly: number }) => Math.max(sub.monthly, sub.quarterly);
 export const isEvery = (n: unknown): n is Every => EVERY.includes(n as Every);
 export const everyLabel = (e: number) => (e === 1 ? "Every month" : `Every ${e} months`);
 export const everyText = (e: number) => (e === 1 ? "every month" : `every ${e} months`);

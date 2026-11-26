@@ -5,7 +5,7 @@ import { useGrowth, useT } from "@/lib/site-context";
 import { useShop } from "@/lib/store";
 
 /** Product page: buy 1, 2 or 3 — the bulk price is shown live and picking a tile sets the quantity.
- *  Same % as Subscribe & save every 3 months, paid now; up to N discounted per product per day. */
+ *  Same % as Subscribe & save, paid now; up to N discounted per product per day. */
 export function BulkOffer({ price, qty, onQty }: { price: number; qty: number; onQty: (n: number) => void }) {
   const t = useT();
   const g = useGrowth().bulk;
@@ -31,7 +31,7 @@ export function BulkOffer({ price, qty, onQty }: { price: number; qty: number; o
           );
         })}
       </div>
-      {biz?.business ? <p className="mt-2 text-[11px] leading-snug text-muted">{t("Your approved business price, applied at checkout.")}</p> : <p className="mt-2 text-[11px] leading-snug text-muted">{t("Same saving as Subscribe & save every 3 months, without subscribing: paid now, on this order.")} {t("Up to")} {b.maxUnits} {t("per product a day")}.</p>}
+      {biz?.business ? <p className="mt-2 text-[11px] leading-snug text-muted">{t("Your approved business price, applied at checkout.")}</p> : <p className="mt-2 text-[11px] leading-snug text-muted">{t("Same saving as Subscribe & save, without subscribing: paid now, on this order.")} {t("Up to")} {b.maxUnits} {t("per product a day")}.</p>}
     </div>
   );
 }

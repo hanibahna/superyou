@@ -24,7 +24,7 @@ struct BulkOffer: View {
                     }.buttonStyle(.plain)
                 }
             }
-            Text("Same saving as Subscribe & save every 3 months, without subscribing: paid now, on this order. Up to \(cfg.maxUnits) per product a day.").font(.caption2).foregroundStyle(.secondary)
+            Text("Same saving as Subscribe & save, without subscribing: paid now, on this order. Up to \(cfg.maxUnits) per product a day.").font(.caption2).foregroundStyle(.secondary)
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 16).fill(LinearGradient(colors: [Color(hex: "#fff5f8"), .white], startPoint: .topLeading, endPoint: .bottomTrailing)))

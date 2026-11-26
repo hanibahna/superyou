@@ -83,17 +83,35 @@ struct ProductView: View {
 
                     if p.subscribable == true, let s = subscribe {
                         VStack(alignment: .leading, spacing: 8) {
-                            // Delivery as often as this product runs out (AI estimate), plus one step more often.
-                            let rec = p.life?.every ?? 3
+                            // Like Sephora's Auto-Replenish: every 1, 2, 3, 4 or 6 months, same % whichever, most common marked.
+                            let pct = max(s.monthly, s.quarterly)
                             let all = [1, 2, 3, 4, 6]
-                            let plans = rec > 1 ? [all[(all.firstIndex(of: rec) ?? 2) - 1], rec] : [1]
-                            if let l = p.life { Text("Lasts about \(l.days < 45 ? "\(l.days / 7) weeks" : "\(Int((Double(l.days) / 30.4).rounded())) months") · \(l.basis)").font(.caption).foregroundStyle(.secondary) }
-                            Picker("Buy", selection: $every) {
-                                Text("Once").tag(Int?.none)
-                                ForEach(plans, id: \.self) { e in Text(e == 1 ? "Monthly" : "Every \(e) mo").tag(Int?.some(e)) }
+                            let rec = all.min(by: { abs($0 - (p.life?.every ?? 3)) < abs($1 - (p.life?.every ?? 3)) }) ?? 3
+                            Picker("Buy", selection: Binding(get: { every == nil ? 0 : 1 }, set: { every = $0 == 0 ? nil : (every ?? rec) })) {
+                                Text("One-time").tag(0)
+                                Text("Auto-replenish \(Int(pct))% off").tag(1)
                             }.pickerStyle(.segmented)
-                            if every == rec { Text("Recommended for this product · earn \(Int(rec == 1 ? s.monthly : s.quarterly))%").font(.caption.bold()).foregroundStyle(Color.greenShip) }
-                            if let e = every { Text("After \(e == 1 ? (s.unlockMonthly ?? 3) : (s.unlockQuarterly ?? 2)) deliveries you get \(Int(e == 1 ? s.monthly : s.quarterly))% back on them, then \(Int(e == 1 ? s.monthly : s.quarterly))% off every order. \(s.note)").font(.caption).foregroundStyle(.secondary) }
+                            if let e = every {
+                                (Text("Deliver every: ") + Text("\(e) month\(e == 1 ? "" : "s")\(e == rec ? " (most common)" : "")").bold()).font(.subheadline)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(all, id: \.self) { n in
+                                            Button { every = n } label: {
+                                                Text(n == rec ? "\(n) (most common)" : "\(n)").font(.subheadline.bold()).padding(.horizontal, 12).frame(minHeight: 40)
+                                                    .foregroundStyle(e == n ? Color.ink : .secondary)
+                                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(e == n ? Color.ink : Color.secondary.opacity(0.3), lineWidth: 2))
+                                            }.buttonStyle(.plain)
+                                        }
+                                        Text("month(s)").font(.subheadline).foregroundStyle(.secondary)
+                                    }
+                                }
+                                if let l = p.life { Text("Lasts about \(l.days < 45 ? "\(l.days / 7) weeks" : "\(Int((Double(l.days) / 30.4).rounded())) months")").font(.caption).foregroundStyle(.secondary) }
+                                Group {
+                                    (Text("You will save ") + Text(money(v.price * pct / 100 * 12 / Double(e))).bold() + Text(" a year with this subscription.")).font(.subheadline)
+                                        .padding(10).frame(maxWidth: .infinity, alignment: .leading).background(Color(hex: "#f6f1f3"), in: RoundedRectangle(cornerRadius: 10))
+                                }
+                                Text("After \(e == 1 ? (s.unlockMonthly ?? 3) : (s.unlockQuarterly ?? 2)) deliveries you get \(Int(pct))% back on them, then \(Int(pct))% off every order. \(s.note)").font(.caption).foregroundStyle(.secondary)
+                            }
                         }.padding(.horizontal)
                     }
                     if let b = bulkCfg, v.inStock, every == nil, v.superPrice?.lowered != true { BulkOffer(cfg: b, price: v.price, qty: $qty).padding(.horizontal) }

@@ -220,21 +220,21 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
             <div className="mt-3"><Area label="Intro" value={g.skinScan.intro} onChange={(intro) => up("skinScan", { intro })} /></div>
             <p className={`mt-3 text-sm ${aiReady ? "text-green-700" : "text-sale"}`}>{aiReady ? "✓ AI key found — the scan works." : "Not connected: paste a Claude API key in Admin → Sections & AI. Until then the page offers the quiz."}</p>
           </Card>
-          <Card title="Bulk buy" sub="Buy 2 or more of the same product in one order, paid now, and get the same % as Subscribe & save every 3 months (or your own %). Never below cost + your minimum margin. SuperPrice and subscribed items are excluded.">
+          <Card title="Bulk buy" sub="Buy 2 or more of the same product in one order, paid now, and get the same % as Subscribe & save (or your own %). Never below cost + your minimum margin. SuperPrice and subscribed items are excluded.">
             <div className="grid gap-4 md:grid-cols-3">
               <Toggle label="Bulk buy discount" checked={g.bulk.enabled} onChange={(enabled) => up("bulk", { enabled })} />
               <Toggle label="Wholesale page, form and menu link (/wholesale/)" checked={g.bulk.wholesale} onChange={(wholesale) => up("bulk", { wholesale })} />
-              <Num label="Discount % (0 = same as Subscribe & save every 3 months)" value={g.bulk.pct} onChange={(pct) => up("bulk", { pct })} />
+              <Num label="Discount % (0 = same as Subscribe & save)" value={g.bulk.pct} onChange={(pct) => up("bulk", { pct })} />
               <Num label="Discounted units per product, per customer a day" value={g.bulk.maxUnits} onChange={(maxUnits) => up("bulk", { maxUnits })} />
             </div>
           </Card>
-          <Card title="Subscribe & save" sub="Customers choose monthly or every-3-months delivery on the product page and get an extra discount. Orders are placed automatically (cash on delivery) and they can skip, change or cancel from their link. Manage them in Admin → Subscriptions.">
+          <Card title="Subscribe & save" sub="Customers choose delivery every 1, 2, 3, 4 or 6 months on the product page (the product's most common frequency is marked) and get the same discount whichever they pick. Orders are placed automatically (cash on delivery) and they can skip, change or cancel from their link. Manage them in Admin → Subscriptions.">
             <Toggle label="Offer subscriptions" checked={g.subscribe.enabled} onChange={(enabled) => up("subscribe", { enabled })} />
             <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <Num label="Monthly: extra % off" value={g.subscribe.monthly} onChange={(monthly) => up("subscribe", { monthly })} />
-              <Num label="Every 3 months: extra % off" value={g.subscribe.quarterly} onChange={(quarterly) => up("subscribe", { quarterly })} />
-              <Num label="Monthly: unlocks after N delivered orders" value={g.subscribe.unlockMonthly} onChange={(unlockMonthly) => up("subscribe", { unlockMonthly })} />
-              <Num label="Every 3 months: unlocks after N delivered orders" value={g.subscribe.unlockQuarterly} onChange={(unlockQuarterly) => up("subscribe", { unlockQuarterly })} />
+              <Num label="Discount % (any frequency)" value={Math.max(g.subscribe.monthly, g.subscribe.quarterly)} onChange={(v) => up("subscribe", { monthly: v, quarterly: v })} />
+              <div />
+              <Num label="Monthly plans: discount unlocks after N delivered orders" value={g.subscribe.unlockMonthly} onChange={(unlockMonthly) => up("subscribe", { unlockMonthly })} />
+              <Num label="Every 2+ months: discount unlocks after N delivered orders" value={g.subscribe.unlockQuarterly} onChange={(unlockQuarterly) => up("subscribe", { unlockQuarterly })} />
               <label className="flex items-center gap-2 text-sm font-semibold md:col-span-2"><input type="checkbox" checked={!!g.subscribe.promo?.enabled} onChange={(e) => up("subscribe", { promo: { ...g.subscribe.promo, endsAt: g.subscribe.promo?.endsAt ?? "", enabled: e.target.checked } })} /> Campaign: a % off the first order, the full discount from the 2nd order, free delivery</label>
               <Num label="Campaign: % off the first order" value={g.subscribe.promo?.firstPct ?? 5} onChange={(firstPct) => up("subscribe", { promo: { enabled: !!g.subscribe.promo?.enabled, endsAt: g.subscribe.promo?.endsAt ?? "", ...g.subscribe.promo, firstPct } })} />
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={g.subscribe.promo?.freeDelivery ?? true} onChange={(e) => up("subscribe", { promo: { enabled: !!g.subscribe.promo?.enabled, endsAt: g.subscribe.promo?.endsAt ?? "", ...g.subscribe.promo, freeDelivery: e.target.checked } })} /> Campaign: free delivery on every subscription order</label>

@@ -118,19 +118,20 @@ Contact
 ${contact}`,
       };
     case "subscription-terms": {
-      const g = sub ?? { monthly: 10, quarterly: 15, unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90 };
+      const g = sub ?? { monthly: 10, quarterly: 10, unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90 };
       return {
         title: "Subscribe & save terms",
         body: `Subscribe & save terms
-Subscribe & save delivers the products you choose every month or every 3 months, and rewards you for staying with us.
+Subscribe & save delivers the products you choose every 1, 2, 3, 4 or 6 months, and rewards you for staying with us.
 
 How the plan works
 • Your orders are placed automatically on the due date and paid on delivery. We remind you on WhatsApp 3 days before each one.
 • You can skip a delivery, change products or quantities, change how often, pause or cancel at any time from your private subscription link. There is no minimum period.
 
 How you earn your discount
-• Your first deliveries are at the normal price: ${g.unlockMonthly} deliveries on a monthly plan, or ${g.unlockQuarterly} deliveries on an every-3-months plan.
-• Once those orders have been delivered, your discount unlocks: ${g.monthly}% off on a monthly plan or ${g.quarterly}% off on an every-3-months plan, on every subscription order from then on.
+• Choose delivery every 1, 2, 3, 4 or 6 months. The discount is the same whichever you choose.
+• Your first deliveries are at the normal price: ${g.unlockMonthly} deliveries on a monthly plan, or ${g.unlockQuarterly} deliveries on a plan of every 2 months or more.
+• Once those orders have been delivered, your discount unlocks: ${Math.max(g.monthly, g.quarterly)}% off every subscription order from then on.
 • At the same time you earn a rebate of the same percentage on the subscribed products in the orders already delivered.
 
 How the rebate is used
