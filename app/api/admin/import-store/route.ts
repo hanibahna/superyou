@@ -16,7 +16,9 @@ const schema = z.object({
   asDraft: z.boolean().default(false),
   // Leave out items we already sell from another catalog (same barcode, or same brand + name + size).
   skipDuplicates: z.boolean().default(false),
-  dryRun: z.boolean().default(false), // count and categorise only; nothing is saved
+  dryRun: z.boolean().default(false),
+  // Only add variants we don't have yet (by SKU); existing products are left exactly as they are.
+  onlyNew: z.boolean().default(false), // count and categorise only; nothing is saved
   skuPrefix: z.string().regex(/^[A-Z0-9]{2,8}$/).default("SRC"),
   // When the server can't reach the store (bot check), the admin page sends the page it fetched itself.
   products: z.array(z.any()).max(250).optional(),
@@ -59,6 +61,11 @@ export async function POST(req: NextRequest) {
     products = products
       .map((p) => ({ ...p, variants: p.variants.filter((v) => !matchVariant(book, p, v) || (skipped++, false)) }))
       .filter((p) => p.variants.length);
+  }
+  if (o.onlyNew) {
+    products = products
+      .map((p) => ({ ...p, variants: p.variants.filter((v) => !idx.skuToId.has(`${o.skuPrefix}-${v.id}`.toLowerCase())) }))
+      .filter((p) => p.variants.length && !/gift card|posm/i.test(p.product_type));
   }
   const rows = products.flatMap((p) => mapSourceProduct(p, { adjustPct: o.adjustPct, round: o.round, asDraft: o.asDraft, skuPrefix: o.skuPrefix, sourceName, landed: landedPricing }));
   // Brands in the spelling we already use ("ESTEE LAUDER" → "Estée Lauder"); new ones in Title Case when the store shouts.
