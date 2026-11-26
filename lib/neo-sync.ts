@@ -176,11 +176,13 @@ export function reportText(r: Run) {
   ].join("\n");
 }
 
-async function sendReport(r: Run) {
+export async function sendReport(r: Run): Promise<boolean[]> {
   const { sendEmail } = await import("@/lib/email");
   const subject = `Catalog sync: ${r.added.length + r.addedSoldOut.length} new, ${r.priceUp.length + r.priceDown.length} price changes${r.errors.length ? " (incomplete)" : ""}`;
   const text = reportText(r);
-  for (const to of REPORT_TO) await sendEmail(to, subject, text).catch(() => false);
+  const out: boolean[] = [];
+  for (const to of REPORT_TO) out.push(await sendEmail(to, subject, text).catch(() => false));
+  return out;
 }
 
 export async function lastSync(): Promise<Run | null> {
