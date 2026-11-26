@@ -25,6 +25,7 @@ async function verifySlice(from: number, size: number) {
   const got: Record<string, [number, number, number]> = {};
   let failed = 0;
   let i = 0;
+  const t0 = Date.now();
   const worker = async () => {
     while (i < slice.length) {
       const h = slice[i++];
@@ -32,15 +33,17 @@ async function verifySlice(from: number, size: number) {
         try {
           const r = await fetch(`https://neovitale.com/products/${encodeURIComponent(h)}.js`, { headers: { "User-Agent": "SuperYou-Catalog-Import/1.0", Accept: "application/json" }, cache: "no-store" });
           if (r.status === 404) break;
+          if (r.status === 429) { await new Promise((res) => setTimeout(res, 1000 * (Number(r.headers.get("retry-after")) || 6))); attempt--; if (Date.now() - t0 > 240000) { failed++; break; } continue; }
           if (!r.ok) throw new Error(String(r.status));
           const j = (await r.json()) as { variants: { id: number; price: number; compare_at_price: number | null; available: boolean }[] };
+          await new Promise((res) => setTimeout(res, 300));
           for (const v of j.variants) got[String(v.id)] = [v.price / 100, (v.compare_at_price ?? 0) / 100, v.available ? 1 : 0];
           break;
         } catch { if (attempt === 2) failed++; else await new Promise((res) => setTimeout(res, 1500 * (attempt + 1))); }
       }
     }
   };
-  await Promise.all([worker(), worker(), worker(), worker()]);
+  await Promise.all([worker(), worker()]);
   const prev = JSON.parse((await db.cmd<string | null>(["GET", VKEY])) ?? "{}") as Record<string, [number, number, number]>;
   Object.assign(prev, got);
   await db.cmd(["SET", VKEY, JSON.stringify(prev), "EX", 172800]);
@@ -78,7 +81,7 @@ export async function GET(req: NextRequest) {
   const v = req.nextUrl.searchParams.get("verify");
   if (v !== null) {
     if (v === "reset") { await db.cmd(["DEL", VKEY]); await liveNeo(true); return NextResponse.json({ reset: true }); }
-    return NextResponse.json(await verifySlice(Number(v) || 0, 400));
+    return NextResponse.json(await verifySlice(Number(v) || 0, Math.min(200, Number(req.nextUrl.searchParams.get("size")) || 60)));
   }
   const live = await liveNeo(req.nextUrl.searchParams.has("fresh"));
   const verified = JSON.parse((await db.cmd<string | null>(["GET", VKEY]).catch(() => null)) ?? "{}") as Record<string, [number, number, number]>;
