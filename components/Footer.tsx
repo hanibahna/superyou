@@ -1,5 +1,7 @@
 "use client";
 
+import { AppLinks } from "@/components/AppLinks";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Category } from "@/lib/data/catalog";
@@ -50,6 +52,7 @@ export function Footer({ categories }: { categories: Category[] }) {
           {store.openingHours && <p className="text-sm">{store.openingHours}</p>}
           {store.whatsapp && <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-bold text-white">{tx("WhatsApp chat")}</a>}
           <Link href="/gift-cards/" className="ms-2 mt-3 inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">🎁 {tx("Gift cards")}</Link>
+          <AppLinks dark className="mt-4" />
           <div className="mt-4 flex gap-3 text-sm">
             {(["instagram", "facebook", "tiktok", "youtube"] as const).filter((k) => social[k]).map((k) => (
               <a key={k} href={social[k]} target="_blank" rel="noreferrer" className="rounded-full border border-white/20 px-3 py-1 hover:bg-white/10">

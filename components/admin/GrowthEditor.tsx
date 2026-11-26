@@ -220,6 +220,13 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
             <div className="mt-3"><Area label="Intro" value={g.skinScan.intro} onChange={(intro) => up("skinScan", { intro })} /></div>
             <p className={`mt-3 text-sm ${aiReady ? "text-green-700" : "text-sale"}`}>{aiReady ? "✓ AI key found — the scan works." : "Not connected: paste a Claude API key in Admin → Sections & AI. Until then the page offers the quiz."}</p>
           </Card>
+          <Card title="Mobile apps" sub="Paste the App Store and Google Play links when the apps are live: 'Get the app' buttons then show in the footer and the account page. Empty = hidden.">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Text label="App Store link (iPhone)" value={g.apps.ios} onChange={(ios) => up("apps", { ios })} placeholder="https://apps.apple.com/app/…" />
+              <Text label="Google Play link (Android)" value={g.apps.android} onChange={(android) => up("apps", { android })} placeholder="https://play.google.com/store/apps/details?id=…" />
+              <Text label="Line under the buttons (e.g. the app offer)" value={g.apps.note} onChange={(note) => up("apps", { note })} placeholder="10% off your first order in the app" />
+            </div>
+          </Card>
           <Card title="Bulk buy" sub="Buy 2 or more of the same product in one order, paid now, and get the same % as Subscribe & save (or your own %). Never below cost + your minimum margin. SuperPrice and subscribed items are excluded.">
             <div className="grid gap-4 md:grid-cols-3">
               <Toggle label="Bulk buy discount" checked={g.bulk.enabled} onChange={(enabled) => up("bulk", { enabled })} />

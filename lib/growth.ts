@@ -51,6 +51,7 @@ export type Growth = {
   skinScan: { enabled: boolean; intro: string };
   /** Bulk buy: 2 to maxUnits of the same product in one order, paid now, get the Subscribe & save 3-month %
    *  (pct 0 = follow it). At most maxUnits discounted units per product per customer a day. */
+  apps: { ios: string; android: string; note: string }; // App Store / Google Play links; empty = not shown
   bulk: { enabled: boolean; pct: number; maxUnits: number; wholesale: boolean }; // wholesale: the public /wholesale/ page, form and menu link
   subscribe: { enabled: boolean; monthly: number; quarterly: number; collection: string; note: string; unlockMonthly: number; unlockQuarterly: number; maxRebate: number; cooldownDays: number; promo?: { enabled: boolean; endsAt: string; firstPct?: number; freeDelivery?: boolean } }; // Subscribe & save: earned after N delivered orders
   shadeFinder: { enabled: boolean };
@@ -289,6 +290,7 @@ export const defaultGrowth: Growth = {
     intro: "A new deal or gift behind every door, 1–24 December. Come back each day.",
     doors: Array.from({ length: 24 }, (_, i) => ({ day: i + 1, title: `Day ${i + 1}`, text: "", code: "", href: "/shop/?sale=1", image: "" })),
   },
+  apps: { ios: "", android: "", note: "" },
   bulk: { enabled: true, pct: 0, maxUnits: 3, wholesale: false },
   subscribe: { enabled: true, monthly: 10, quarterly: 10, collection: "", note: "Skip, change or cancel any time. Pay on delivery, nothing charged in advance.", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "", firstPct: 5, freeDelivery: true } },
   skinScan: { enabled: true, intro: "SuperScan is our free 3D AI skin scan, like setting up Face ID: look at the screen, slowly turn your head in a circle, and the AI reads your skin from five angles: front, both sides, chin up and chin down. You get your skin type, a zone-by-zone reading and a routine from products in stock. Photos are analysed once and never stored." },
@@ -334,6 +336,7 @@ export const growthSchema = z.object({
   }),
   skinScan: z.object({ enabled: z.boolean(), intro: z.string().max(400) }),
   subscribe: z.object({ enabled: z.boolean(), monthly: z.number().min(0).max(50), quarterly: z.number().min(0).max(50), collection: z.string().max(200), note: z.string().max(200), unlockMonthly: z.number().int().min(1).max(12).default(3), unlockQuarterly: z.number().int().min(1).max(12).default(2), maxRebate: z.number().min(0).max(500).default(15), cooldownDays: z.number().int().min(0).max(365).default(90), promo: z.object({ enabled: z.boolean(), endsAt: z.string().max(10), firstPct: z.number().min(0).max(50).default(5), freeDelivery: z.boolean().default(true) }).default({ enabled: false, endsAt: "", firstPct: 5, freeDelivery: true }) }).default({ enabled: true, monthly: 10, quarterly: 10, collection: "", note: "", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "", firstPct: 5, freeDelivery: true } }),
+  apps: z.object({ ios: z.string().max(300).default(""), android: z.string().max(300).default(""), note: z.string().max(160).default("") }).default({ ios: "", android: "", note: "" }),
   bulk: z.object({ enabled: z.boolean(), pct: z.number().min(0).max(50), maxUnits: z.number().int().min(2).max(10), wholesale: z.boolean().default(false) }).default({ enabled: true, pct: 0, maxUnits: 3, wholesale: false }),
   shadeFinder: z.object({ enabled: z.boolean() }),
   images: z.object({ frame: z.enum(["white", "grey"]), padding: z.number().min(0).max(20) }),
@@ -370,6 +373,7 @@ export function withGrowthDefaults(v: Partial<Growth> | null | undefined): Growt
     reviews: { ...d.reviews, ...v.reviews }, club: { ...d.club, ...v.club, bonus: { ...d.club.bonus, ...v.club?.bonus }, referral: { ...d.club.referral, ...v.club?.referral }, memberPrice: { ...d.club.memberPrice, ...v.club?.memberPrice } }, pharmacist: { ...d.pharmacist, ...v.pharmacist },
     bundles: { ...d.bundles, ...v.bundles }, reorder: { ...d.reorder, ...v.reorder }, advent: { ...d.advent, ...v.advent },
     bulk: { ...d.bulk, ...v.bulk },
+    apps: { ...d.apps, ...v.apps },
     skinScan: { ...d.skinScan, ...v.skinScan }, subscribe: { ...d.subscribe, ...v.subscribe, promo: { ...d.subscribe.promo!, ...v.subscribe?.promo } }, shadeFinder: { ...d.shadeFinder, ...v.shadeFinder }, images: { ...d.images, ...v.images }, trust: { ...d.trust, ...v.trust },
     prime: { ...defaultPrime, ...v.prime, promo: { ...defaultPrime.promo, ...v.prime?.promo } },
     priceMatch: withDirectory({ ...defaultPriceMatch, ...v.priceMatch, sites: v.priceMatch?.sites ?? defaultPriceMatch.sites }),
@@ -413,6 +417,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     subscribe: { ...g.subscribe, promoLive: subPromoLive(g) },
     bulk: { enabled: g.bulk.enabled, pct: bulkPct(g), maxUnits: g.bulk.maxUnits },
     wholesale: g.bulk.wholesale,
+    apps: g.apps.ios || g.apps.android ? g.apps : null,
     shadeFinder: g.shadeFinder,
     images: g.images,
     trust: g.trust,
