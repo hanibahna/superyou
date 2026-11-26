@@ -12,6 +12,7 @@ export async function GET() {
   const pal = buildPalette(theme) as Record<string, string>;
   return NextResponse.json({
     store: { name: s.store.name, tagline: s.store.tagline, whatsapp: s.store.whatsapp, phone: s.store.phone, email: s.store.email },
+    social: s.social,
     delivery: { fee: s.delivery.fee, freeThreshold: s.delivery.freeThreshold, estimate: s.delivery.estimate, zones: s.delivery.zones },
     payments: methods,
     minOrder: s.checkout.minOrder,

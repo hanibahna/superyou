@@ -87,6 +87,8 @@ struct Config: Codable {
     let store: Store; let delivery: Delivery; let payments: [Payment]; let minOrder: Double
     let features: Features?; let services: [Service]?
     var theme: Theme? = nil
+    struct Social: Codable { var instagram: String? = nil; var facebook: String? = nil; var tiktok: String? = nil; var youtube: String? = nil }
+    var social: Social? = nil
     struct PageLink: Codable { let slug: String; let title: String }
     var pages: [PageLink]? = nil
 }

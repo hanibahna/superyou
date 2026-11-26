@@ -49,7 +49,7 @@ struct AccountView: View {
                     NavigationLink { WishlistView() } label: { Label("Wishlist", systemImage: "heart") }
                     NavigationLink { AdvisorView() } label: { Label("Ask our AI advisor", systemImage: "sparkles") }
                     if config?.features?.videoCalls == false {
-                        Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("WhatsApp a pharmacist", systemImage: "message") }
+                        Link(destination: URL(string: "https://wa.me/\(config?.store.whatsapp ?? "96170777608")")!) { Label("WhatsApp a pharmacist", systemImage: "message") }
                         NavigationLink { ServicesView() } label: { Label("Services", systemImage: "calendar") }
                     } else {
                         NavigationLink { ServicesView() } label: { Label(config?.features?.eventsOn == false ? "Book a pharmacist video call" : "Services & events", systemImage: "video") }
@@ -70,6 +70,13 @@ struct AccountView: View {
                     NavigationLink { SitePage(title: "SuperYou Club", path: "/club/") } label: { Label("SuperYou Club", systemImage: "star") }
                     if config?.features?.wholesale == true { NavigationLink { WholesaleView() } label: { Label("Wholesale (for businesses)", systemImage: "shippingbox") } }
                 }
+                if let so = config?.social, [so.instagram, so.tiktok, so.facebook, so.youtube].contains(where: { !($0 ?? "").isEmpty }) {
+                    Section("Follow SuperYou") {
+                        ForEach([("Instagram", so.instagram, "camera"), ("TikTok", so.tiktok, "music.note"), ("Facebook", so.facebook, "person.2"), ("YouTube", so.youtube, "play.rectangle")].filter { !($0.1 ?? "").isEmpty }, id: \.0) { name, url, icon in
+                            if let u = URL(string: url ?? "") { Link(destination: u) { Label(name, systemImage: icon) } }
+                        }
+                    }
+                }
                 Section("About SuperYou") {
                     ForEach(config?.pages ?? [], id: \.slug) { pg in
                         NavigationLink { SitePage(title: pg.title, path: "/pages/\(pg.slug)/") } label: { Text(pg.title) }
@@ -81,7 +88,7 @@ struct AccountView: View {
                     }
                 }
                 Section {
-                    Link(destination: URL(string: "https://wa.me/96170777608")!) { Label("Ask a pharmacist on WhatsApp", systemImage: "message") }
+                    Link(destination: URL(string: "https://wa.me/\(config?.store.whatsapp ?? "96170777608")")!) { Label("Ask a pharmacist on WhatsApp", systemImage: "message") }
                     Link(destination: URL(string: "https://www.shopsuperyou.com/pages/privacy-policy/")!) { Label("Privacy policy", systemImage: "lock") }
                 } header: { Text("Help") } footer: {
                     // Owner sign-in stays out of customers' way: tap the version line 7 times to show it.
