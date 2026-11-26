@@ -31,7 +31,6 @@ export function ProductCard({ product }: { product: Card }) {
       >
         <HeartIcon filled={wished} width={18} height={18} />
       </button>
-      {pct && <span dir="ltr" className="absolute start-3 top-3 z-10 rounded-md bg-sale px-2 py-0.5 text-xs font-bold text-white">-{pct}%</span>}
       <Link href={href} className="block overflow-hidden rounded-lg">
         <ProductImage product={product} width={480} className="pimg aspect-square w-full transition duration-300 group-hover:scale-105" />
       </Link>

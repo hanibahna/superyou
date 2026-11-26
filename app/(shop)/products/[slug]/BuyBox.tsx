@@ -78,7 +78,6 @@ export function BuyBox({
     <div className="grid gap-6 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-10 md:gap-y-0">
       <div className="relative order-1 md:col-start-1 md:row-start-1">
         <TrackView product={snap(variants.find((x) => x.inStock) ?? v)} />
-        {pct && <span dir="ltr" className="absolute start-4 top-4 z-10 rounded-md bg-sale px-2.5 py-1 text-sm font-bold text-white">-{pct}%</span>}
         <ProductImage product={{ ...v, image: shown }} width={1000} className="pdp-main aspect-square w-full rounded-2xl border border-line" />
         {gallery.length > 1 && (
           <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto md:grid md:grid-cols-5">

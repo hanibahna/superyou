@@ -240,7 +240,7 @@ function NoCheaper() {
       {done && (
         <p className="sp-pop mt-2 rounded-lg bg-[#046c4e] px-2.5 py-1.5 text-[12px] font-semibold text-white">
           ✓ {t("No online shop in Lebanon beats our price, guaranteed.")}
-        </p>
+        <span className="mt-0.5 block text-[11px] font-normal text-white/90">{t("None of these shops sells it today. If one lists it for less, we go")} {g.superPriceBeat ?? 3}% {t("below their price.")}</span></p>
       )}
     </div>
   );

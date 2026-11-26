@@ -115,6 +115,8 @@ export async function competitorStats() {
 /** We are already the best price: t = the cheapest other shop, s = that shop. */
 /** Every shop that sells it: [name, price, show name]. */
 export type Shop = [string, number, boolean];
+/** Shops we buy from are compared against but never named to customers. */
+const isSupplier = (d: string) => ["neovitale.com", "skinsociety.me", "nexuscare.me"].includes(d.toLowerCase().replace(/^www\./, ""));
 export type Cmp = { t: number; s: string; show: boolean; all?: Shop[]; lose?: boolean };
 /** What the storefront needs for one product: p = SuperPrice, t = competitor price, s = shop. */
 export type Match = { p: number; t: number; s: string; show: boolean; u: string; est?: boolean; all?: Shop[]; beat?: "full" | "partial" };
@@ -331,7 +333,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
         if (own) continue;
         const prev = best.get(flat[i]);
         if (!prev || t < prev.t) best.set(flat[i], { t, site, u, how });
-        (shops.get(flat[i]) ?? shops.set(flat[i], []).get(flat[i])!).push([site.label, r2(t), site.showName]);
+        (shops.get(flat[i]) ?? shops.set(flat[i], []).get(flat[i])!).push([site.label, r2(t), site.showName && !isSupplier(site.domain)]);
       }
       cursor = String(next);
     } while (cursor !== "0");
@@ -348,13 +350,13 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     // Same price as a shop (within 0.5%): go tieBeatPct below them. Cheaper there: beatPct below.
     const tie = b.t >= p.price - 0.005 && b.t <= p.price * 1.005;
     if (b.t > p.price * 1.005 || (tie && !cfg.tieBeatPct)) {
-      cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
+      cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName && !isSupplier(b.site.domain), all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
       continue;
     }
     cheaper++;
     const name = `${p.brand} ${p.name}${p.variant ? ` · ${p.variant}` : ""}`;
     // A shop is cheaper and we can't (or shouldn't) go below it: the storefront must not claim the best price.
-    const lose = () => cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]), lose: true } satisfies Cmp));
+    const lose = () => cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName && !isSupplier(b.site.domain), all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]), lose: true } satisfies Cmp));
     const flag = (why: Flag["why"], floor = 0) => (lose(), flags.push({ id, name, ours: p.price, theirs: b.t, floor: r2(floor), site: b.site.label, url: b.u, why }));
     // A name match far below our price is more likely a different size or a mistake.
     if (b.how === "name" && b.t < p.price * 0.5) { flag("check match"); continue; }
@@ -369,7 +371,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     const sp = Math.max(target, floor, cap);
     // Only when we end up truly cheaper than the competitor (and cheaper than today).
     if (sp >= b.t - 0.005 || sp >= p.price - 0.005) {
-      if (tie) cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName, all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
+      if (tie) cmp.push(id, JSON.stringify({ t: r2(b.t), s: b.site.label, show: b.site.showName && !isSupplier(b.site.domain), all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]) } satisfies Cmp));
       else flag("below floor", Math.max(floor, cap));
       continue;
     }
@@ -378,7 +380,7 @@ async function apply(sites: PriceMatchSite[], cfg: PriceMatch, siteReports: Site
     mBefore += (p.price - cost) / p.price;
     mAfter += (sp - cost) / sp;
     supers.push({ id, name, ours: p.price, theirs: b.t, superPrice: sp, cost: r2(cost), margin: Math.round(((sp - cost) / sp) * 1000) / 10, est: !known, site: b.site.label });
-    const m: Match = { p: sp, t: r2(b.t), s: b.site.label, show: b.site.showName, u: b.u, ...(known ? {} : { est: true }), all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]), beat: sp <= target + 0.005 ? "full" : "partial" };
+    const m: Match = { p: sp, t: r2(b.t), s: b.site.label, show: b.site.showName && !isSupplier(b.site.domain), u: b.u, ...(known ? {} : { est: true }), all: (shops.get(id) ?? []).sort((x, y) => x[1] - y[1]), beat: sp <= target + 0.005 ? "full" : "partial" };
     prices.push(id, JSON.stringify(m));
   }
   await db.cmd(["DEL", PRICES]);

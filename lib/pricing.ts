@@ -55,6 +55,7 @@ function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"]
 }
 
 /** Active products with automatic sale prices applied. Cached until the catalog or promotions change. */
+const SUPPLIER_LABELS = new Set(["neovitale", "skin society", "nexuscare"]);
 export async function liveProducts() {
   const [idx, promos, vis, growth, ratings, sourcing, pm] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing(), priceMatches()]);
   const pmOn = growth.priceMatch.enabled;
@@ -76,13 +77,15 @@ export async function liveProducts() {
     const sold = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
     // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
     const m = pmOn ? pm.map.get(p.id) : undefined;
-    const named = (all?: [string, number, boolean][]) => all?.map(([s, t, show]) => [show ? s : "", t] as [string, number]);
-    if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: m.show ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
+    // Shops we buy from are never named to customers (also for checks stored before this rule).
+    const ok = (s: string, show: boolean) => show && !SUPPLIER_LABELS.has(s.toLowerCase());
+    const named = (all?: [string, number, boolean][]) => all?.map(([s, t, show]) => [ok(s, show) ? s : "", t] as [string, number]);
+    if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: ok(m.s, m.show) ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
     // Already the best price: say which shop we compared with (shown as "price compared").
     const c = pmOn && growth.priceMatch.badge ? pm.cmp.get(p.id) : undefined;
     // A shop is cheaper and we didn't go below it: no "best price" claim on this product.
     if (c?.lose) return { ...sold, pmLose: true };
-    if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: c.show ? c.s : "", shops: named(c.all), beat: "none" as const };
+    if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: ok(c.s, c.show) ? c.s : "", shops: named(c.all), beat: "none" as const };
     return sold;
   });
   let dupOf = new Map<string, string>();

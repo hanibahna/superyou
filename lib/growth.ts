@@ -389,6 +389,8 @@ function withDirectory(pm: PriceMatch): PriceMatch {
 
 /** What the browser needs (no voucher logic, no wheel odds). */
 /** Bulk buy %: its own setting, or the Subscribe & save every-3-months %. */
+/** Shops we buy from: compared against, but never named to customers. */
+export const SUPPLIER_DOMAINS = ["neovitale.com", "skinsociety.me", "nexuscare.me"];
 export const bulkPct = (g: Growth) => (g.bulk.pct > 0 ? g.bulk.pct : g.subscribe.quarterly);
 
 export function publicGrowth(g: Growth, aiKey?: boolean) {
@@ -399,7 +401,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     superPrice: g.priceMatch.enabled && g.priceMatch.badge,
     // Shop names checked every night, for the "no cheaper price anywhere" card. Shops we buy from stay out.
     superPriceBeat: g.priceMatch.beatPct,
-    superPriceShops: g.priceMatch.enabled ? [...new Set(g.priceMatch.sites.filter((s) => s.enabled && s.showName && s.domain !== "neovitale.com").map((s) => s.label))] : [],
+    superPriceShops: g.priceMatch.enabled ? [...new Set(g.priceMatch.sites.filter((s) => s.enabled && s.showName && !SUPPLIER_DOMAINS.includes(s.domain.toLowerCase().replace(/^www\./, ""))).map((s) => s.label))] : [],
     prime: { ...g.prime, promoLive: primePromoLive(g.prime) },
     reviews: { enabled: g.reviews.enabled, showOnCards: g.reviews.showOnCards },
     club: { enabled: g.club.enabled, name: g.club.name, pointsPerDollar: g.club.pointsPerDollar, rewardPoints: g.club.rewardPoints, rewardValue: g.club.rewardValue, tiers: g.club.tiers, bonus: g.club.bonus, referral: g.club.referral, expiryMonths: g.club.expiryMonths, memberPrice: g.club.memberPrice, birthdayPercent: g.club.birthdayPercent },
