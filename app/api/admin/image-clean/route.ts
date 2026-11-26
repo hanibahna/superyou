@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         const results = await Promise.all(imgs.map((u) => cleanImage(u, { dry })));
         done += results.length;
         results.forEach((r) => { if (r.status === "manual") manual.push({ id: p.id, name: `${p.brand} ${p.name}`, why: r.why }); if (r.status === "error") errors.push(`${p.id}: ${r.why}`); });
-        if (results.some((r) => r.status === "error")) left++;
+        
         if (dry) { fixedNow += results.filter((r) => r.status === "fixed").length; return; }
         const map = new Map<string, string>();
         imgs.forEach((u, n) => { const r = results[n]; if (r.status === "fixed" && r.out) map.set(u, r.out); });

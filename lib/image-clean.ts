@@ -16,6 +16,7 @@ const key = (u: string) => createHash("sha1").update(u).digest("hex");
 type Box = { x: number; y: number; w: number; h: number };
 type Seen = { promo: boolean; boxes: Box[]; what?: string };
 
+let lastErr = "";
 async function ask(model: string, jpeg: Buffer, wantBoxes: boolean): Promise<Seen | null> {
   const k = process.env.ANTHROPIC_API_KEY;
   if (!k) return null;
@@ -32,8 +33,8 @@ Reply with JSON only: {"promo":true|false${wantBoxes ? `,"boxes":[{"x":0.05,"y":
       messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: jpeg.toString("base64") } }, { type: "text", text: prompt }] }],
     }),
     signal: AbortSignal.timeout(60_000),
-  }).catch(() => null);
-  if (!r?.ok) return null;
+  }).catch((e) => { lastErr = String(e).slice(0, 120); return null; });
+  if (!r?.ok) { if (r) lastErr = `${r.status} ${(await r.text().catch(() => "")).slice(0, 160)}`; return null; }
   const j = (await r.json().catch(() => ({}))) as { content?: { text?: string }[] };
   const t = (j.content ?? []).map((c) => c.text ?? "").join("");
   try {
@@ -116,10 +117,10 @@ export async function cleanImage(url: string, { dry = false } = {}): Promise<Cle
   if (!small) return { status: "error", why: "unreadable image", at };
   // A quick look first; only photos with an overlay get the careful look that places the boxes.
   const quick = await ask(process.env.ANTHROPIC_IMGCHECK_MODEL || "claude-haiku-5-5", small, false);
-  if (!quick) return { status: "error", why: "vision check failed", at };
+  if (!quick) return { status: "error", why: `vision check failed: ${lastErr}`, at };
   if (!quick.promo) return save({ status: "clean", at });
   const full = await ask(process.env.ANTHROPIC_IMGFIX_MODEL || "claude-sonnet-5-5", small, true);
-  if (!full) return { status: "error", why: "vision check failed", at };
+  if (!full) return { status: "error", why: `vision check failed: ${lastErr}`, at };
   if (!full.promo) return save({ status: "clean", at });
   if (!full.boxes.length) return save({ status: "manual", why: `overlay "${full.what}" but no box`, at });
   const fixed = await repair(await sharp(buf).flatten({ background: "#ffffff" }).jpeg({ quality: 95 }).toBuffer(), full.boxes).catch(() => null);
