@@ -20,7 +20,7 @@ const LAST = "neo-sync:last";
 const PAGES_PER_STEP = 6;
 const SKU = "NEO";
 const SALE_TAGS = new Set(["mega", "half", "deal"]);
-export const REPORT_TO = ["hani.bahna@gmail.com"];
+export const REPORT_TO = ["order@shopsuperyou.com", "hani.bahna@gmail.com"];
 
 type Line = string;
 type Run = {
