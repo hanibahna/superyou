@@ -2,7 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { siteUrl } from "@/lib/site-url";
 
 // NeoVitale catalog sync every 3 days (Vercel Cron, see vercel.json). Same chaining as the
-// price check: answer at once, do one step afterwards, then call itself for the next step.
+// price check: answer at once (?hop=1 resumes a run that stopped part-way; the 04:00 and 05:00 crons do that), do one step afterwards, then call itself for the next step.
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {

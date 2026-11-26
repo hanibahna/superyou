@@ -48,7 +48,7 @@ async function page(n: number): Promise<SourceProduct[]> {
   for (let a = 0; ; a++) {
     try { return await fetchSourcePage(new URL("https://neovitale.com"), n); } catch (e) {
       if (a >= 3) throw e;
-      await new Promise((res) => setTimeout(res, 8000 * (a + 1))); // NeoVitale limits how fast we can read
+      await new Promise((res) => setTimeout(res, 6000 * (a + 1))); // NeoVitale limits how fast we can read
     }
   }
 }
@@ -65,7 +65,7 @@ export async function stepSync(): Promise<{ more: boolean }> {
   const seen = new Set(run.seen);
   let last = false;
   const t0 = Date.now();
-  for (let i = 0; i < PAGES_PER_STEP && Date.now() - t0 < 150000; i++) {
+  for (let i = 0; i < PAGES_PER_STEP && Date.now() - t0 < 90000; i++) {
     let list: SourceProduct[];
     try { list = await page(run.page); } catch (e) {
       // Rate-limited: try the same page again in the next step (up to 3 times), then give up.

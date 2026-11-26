@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/neo-sync/",
       "schedule": "0 3 */3 * *"
+    },
+    {
+      "path": "/api/cron/neo-sync/?hop=1",
+      "schedule": "0 4 */3 * *"
+    },
+    {
+      "path": "/api/cron/neo-sync/?hop=1",
+      "schedule": "0 5 */3 * *"
     }
   ]
 }
