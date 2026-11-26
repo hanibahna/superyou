@@ -37,15 +37,19 @@ struct ProductListView: View {
     @State private var facets: Facets?
     @State private var showFilters = false
     @State private var failed = false
+    @State private var imported = false
 
     static let sorts: [(String, String)] = [("", "Featured"), ("price-asc", "Price: low to high"), ("price-desc", "Price: high to low"), ("discount", "Biggest discount"), ("new", "New arrivals")]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Picker("Ships from", selection: $origin) {
-                    Text("All").tag(""); Text("Lebanon").tag("local"); Text("Imported").tag("international")
-                }.pickerStyle(.segmented).padding(.horizontal)
+                // Only when imported products are switched on in the admin (otherwise everything ships from Lebanon).
+                if imported {
+                    Picker("Ships from", selection: $origin) {
+                        Text("All").tag(""); Text("Lebanon").tag("local"); Text("Imported").tag("international")
+                    }.pickerStyle(.segmented).padding(.horizontal)
+                }
                 HStack(spacing: 10) {
                     Menu {
                         Picker("Sort by", selection: $f.sort) { ForEach(Self.sorts, id: \.0) { Text($0.1).tag($0.0) } }
@@ -81,7 +85,11 @@ struct ProductListView: View {
         }
         .navigationTitle(title)
         .navigationDestination(for: Card.self) { ProductView(slug: $0.slug) }
-        .task { if items.isEmpty { await load(1) } }
+        .task {
+            imported = (await API.sharedConfig())?.features?.imported == true
+            if !imported { origin = "" }
+            if items.isEmpty { await load(1) }
+        }
         .onChange(of: origin) { _, _ in Task { items = []; await load(1) } }
         .onChange(of: f) { _, _ in Task { items = []; await load(1) } }
         .sheet(isPresented: $showFilters) { FilterSheet(facets: facets, filter: $f, lockedBrand: query.contains("brand=")) }

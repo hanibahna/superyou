@@ -49,6 +49,8 @@ export async function GET() {
     // The website's look, so the app matches it: colours from Admin › Theme, shape and fonts from Admin › Layout.
     theme: { primary: theme.primary, ink: theme.ink, sale: theme.sale, background: theme.background, tint: pal["brand-50"] ?? "", preset: layout.preset, headingFont: layout.headingFont, buttons: layout.buttons, cards: layout.cards, radius: layout.radius },
     features: {
+      // Imported (US) products on sale right now: the app shows its Lebanon / Imported switch only then.
+      imported: nav.originCats.has("international"),
       superScan: g.skinScan.enabled,
       advisor: x.advisor.enabled ? { name: x.advisor.name, greeting: x.advisor.greeting, suggestions: x.advisor.suggestions } : null,
       wheel: g.popup.enabled && g.popup.mode === "wheel" ? { title: g.popup.title, text: g.popup.text, slices: g.popup.wheel.map((w) => w.label) } : null,
