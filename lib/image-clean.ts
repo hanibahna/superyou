@@ -18,8 +18,8 @@ type Seen = { promo: boolean; boxes: Box[]; what?: string };
 
 let lastErr = "";
 async function ask(model: string, jpeg: Buffer, wantBoxes: boolean): Promise<Seen | null> {
-  const k = process.env.ANTHROPIC_API_KEY;
-  if (!k) return null;
+  const k = await (await import("@/lib/extras")).anthropicKey();
+  if (!k) { lastErr = "no Claude API key"; return null; }
   const prompt = `This is a product photo for an online pharmacy and beauty shop.
 Is there PROMOTIONAL text or a badge ADDED ON TOP of the photo by a retailer: a discount (e.g. "-20%", "20% OFF"), "SALE", "OFFER", "PROMO", a price, "Buy 1 get 1", "Free gift", "Limited time", "Special price", "Bundle deal", "New price"?
 Do NOT count text printed on the product's own packaging (brand, product name, "SPF 50", "50 ml", "new formula" on the box), and do not count the brand's own campaign artwork without a discount or price.
