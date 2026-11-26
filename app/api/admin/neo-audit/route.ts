@@ -80,6 +80,30 @@ async function liveNeo(fresh: boolean): Promise<Live> {
 export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
+  // Product data for the given NeoVitale handles, read one product page at a time and shaped like
+  // the catalog feed, so Import can add them with { products } (used when the feed is rate-limited).
+  const want = req.nextUrl.searchParams.get("fetch");
+  if (want) {
+    const out: unknown[] = [];
+    for (const h of want.split(",").slice(0, 40)) {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const r = await fetch(`https://neovitale.com/products/${encodeURIComponent(h)}.js`, { headers: { "User-Agent": "SuperYou-Catalog-Import/1.0", Accept: "application/json" }, cache: "no-store" });
+        if (r.status === 404) break;
+        if (!r.ok) { await new Promise((res) => setTimeout(res, 1000 * (Number(r.headers.get("retry-after")) || 5))); continue; }
+        type JsV = { id: number; title: string; price: number; compare_at_price: number | null; available: boolean; sku: string | null; barcode: string | null; featured_image?: { src: string } | null };
+        const j = (await r.json()) as { id: number; title: string; handle: string; vendor: string; type: string; tags: string[]; description: string; images: string[]; options: { name: string; values: string[] }[]; created_at: string; variants: JsV[] };
+        const abs = (u: string) => (u.startsWith("//") ? `https:${u}` : u);
+        out.push({
+          id: j.id, title: j.title, handle: j.handle, vendor: j.vendor, product_type: j.type, tags: j.tags, body_html: j.description, created_at: j.created_at,
+          images: j.images.map((src) => ({ src: abs(src) })), options: j.options.map((o) => ({ name: o.name, values: o.values })),
+          variants: j.variants.map((v) => ({ id: v.id, title: v.title, price: (v.price / 100).toFixed(2), compare_at_price: v.compare_at_price ? (v.compare_at_price / 100).toFixed(2) : null, available: v.available, sku: v.sku ?? "", barcode: v.barcode ?? "", featured_image: v.featured_image ? { src: abs(v.featured_image.src) } : null })),
+        });
+        await new Promise((res) => setTimeout(res, 400));
+        break;
+      }
+    }
+    return NextResponse.json({ products: out });
+  }
   if (req.nextUrl.searchParams.has("missing")) {
     if (req.nextUrl.searchParams.has("fresh")) await liveNeo(true);
     const names = JSON.parse((await db.cmd<string | null>(["GET", "neo-audit:names"])) ?? "{}") as Record<string, string>;
