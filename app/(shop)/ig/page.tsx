@@ -33,11 +33,11 @@ export default async function InstagramLinks() {
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">@shop_super_you</p>
         <h1 className="mt-2 text-3xl font-black">SuperYou</h1>
-        <p className="mt-2 text-sm text-muted">Original beauty and pharmacy · lowest price in Lebanon · pay on delivery</p>
+        <p className="mt-2 text-sm text-muted">Original beauty and parapharmacy · lowest price in Lebanon · pay on delivery</p>
       </div>
       {wa && (
         <a href={wa} className="tap mt-6 flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-4 font-bold text-white">
-          Order or ask a pharmacist on WhatsApp
+          Order or ask our pharmacist on WhatsApp
         </a>
       )}
       <ul className="mt-4 space-y-3">
