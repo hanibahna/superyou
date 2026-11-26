@@ -20,6 +20,13 @@ export async function proxy(req: NextRequest) {
     return res;
   }
   if (path.startsWith("/admin") || path.startsWith("/api/admin")) return adminGate(req, path);
+  // Instagram bio link (www.shopsuperyou.com): the first homepage visit from Instagram's in-app browser
+  // opens the link page with every feature. The logo and later visits go to the normal homepage.
+  if (path === "/" && !req.nextUrl.search && /Instagram/i.test(req.headers.get("user-agent") ?? "") && !req.cookies.get("sy_ig")) {
+    const res = NextResponse.redirect(new URL("/ig/?utm_source=instagram&utm_medium=bio", req.url), 307);
+    res.cookies.set("sy_ig", "1", { path: "/", maxAge: 60 * 60 * 6, sameSite: "lax" });
+    return res;
+  }
   if (!/^\/(ar|fr)(\/|$)/.test(path)) return NextResponse.next();
 
   // French and Arabic pages live at /fr/… and /ar/… so Google can index them. The same pages are served,
