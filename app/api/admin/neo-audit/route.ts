@@ -58,13 +58,14 @@ async function liveNeo(fresh: boolean): Promise<Live> {
   const origin = new URL("https://neovitale.com");
   const live: Live = new Map();
   const handles: string[] = [];
+  const names: Record<string, string> = {};
   for (let page = 1; page < 200; page++) {
     let list: Awaited<ReturnType<typeof fetchSourcePage>> = [];
     for (let attempt = 0; ; attempt++) {
       try { list = await fetchSourcePage(origin, page); break; } catch (e) { if (attempt >= 3) throw e; await new Promise((r) => setTimeout(r, 2000 * (attempt + 1))); }
     }
     if (!list.length) break;
-    for (const p of list) handles.push(p.handle);
+    for (const p of list) { handles.push(p.handle); for (const v of p.variants) names[String(v.id)] = `${p.handle}|${p.vendor}|${p.title}|${v.title === "Default Title" ? "" : v.title}|${p.product_type}`; }
     for (const p of list) for (const v of p.variants) live.set(String(v.id), { price: Number(v.price), compare: v.compare_at_price ? Number(v.compare_at_price) : 0, available: !!v.available });
     await new Promise((r) => setTimeout(r, 250));
   }
@@ -72,12 +73,23 @@ async function liveNeo(fresh: boolean): Promise<Live> {
   for (const [k, v] of live) compact[k] = [v.price, v.compare, v.available ? 1 : 0];
   await db.cmd(["SET", KEY, JSON.stringify(compact), "EX", 21600]).catch(() => null);
   await db.cmd(["SET", HKEY, JSON.stringify(handles), "EX", 86400]).catch(() => null);
+  await db.cmd(["SET", "neo-audit:names", JSON.stringify(names), "EX", 86400]).catch(() => null);
   return live;
 }
 
 export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
+  if (req.nextUrl.searchParams.has("missing")) {
+    if (req.nextUrl.searchParams.has("fresh")) await liveNeo(true);
+    const names = JSON.parse((await db.cmd<string | null>(["GET", "neo-audit:names"])) ?? "{}") as Record<string, string>;
+    const idx0 = await getIndex();
+    const ours = new Set(idx0.all.filter((p) => p.source === "neovitale.com").map((p) => (p.sku ?? "").split("-").pop()));
+    const missing = Object.entries(names).filter(([vid]) => !ours.has(vid)).map(([vid, t]) => { const [handle, brand, title, variant, type] = t.split("|"); return { vid, handle, brand, title, variant, type }; });
+    const byHandle = new Map<string, number>();
+    for (const m of missing) byHandle.set(m.handle, (byHandle.get(m.handle) ?? 0) + 1);
+    return NextResponse.json({ neoVariants: Object.keys(names).length, ours: ours.size, missingVariants: missing.length, missingProducts: byHandle.size, missing });
+  }
   const v = req.nextUrl.searchParams.get("verify");
   if (v !== null) {
     if (v === "reset") { await db.cmd(["DEL", VKEY]); await liveNeo(true); return NextResponse.json({ reset: true }); }

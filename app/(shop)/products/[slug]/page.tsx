@@ -27,7 +27,7 @@ import { translateMany } from "@/lib/translate";
 import { BuyBox } from "./BuyBox";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const slug = (await params).slug;
+  const slug = ((s) => { try { return decodeURIComponent(s); } catch { return s; } })((await params).slug);
   const [p] = await getGroupBySlug(slug);
   if (!p) return {};
   const d = await getProductDetail(p.id);
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ProductPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
   const tx = await getT();
-  const slug = (await params).slug;
+  const slug = ((s) => { try { return decodeURIComponent(s); } catch { return s; } })((await params).slug);
   const [raw, live] = await Promise.all([getGroupBySlug(slug), liveProducts()]);
   // Show live (sale) prices.
   const variants = raw.map((v) => live.byId.get(v.id)).filter((v): v is NonNullable<typeof v> => !!v) // hidden catalogs/brands are excluded

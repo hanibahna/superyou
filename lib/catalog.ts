@@ -250,7 +250,11 @@ export async function getProductById(id: string): Promise<ProductLite | null> {
 
 /** All live variants of one item (cheapest first). */
 export async function getGroupBySlug(slug: string): Promise<ProductLite[]> {
-  return ((await getIndex()).bySlug.get(slug) ?? []).filter((p) => p.status === "active");
+  const idx = await getIndex();
+  // Slugs with non-English characters ("®", "é") arrive percent-encoded from the address bar.
+  let list = idx.bySlug.get(slug);
+  if (!list && slug.includes("%")) { try { list = idx.bySlug.get(decodeURIComponent(slug)); } catch { /* malformed address */ } }
+  return (list ?? []).filter((p) => p.status === "active");
 }
 
 async function getDetails(ids: string[]): Promise<Map<string, Detail>> {

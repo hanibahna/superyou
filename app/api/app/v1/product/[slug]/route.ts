@@ -11,7 +11,7 @@ import { productReviews } from "@/lib/growth-store";
 
 // Native app: one product with its variants, pictures, description and delivery info. No supplier data.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const slug = (await params).slug;
+  const slug = ((s) => { try { return decodeURIComponent(s); } catch { return s; } })((await params).slug);
   const [raw, live] = await Promise.all([getGroupBySlug(slug), liveProducts()]);
   const variants = raw.map((v) => live.byId.get(v.id)).filter((v): v is NonNullable<typeof v> => !!v);
   if (!variants.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
