@@ -1,3 +1,4 @@
+import { InstagramStrip } from "@/components/InstagramStrip";
 import { BrandStrip, Banners, CategoryTiles, Countdown, HeroSlider, NewsletterSection, ShopByConcern, TextBlock, TikTokProfile, VideoSection } from "@/components/Home";
 import { shopImgDeep } from "@/lib/img-server";
 import { autoCategories, hrefIsLive, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
@@ -113,6 +114,7 @@ export default async function HomePage() {
         return extra.length ? [banded, ...extra] : banded;
       })}
       {firstHero < 0 && <><PromiseStrip t={t} freeOver={settings.delivery.freeThreshold} /><QuickJump t={t} links={jumps} /></>}
+      <InstagramStrip url={settings.social?.instagram ?? ""} />
     </>
   );
 

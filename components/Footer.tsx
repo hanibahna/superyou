@@ -56,7 +56,7 @@ export function Footer({ categories }: { categories: Category[] }) {
           <div className="mt-4 flex gap-3 text-sm">
             {(["instagram", "facebook", "tiktok", "youtube"] as const).filter((k) => social[k]).map((k) => (
               <a key={k} href={social[k]} target="_blank" rel="noreferrer" className="rounded-full border border-white/20 px-3 py-1 hover:bg-white/10">
-                {k === "tiktok" ? "TikTok" : k === "youtube" ? "YouTube" : k[0].toUpperCase() + k.slice(1)}
+                {k === "tiktok" ? "TikTok" : k === "youtube" ? "YouTube" : k === "instagram" ? `Instagram @${social.instagram.replace(/\/+$/, "").split("/").pop()}` : k[0].toUpperCase() + k.slice(1)}
               </a>
             ))}
           </div>
