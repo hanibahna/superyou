@@ -41,9 +41,11 @@ export const checkoutSchema = z.object({
   giftCard: z.string().max(30).optional(),
   // Where the shopper came from (campaign tags); a bad value is dropped, never blocks the order.
   attribution: attributionSchema.optional().catch(undefined),
+  channel: z.literal("app").optional(), // set by the app's own checkout route
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+const c0 = (o: { customer: { phone: string } }) => o.customer.phone;
 
 export const ORDER_STATUSES = [
   "pending_cod",
@@ -105,6 +107,7 @@ export type Order = {
   history?: { at: string; status: OrderStatus; by: string; note?: string }[];
   /** Test order (placed from the admin or while signed in with test mode on): kept apart from real orders. */
   test?: boolean;
+  channel?: "app"; // placed in the SuperYou app
   /** Supplier → courier → customer (lib/fulfil). */
   fulfil?: { stage: "sent" | "ready" | "picked" | "delivered"; sentAt?: string; readyAt?: string; pickedAt?: string; deliveredAt?: string; pod?: string; podFrom?: "page" | "whatsapp"; payable?: number; paidAt?: string };
 };
@@ -120,7 +123,7 @@ const spDay = () => new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 1
 const spUsedKey = (phone: string) => `sp:used:${normPhone(phone)}:${spDay()}`;
 
 export async function priceOrder(input: CheckoutInput) {
-  const base = { items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId, phone: input.customer.phone, prime: input.prime };
+  const base = { items: input.items, code: input.code, zone: input.customer.zone, subscriptionId: input.subscriptionId, phone: input.customer.phone, prime: input.prime, channel: input.channel };
   let q = await serverQuote(base);
   // SuperPrice: one order per customer (phone number) per day. The first try explains it;
   // placing the order again within 10 minutes buys those items at the regular price.
@@ -250,11 +253,14 @@ export async function createOrder(input: CheckoutInput, opts: { test?: boolean }
     ...(input.subscriptionId ? { subscriptionId: input.subscriptionId } : {}),
     history: [{ at: new Date().toISOString(), status, by: test ? "test" : "customer" }],
     ...(test ? { test: true } : {}),
+    ...(input.channel === "app" ? { channel: "app" as const } : {}),
   };
   // Test orders don't touch stock, coupons, gift cards, club points, subscriptions or referral credit.
   const moves = test ? [] : await (await import("@/lib/inventory")).adjustStock(order.lines.map((l) => ({ productId: l.productId, delta: -l.qty })), `Order ${order.id}`).catch((e) => (console.error("[stock]", e), []));
   order.stockTaken = moves.length > 0;
   await saveOrder(order);
+  // App welcome discount: one per phone, so mark this phone as having ordered in the app.
+  if (!test && order.channel === "app" && normPhone(c0(order))) await (await import("@/lib/db")).db.cmd(["SADD", "app:ordered", normPhone(c0(order))]).catch(() => {});
   if (!test) await (await import("@/lib/carts")).cartConverted(order.customer.phone, order.id).catch(() => {});
   const c = order.customer;
   await (await import("@/lib/address-store")).rememberServerAddress(c.phone, { zone: c.zone, city: c.city, address: c.address, notes: c.notes || undefined, lat: c.lat, lng: c.lng }).catch(() => {});

@@ -3,6 +3,8 @@ import "server-only";
 // Live shop prices (automatic sales applied) and the authoritative cart quote.
 
 import { shopImg } from "@/lib/img-server";
+import { db } from "@/lib/db";
+import { normPhone } from "@/lib/wa";
 import type { Every } from "@/lib/every";
 import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
@@ -100,11 +102,20 @@ const snapOf = (p: ProductLite): ProductSnap => ({
   origin: p.origin, shipFrom: p.shipFrom, daysMin: p.daysMin, daysMax: p.daysMax,
 });
 
-export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string; noSuperPrice?: boolean; phone?: string; prime?: "trial" | "join" };
+/** Has this phone already ordered in the app? (orders.ts adds it when an app order is placed) */
+export async function appOrdered(phone: string) {
+  return !!(await db.cmd<number>(["SISMEMBER", "app:ordered", normPhone(phone)]).catch(() => 0));
+}
+
+export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string; noSuperPrice?: boolean; phone?: string; prime?: "trial" | "join"; channel?: "app" };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);
   const promos: Promotions = { discounts: [...basePromos.discounts], gifts: [...basePromos.gifts] };
+  // App welcome: X% off the customer's first order placed in the app, applied automatically (no code).
+  // Known by phone; items already on sale and SuperPrice items are not discounted again.
+  if (input.channel === "app" && growth.apps.firstPct > 0 && input.phone && !input.subscriptionId && !(await appOrdered(input.phone)))
+    promos.discounts.push({ id: "app-first", name: `App welcome: ${growth.apps.firstPct}% off your first app order`, enabled: true, type: "percent", value: growth.apps.firstPct, scope: { kind: "all", values: [] }, exclude: { kind: "all", values: [] }, code: "", minSubtotal: 0.01, startsAt: "", endsAt: "", stack: false, usageLimit: 0, used: 0 });
   // Personal codes (welcome pop-up, club rewards, birthdays) become a one-off coupon rule.
   let voucherError: string | undefined;
   let ref: Awaited<ReturnType<typeof import("@/lib/growth-store").memberByRef>> = null;

@@ -153,7 +153,7 @@ function ReferralBox({ code }: { code: string }) {
   return (
     <div className="rounded-2xl bg-brand-50 p-5">
       <p className="font-semibold">{tx("Refer a friend")}</p>
-      <p className="mt-1 text-sm">Your friend gets ${g.club.referral.friendAmount} off their first order (from ${g.club.referral.friendMinSubtotal}); you get {g.club.referral.referrerPoints} points when it's delivered.</p>
+      <p className="mt-1 text-sm">Your friend gets ${g.club.referral.friendAmount} off their first order (from ${g.club.referral.friendMinSubtotal}); you get {g.club.referral.referrerAmount ? `a $${g.club.referral.referrerAmount} code` : `${g.club.referral.referrerPoints} points`} when it's delivered.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <code className="rounded-lg bg-white px-3 py-2 text-sm">{code}</code>
         <button onClick={() => (navigator.clipboard?.writeText(link), setCopied(true))} className="rounded-lg border border-ink px-3 py-2 text-sm font-semibold">{copied ? tx("Copied") : tx("Copy")}</button>

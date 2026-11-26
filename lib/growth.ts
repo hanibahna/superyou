@@ -40,7 +40,7 @@ export type Growth = {
     tiers: ClubTier[];
     birthdayPercent: number; // 0 = off
     bonus: { join: number; firstOrder: number; review: number; photoReview: number }; // extra points
-    referral: { enabled: boolean; friendAmount: number; friendMinSubtotal: number; referrerPoints: number };
+    referral: { enabled: boolean; friendAmount: number; friendMinSubtotal: number; referrerPoints: number; referrerAmount: number }; // referrerAmount: $ code for the member when the friend's first order is delivered
     expiryMonths: number; // points expire after this long without an order (0 = never)
     memberPrice: { enabled: boolean; percent: number; collection: string }; // members-only % off a collection (empty = whole shop)
   };
@@ -51,7 +51,7 @@ export type Growth = {
   skinScan: { enabled: boolean; intro: string };
   /** Bulk buy: 2 to maxUnits of the same product in one order, paid now, get the Subscribe & save 3-month %
    *  (pct 0 = follow it). At most maxUnits discounted units per product per customer a day. */
-  apps: { ios: string; android: string; note: string }; // App Store / Google Play links; empty = not shown
+  apps: { ios: string; android: string; note: string; firstPct: number; doublePoints: boolean }; // firstPct: % off the first app order (auto); doublePoints: Club points ×2 on app orders // App Store / Google Play links; empty = not shown
   bulk: { enabled: boolean; pct: number; maxUnits: number; wholesale: boolean }; // wholesale: the public /wholesale/ page, form and menu link
   subscribe: { enabled: boolean; monthly: number; quarterly: number; collection: string; note: string; unlockMonthly: number; unlockQuarterly: number; maxRebate: number; cooldownDays: number; promo?: { enabled: boolean; endsAt: string; firstPct?: number; freeDelivery?: boolean } }; // Subscribe & save: earned after N delivered orders
   shadeFinder: { enabled: boolean };
@@ -267,7 +267,7 @@ export const defaultGrowth: Growth = {
     ],
     birthdayPercent: 15,
     bonus: { join: 50, firstOrder: 100, review: 20, photoReview: 40 },
-    referral: { enabled: true, friendAmount: 5, friendMinSubtotal: 25, referrerPoints: 150 },
+    referral: { enabled: true, friendAmount: 5, friendMinSubtotal: 25, referrerPoints: 0, referrerAmount: 5 },
     expiryMonths: 12,
     memberPrice: { enabled: false, percent: 5, collection: "" },
   },
@@ -290,7 +290,7 @@ export const defaultGrowth: Growth = {
     intro: "A new deal or gift behind every door, 1–24 December. Come back each day.",
     doors: Array.from({ length: 24 }, (_, i) => ({ day: i + 1, title: `Day ${i + 1}`, text: "", code: "", href: "/shop/?sale=1", image: "" })),
   },
-  apps: { ios: "", android: "", note: "" },
+  apps: { ios: "", android: "", note: "", firstPct: 10, doublePoints: true },
   bulk: { enabled: true, pct: 0, maxUnits: 3, wholesale: false },
   subscribe: { enabled: true, monthly: 10, quarterly: 10, collection: "", note: "Skip, change or cancel any time. Pay on delivery, nothing charged in advance.", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "", firstPct: 5, freeDelivery: true } },
   skinScan: { enabled: true, intro: "SuperScan is our free 3D AI skin scan, like setting up Face ID: look at the screen, slowly turn your head in a circle, and the AI reads your skin from five angles: front, both sides, chin up and chin down. You get your skin type, a zone-by-zone reading and a routine from products in stock. Photos are analysed once and never stored." },
@@ -322,7 +322,7 @@ export const growthSchema = z.object({
     enabled: z.boolean(), name: z.string().max(60), pointsPerDollar: z.number().min(0).max(100), rewardPoints: z.number().int().min(1).max(1000000),
     rewardValue: z.number().min(0).max(10000), birthdayPercent: z.number().min(0).max(90),
     bonus: z.object({ join: z.number().int().min(0).max(100000), firstOrder: z.number().int().min(0).max(100000), review: z.number().int().min(0).max(100000), photoReview: z.number().int().min(0).max(100000) }),
-    referral: z.object({ enabled: z.boolean(), friendAmount: z.number().min(0).max(1000), friendMinSubtotal: z.number().min(0).max(10000), referrerPoints: z.number().int().min(0).max(100000) }),
+    referral: z.object({ enabled: z.boolean(), friendAmount: z.number().min(0).max(1000), friendMinSubtotal: z.number().min(0).max(10000), referrerPoints: z.number().int().min(0).max(100000), referrerAmount: z.number().min(0).max(1000).default(5) }),
     expiryMonths: z.number().int().min(0).max(60),
     memberPrice: z.object({ enabled: z.boolean(), percent: z.number().min(0).max(90), collection: z.string().max(200) }),
     tiers: z.array(z.object({ name: z.string().min(1).max(30), minSpend: z.number().min(0), multiplier: z.number().min(0).max(10), perks: z.string().max(200) })).min(1).max(6),
@@ -336,7 +336,7 @@ export const growthSchema = z.object({
   }),
   skinScan: z.object({ enabled: z.boolean(), intro: z.string().max(400) }),
   subscribe: z.object({ enabled: z.boolean(), monthly: z.number().min(0).max(50), quarterly: z.number().min(0).max(50), collection: z.string().max(200), note: z.string().max(200), unlockMonthly: z.number().int().min(1).max(12).default(3), unlockQuarterly: z.number().int().min(1).max(12).default(2), maxRebate: z.number().min(0).max(500).default(15), cooldownDays: z.number().int().min(0).max(365).default(90), promo: z.object({ enabled: z.boolean(), endsAt: z.string().max(10), firstPct: z.number().min(0).max(50).default(5), freeDelivery: z.boolean().default(true) }).default({ enabled: false, endsAt: "", firstPct: 5, freeDelivery: true }) }).default({ enabled: true, monthly: 10, quarterly: 10, collection: "", note: "", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "", firstPct: 5, freeDelivery: true } }),
-  apps: z.object({ ios: z.string().max(300).default(""), android: z.string().max(300).default(""), note: z.string().max(160).default("") }).default({ ios: "", android: "", note: "" }),
+  apps: z.object({ ios: z.string().max(300).default(""), android: z.string().max(300).default(""), note: z.string().max(160).default(""), firstPct: z.number().min(0).max(50).default(10), doublePoints: z.boolean().default(true) }).default({ ios: "", android: "", note: "", firstPct: 10, doublePoints: true }),
   bulk: z.object({ enabled: z.boolean(), pct: z.number().min(0).max(50), maxUnits: z.number().int().min(2).max(10), wholesale: z.boolean().default(false) }).default({ enabled: true, pct: 0, maxUnits: 3, wholesale: false }),
   shadeFinder: z.object({ enabled: z.boolean() }),
   images: z.object({ frame: z.enum(["white", "grey"]), padding: z.number().min(0).max(20) }),

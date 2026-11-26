@@ -27,6 +27,8 @@ struct SuperYouApp: App {
     }
     @StateObject private var wishlist = Wishlist()
     @StateObject private var router = Router.shared
+    @AppStorage("sy.appOfferSeen") private var offerSeen = false
+    @State private var appOffer: Config.AppOffer?
 
     var body: some Scene {
         WindowGroup {
@@ -36,7 +38,13 @@ struct SuperYouApp: App {
                 .id(themeVersion)
                 .task {
                     // Match the website's current look; redraw once if it changed since last launch.
-                    if SiteTheme.apply(await API.sharedConfig()?.theme) { SiteTheme.styleNavigationBars(); themeVersion += 1 }
+                    let cfg = await API.sharedConfig()
+                    if SiteTheme.apply(cfg?.theme) { SiteTheme.styleNavigationBars(); themeVersion += 1 }
+                    // App offer, shown once on first launch.
+                    if !offerSeen, let o = cfg?.features?.appOffer { appOffer = o }
+                }
+                .sheet(isPresented: Binding(get: { appOffer != nil }, set: { if !$0 { appOffer = nil; offerSeen = true } })) {
+                    if let o = appOffer { AppOfferSheet(offer: o) { appOffer = nil; offerSeen = true }.presentationDetents([.medium]) }
                 }
         }
     }

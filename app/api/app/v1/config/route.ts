@@ -30,6 +30,8 @@ export async function GET() {
       // Bulk buy: 2+ of a product paid now get this % (same as Subscribe & save every 3 months by default).
       bulk: g.bulk.enabled && (await import("@/lib/growth")).bulkPct(g) > 0 ? { pct: (await import("@/lib/growth")).bulkPct(g), maxUnits: g.bulk.maxUnits } : null,
       wholesale: g.bulk.wholesale,
+      // App offer: shown once on first launch; the discount itself is applied by the server on app orders.
+      appOffer: g.apps.firstPct > 0 || g.apps.doublePoints ? { firstPct: g.apps.firstPct, doublePoints: g.apps.doublePoints } : null,
       videoCalls: svc.videoCalls !== false,
       eventsOn: svc.eventsOn !== false,
       subscribe: g.subscribe.enabled ? { monthly: g.subscribe.monthly, quarterly: g.subscribe.quarterly, note: g.subscribe.note, unlockMonthly: g.subscribe.unlockMonthly, unlockQuarterly: g.subscribe.unlockQuarterly } : null,

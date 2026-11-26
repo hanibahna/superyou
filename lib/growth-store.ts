@@ -21,7 +21,7 @@ const site = () => siteUrl();
 
 export type Voucher = {
   code: string;
-  kind: "welcome" | "cart" | "club" | "birthday";
+  kind: "welcome" | "cart" | "club" | "birthday" | "referral";
   percent: number; // either a percentage…
   amount: number; // …or a fixed amount off the order
   minSubtotal: number;
@@ -301,7 +301,7 @@ export async function allMembers(): Promise<Member[]> {
 }
 
 /** Points for a delivered order; turns full point blocks into voucher codes sent on WhatsApp. */
-export async function awardPoints(order: { id: string; total: number; delivery: number; customer: { phone: string; firstName: string; lastName: string; email?: string } }) {
+export async function awardPoints(order: { id: string; total: number; delivery: number; channel?: "app"; customer: { phone: string; firstName: string; lastName: string; email?: string } }) {
   const g = await getGrowth();
   if (!g.club.enabled) return;
   const m = await getMember(order.customer.phone);
@@ -310,7 +310,9 @@ export async function awardPoints(order: { id: string; total: number; delivery: 
   const { tier } = tierFor(g.club.tiers, yearSpend(m));
   // Reward ladder: orders at or above the double-points line earn twice the points.
   const double = g.game?.enabled && g.game.ladder.enabled && g.game.ladder.doublePointsAt > 0 && spend >= g.game.ladder.doublePointsAt;
-  const pts = Math.floor(spend * g.club.pointsPerDollar * tier.multiplier * (double ? 2 : 1));
+  // App orders earn double points (Admin › Growth › Mobile apps); never more than ×2 with the ladder.
+  const appDouble = order.channel === "app" && g.apps.doublePoints;
+  const pts = Math.floor(spend * g.club.pointsPerDollar * tier.multiplier * (double || appDouble ? 2 : 1));
   const first = m.purchases.length === 0;
   m.purchases = [...m.purchases.filter((p) => Date.parse(p.at) > Date.now() - 400 * 864e5), { at: new Date().toISOString(), amount: spend, orderId: order.id }];
   m.points += pts;
@@ -326,12 +328,24 @@ export async function awardPoints(order: { id: string; total: number; delivery: 
   await saveMember(m);
 }
 
-/** A referred friend's first order was delivered: points for the member who invited them. */
-export async function awardReferral(order: { id: string; referral?: string; customer: { phone: string } }) {
+/** A referred friend's first order was delivered: "Give $5, get $5" — a $ code (sent on WhatsApp)
+ *  and/or points for the member who invited them. Once per order. */
+export async function awardReferral(order: { id: string; referral?: string; customer: { phone: string; firstName?: string } }) {
   const g = await getGrowth();
-  if (!order.referral || !g.club.referral.enabled || g.club.referral.referrerPoints <= 0) return;
+  const r = g.club.referral;
+  if (!order.referral || !r.enabled) return;
   const referrer = await memberByRef(order.referral);
-  if (referrer && normPhone(referrer.phone) !== normPhone(order.customer.phone)) await addPoints(referrer.phone, g.club.referral.referrerPoints, `Friend's first order (${order.id})`, `ref:${order.id}`);
+  if (!referrer || normPhone(referrer.phone) === normPhone(order.customer.phone)) return;
+  if (r.referrerPoints > 0) await addPoints(referrer.phone, r.referrerPoints, `Friend's first order (${order.id})`, `ref:${order.id}`);
+  if ((r.referrerAmount ?? 0) > 0) {
+    const once = await db.cmd<string | null>(["SET", `ref:paid:${order.id}`, "1", "NX", "EX", 400 * 86400]);
+    if (once !== "OK") return;
+    const v = await createVoucher({ prefix: "FRIEND", kind: "referral", percent: 0, amount: r.referrerAmount, minSubtotal: 0, expires: new Date(Date.now() + 180 * 864e5).toISOString(), owner: referrer.phone });
+    const m = await getMember(referrer.phone);
+    if (m) { m.rewards.push(v.code); hist(m, 0, `Friend's first order: $${r.referrerAmount} code ${v.code}`); await saveMember(m); }
+    const wa = await import("@/lib/whatsapp");
+    await wa.trigger("clubReward", referrer.phone, { first_name: (m?.name ?? "").split(" ")[0], code: v.code, value: `$${r.referrerAmount}`, points: "0" }).catch(() => false);
+  }
 }
 
 /** Points for an approved review that came from an order link. */

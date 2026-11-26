@@ -10,6 +10,7 @@ const schema = z.object({
   giftCard: z.string().max(30).optional(),
   phone: z.string().max(20).optional(),
   prime: z.enum(["trial", "join"]).optional(),
+  channel: z.literal("app").optional(),
 });
 
 // Live cart prices, discounts, free-gift tiers and delivery for the cart and checkout.

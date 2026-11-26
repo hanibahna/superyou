@@ -39,7 +39,7 @@ export default async function ClubPage() {
             g.club.bonus.join > 0 && [`+${g.club.bonus.join}`, tx("Joining the club")],
             g.club.bonus.firstOrder > 0 && [`+${g.club.bonus.firstOrder}`, tx("Your first order")],
             g.club.bonus.review > 0 && [`+${g.club.bonus.review} / +${g.club.bonus.photoReview}`, tx("A review / with a photo")],
-            g.club.referral.enabled && [`+${g.club.referral.referrerPoints}`, tx("Each friend you refer")],
+            g.club.referral.enabled && [g.club.referral.referrerAmount ? `$${g.club.referral.referrerAmount}` : `+${g.club.referral.referrerPoints}`, tx("Each friend you refer")],
             g.club.birthdayPercent > 0 && [`${g.club.birthdayPercent}%`, tx("Off on your birthday")],
           ].filter((x): x is [string, string] => !!x).map(([a, b]) => (
             <div key={b} className="rounded-2xl bg-[#f5f5f5] p-4 text-center"><p className="text-2xl font-black">{a}</p><p className="mt-1 text-xs text-muted">{b}</p></div>

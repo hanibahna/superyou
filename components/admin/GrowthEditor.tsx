@@ -146,7 +146,8 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
               <Toggle label="Referrals on" checked={g.club.referral.enabled} onChange={(enabled) => up("club", { referral: { ...g.club.referral, enabled } })} />
               <Num label="Friend gets ($ off)" value={g.club.referral.friendAmount} onChange={(friendAmount) => up("club", { referral: { ...g.club.referral, friendAmount } })} />
               <Num label="…on orders from ($)" value={g.club.referral.friendMinSubtotal} onChange={(friendMinSubtotal) => up("club", { referral: { ...g.club.referral, friendMinSubtotal } })} />
-              <Num label="Member earns (points)" value={g.club.referral.referrerPoints} onChange={(referrerPoints) => up("club", { referral: { ...g.club.referral, referrerPoints } })} />
+              <Num label="Member gets a $ code (Give $X, get $X; 0 = off)" value={g.club.referral.referrerAmount ?? 0} onChange={(referrerAmount) => up("club", { referral: { ...g.club.referral, referrerAmount } })} />
+              <Num label="Member also earns (points, 0 = none)" value={g.club.referral.referrerPoints} onChange={(referrerPoints) => up("club", { referral: { ...g.club.referral, referrerPoints } })} />
             </div>
           </Card>
           <Card title="Member prices" sub="Members get an extra % off at checkout, recognised by their phone number.">
@@ -225,6 +226,8 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
               <Text label="App Store link (iPhone)" value={g.apps.ios} onChange={(ios) => up("apps", { ios })} placeholder="https://apps.apple.com/app/…" />
               <Text label="Google Play link (Android)" value={g.apps.android} onChange={(android) => up("apps", { android })} placeholder="https://play.google.com/store/apps/details?id=…" />
               <Text label="Line under the buttons (e.g. the app offer)" value={g.apps.note} onChange={(note) => up("apps", { note })} placeholder="10% off your first order in the app" />
+              <Num label="App welcome: % off the first app order (automatic, 0 = off)" value={g.apps.firstPct} onChange={(firstPct) => up("apps", { firstPct })} />
+              <Toggle label="Double Club points on every app order" checked={g.apps.doublePoints} onChange={(doublePoints) => up("apps", { doublePoints })} />
             </div>
           </Card>
           <Card title="Bulk buy" sub="Buy 2 or more of the same product in one order, paid now, and get the same % as Subscribe & save (or your own %). Never below cost + your minimum margin. SuperPrice and subscribed items are excluded.">
