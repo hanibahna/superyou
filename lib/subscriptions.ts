@@ -28,6 +28,7 @@ export type Subscription = {
   delivered?: Record<string, number>; // orderId → value of the subscribed items in it, once delivered
   unlocked?: boolean; // the discount is earned after N delivered orders
   unlockedAt?: string;
+  pct?: number; // discount locked in when the plan started (from 26 Nov 2026, one % for every frequency)
   freeShip?: boolean; // started during the campaign: delivery is free on all its orders
   fast?: boolean; // started during the "discount from the 2nd order" campaign: unlocks after the first delivery
   noRebate?: boolean; // started within the cooldown after cancelling another one: no rebate on past orders
@@ -36,7 +37,11 @@ export type Subscription = {
 };
 
 export const needFor = (s: Pick<Subscription, "every" | "fast">, g: { unlockMonthly: number; unlockQuarterly: number }) => (s.fast ? 1 : s.every === 1 ? g.unlockMonthly : g.unlockQuarterly);
-const pctFor = (e: number, g: { monthly: number; quarterly: number }) => (tierOf(e) === "monthly" ? g.monthly : g.quarterly);
+// Plans keep the % they started with. Plans from before 26 Nov 2026 (no `pct`) keep the old two-tier
+// rule: the monthly % for monthly plans, 15% for every 2+ months.
+const LEGACY_LONGER = 15;
+const pctOf = (s: Pick<Subscription, "every" | "pct">, g: { monthly: number; quarterly: number }) => s.pct ?? (tierOf(s.every) === "monthly" ? g.monthly : Math.max(LEGACY_LONGER, g.quarterly));
+const pctNew = (g: { monthly: number; quarterly: number }) => Math.max(g.monthly, g.quarterly);
 const R = (s: Subscription) => (s.rebate ??= { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} });
 const note = (s: Subscription, text: string) => { s.log = [...(s.log ?? []), { at: new Date().toISOString(), text }].slice(-40); };
 const OIDX = (orderId: string) => `subord:${orderId}`;
@@ -102,6 +107,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
       createdAt: new Date().toISOString(),
       orders: [order.id],
       rules: 2,
+      pct: pctNew(g),
       delivered: {},
       rebate: { earned: 0, used: 0, pending: 0, forfeited: 0, uses: {} },
       ...(cooling ? { noRebate: true } : {}),
@@ -112,7 +118,7 @@ export async function startSubscriptions(order: Order, input: CheckoutInput) {
     };
     await saveSubscription(s);
     made.push(s.id);
-    await notify("started", s, { percent: pctFor(every, g), deliveries: needFor(s, g), rebate: 0 }).catch(() => {});
+    await notify("started", s, { percent: pctNew(g), deliveries: needFor(s, g), rebate: 0 }).catch(() => {});
   }
   await linkOrder(order.id, made);
 }
@@ -175,7 +181,7 @@ export async function onSubscriptionOrder(order: Order) {
     if (!s || !s.rules) continue;
     const r = R(s);
     s.delivered ??= {};
-    const pct = pctFor(s.every, g);
+    const pct = pctOf(s, g);
     const subIds = new Set(s.items.map((i) => i.productId));
     const value = +order.lines.filter((l) => !l.gift && subIds.has(l.productId) && (order.subscriptionId ? true : l.every === s.every)).reduce((a, l) => a + l.lineTotal, 0).toFixed(2);
     if (order.status === "delivered" && !(order.id in s.delivered)) {
@@ -227,7 +233,7 @@ export async function subscriptionPricing(id: string) {
   const s = await getSubscription(id);
   if (!s) return null;
   const g = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
-  return { pct: !s.rules || s.unlocked ? pctFor(s.every, g) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0, freeShip: !!s.freeShip };
+  return { pct: !s.rules || s.unlocked ? pctOf(s, g) : 0, rebate: s.rules ? Math.min(R(s).pending, g.maxRebate) : 0, freeShip: !!s.freeShip };
 }
 
 /** Record a rebate spent on an order the subscription placed. */
@@ -242,7 +248,7 @@ async function useRebate(s: Subscription, orderId: string, amount: number) {
 
 /** For the customer's page and admin: progress towards the discount. */
 export function progress(s: Subscription, g: { monthly: number; quarterly: number; unlockMonthly: number; unlockQuarterly: number }) {
-  const pct = pctFor(s.every, g);
+  const pct = pctOf(s, g);
   if (!s.rules) return { legacy: true, pct, need: 0, done: 0, unlocked: true, rebate: { earned: 0, used: 0, pending: 0, forfeited: 0 } };
   const r = R(s);
   return { legacy: false, pct, need: needFor(s, g), done: Object.keys(s.delivered ?? {}).length, unlocked: !!s.unlocked, noRebate: !!s.noRebate, rebate: { earned: r.earned, used: r.used, pending: r.pending, forfeited: r.forfeited } };
