@@ -86,6 +86,7 @@ struct ShopView: View {
                 }
             }
             .navigationTitle("Shop")
+            .toolbar { ToolbarItem(placement: .topBarLeading) { MenuButton() } }
             .searchable(text: $text, prompt: "Products, brands or concerns")
             .onSubmit(of: .search) { submitted = text.trimmingCharacters(in: .whitespaces) }
             .onChange(of: text) { _, t in if t.isEmpty { submitted = "" } }

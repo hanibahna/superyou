@@ -91,6 +91,19 @@ struct Config: Codable {
     var social: Social? = nil
     struct PageLink: Codable { let slug: String; let title: String }
     var pages: [PageLink]? = nil
+    /// The website's header menu (☰ in the app).
+    var menu: [MenuItem]? = nil
+}
+
+struct MenuItem: Codable, Hashable, Identifiable {
+    let label: String; let href: String; var children: [MenuItem] = []
+    var id: String { label + href }
+    enum CodingKeys: String, CodingKey { case label, href, children }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        label = try c.decode(String.self, forKey: .label); href = (try? c.decode(String.self, forKey: .href)) ?? ""
+        children = (try? c.decode([MenuItem].self, forKey: .children)) ?? []
+    }
 }
 
 struct Quote: Codable {

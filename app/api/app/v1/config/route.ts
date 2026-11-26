@@ -5,14 +5,24 @@ import { getTheme } from "@/lib/theme-store";
 import { buildPalette } from "@/lib/theme";
 import { getGrowth } from "@/lib/growth-store";
 import { getExtras } from "@/lib/extras";
+import { getTaxonomy } from "@/lib/catalog";
+import { liveNav, shopNav } from "@/lib/live-nav";
+import type { MenuItem } from "@/lib/site";
+
+// The website's header menu for the app's ☰ menu: label, link and up to two levels below.
+const slim = (m: MenuItem[], depth = 0): { label: string; href: string; children: unknown[] }[] =>
+  m.map((x) => ({ label: x.label, href: x.href, children: depth < 2 ? slim(x.children ?? [], depth + 1) : [] }));
 
 // Native app: store settings it needs (delivery zones and fees, payment methods, contacts).
 export async function GET() {
   const [s, methods, svc, g, x, theme, layout] = await Promise.all([getSettings(), checkoutMethods(), getServices(), getGrowth(), getExtras(), getTheme(), getLayout()]);
+  const [nav, tax] = await Promise.all([liveNav(), getTaxonomy()]);
+  const menu = slim(shopNav(s, nav, tax, g.bulk.wholesale).menu);
   const pal = buildPalette(theme) as Record<string, string>;
   return NextResponse.json({
     store: { name: s.store.name, tagline: s.store.tagline, whatsapp: s.store.whatsapp, phone: s.store.phone, email: s.store.email },
     social: s.social,
+    menu,
     delivery: { fee: s.delivery.fee, freeThreshold: s.delivery.freeThreshold, estimate: s.delivery.estimate, zones: s.delivery.zones },
     payments: methods,
     minOrder: s.checkout.minOrder,

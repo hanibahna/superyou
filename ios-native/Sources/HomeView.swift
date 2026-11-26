@@ -33,6 +33,7 @@ struct HomeView: View {
             }
             .refreshable { await load() }
             .navigationTitle("SuperYou")
+            .toolbar { ToolbarItem(placement: .topBarLeading) { MenuButton() } }
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Card.self) { ProductView(slug: $0.slug) }
             .navigationDestination(item: $link) { ProductListView(title: $0.title, query: $0.query) }
