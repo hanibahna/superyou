@@ -104,7 +104,7 @@ export function BuyBox({
         {(v.variant || v.size) && <p className="mt-1 text-sm text-muted">{v.variant ?? v.size}</p>}
 
         <div className="mt-4 flex flex-wrap items-baseline gap-3">
-          {sp && v.matchWas && v.match !== undefined ? <SuperPriceTag was={v.matchWas} price={v.price} /> : <span className={`pdp-price text-3xl font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</span>}
+          {sp && v.matchWas && v.match !== undefined ? <SuperPriceTag was={v.matchWas} price={v.price} /> : <span className={`pdp-price text-3xl font-bold ${pct ? "text-sale" : ""}`}>{v.price > 0 ? money(v.price) : t("Sold out")}</span>}
           {pct && !v.matchWas && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
           {pct && !v.matchWas && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
         </div>
@@ -123,7 +123,7 @@ export function BuyBox({
                   className={`pdp-opt rounded-lg border px-3 py-2 text-sm ${x.id === v.id ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line hover:border-ink"} ${x.inStock ? "" : "text-muted line-through decoration-1"}`}
                 >
                   {x.variant ?? x.size ?? x.sku}
-                  <span className="ml-1.5 text-xs text-muted no-underline">{money(x.price)}</span>
+                  <span className="ml-1.5 text-xs text-muted no-underline">{x.price > 0 ? money(x.price) : t("Sold out")}</span>
                 </button>
               ))}
             </div>
@@ -180,7 +180,7 @@ export function BuyBox({
           <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 md:hidden">
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs text-muted">{v.brand}</p>
-              <p className={`font-bold ${pct ? "text-sale" : ""}`}>{money(v.price)}</p>
+              <p className={`font-bold ${pct ? "text-sale" : ""}`}>{v.price > 0 ? money(v.price) : t("Sold out")}</p>
             </div>
             <button onClick={() => add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
           </div>

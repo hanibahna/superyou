@@ -228,7 +228,9 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
   const collections = opts.landed ? collectionsFor(p.title, p.product_type, tagList) : [];
 
   return p.variants
-    .filter((v) => Number(v.price) > 0)
+    // Sold out with no price yet (the source shows $0): kept, as sold out, so it's listed and can take
+    // "notify me" requests; the shop shows "Sold out" in place of a price.
+    .filter((v) => Number(v.price) > 0 || !v.available)
     .map((v) => {
       const rawPrice = Number(v.price);
       const rawCompare = v.compare_at_price ? Number(v.compare_at_price) : 0;
@@ -269,7 +271,7 @@ export function mapSourceProduct(p: SourceProduct, opts: ImportOptions): (Produc
         source: opts.sourceName,
         cost: srcPrice,
         ...(collections.length ? { collections } : {}),
-        inStock: v.available, // the source publishes availability, not quantities
+        inStock: v.available && Number(v.price) > 0, // the source publishes availability, not quantities
       } as ProductInput & { group: string };
     });
 }

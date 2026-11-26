@@ -123,7 +123,8 @@ function buildIndex(ver: string, raw: string[]): Index {
     const list = bySlug.get(p.slug);
     list ? list.push(p) : bySlug.set(p.slug, [p]);
   }
-  for (const list of bySlug.values()) list.sort((a, b) => a.price - b.price);
+  // Cheapest first; sold-out variants with no price yet ($0) go last so they're never the default.
+  for (const list of bySlug.values()) list.sort((a, b) => (a.price > 0 ? 0 : 1) - (b.price > 0 ? 0 : 1) || a.price - b.price);
   const skuToId = new Map(all.map((p) => [p.sku.toLowerCase(), p.id]));
   return { ver, all, byId, bySlug, skuToId };
 }

@@ -45,8 +45,7 @@ export function ProductCard({ product }: { product: Card }) {
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
             <span className={`font-semibold ${pct ? "text-sale" : ""}`}>
-              {multi && product.priceMax && product.priceMax > product.price ? `${t("From")} ` : ""}
-              {money(("matchWas" in product && product.matchWas) || product.price)}
+              {product.price > 0 ? <>{multi && product.priceMax && product.priceMax > product.price ? `${t("From")} ` : ""}{money(("matchWas" in product && product.matchWas) || product.price)}</> : t("Sold out")}
             </span>
             {pct && <span className="text-xs text-muted line-through">{money(product.compareAt!)}</span>}
           </div>

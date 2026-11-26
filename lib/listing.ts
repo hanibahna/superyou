@@ -23,10 +23,12 @@ export function toCards(list: ProductLite[]): CardItem[] {
   const out: CardItem[] = [];
   for (const vs of groups.values()) {
     const live = vs.filter((v) => v.inStock);
-    const pool = live.length ? live : vs;
+    const priced = vs.filter((v) => v.price > 0);
+    const pool = live.length ? live : priced.length ? priced : vs;
     const rep = pool.reduce((a, b) => (b.price < a.price ? b : a), pool[0]);
     const { source: _src, cost: _cost, collections: _cols, ...card } = rep; // which supplier it came from never reaches the browser
     out.push({ ...card, image: shopImg(rep.image ?? vs.find((v) => v.image)?.image), inStock: live.length > 0, variantCount: vs.length, priceMax: Math.max(...vs.map((v) => v.price)) });
+    // (a sold-out shade with no price yet never sets the "From" price: it isn't in the pool above)
   }
   return out;
 }

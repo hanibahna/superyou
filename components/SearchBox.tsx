@@ -111,7 +111,7 @@ export function SearchBox({ onDone, className = "", autoFocus = false }: { onDon
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         {p.image ? <img src={imgUrl(p.image, 96)} alt="" className="h-10 w-10 rounded object-contain" /> : <span className="h-10 w-10 rounded bg-brand-50" />}
                         <span className="flex-1 leading-tight"><span className="block text-xs text-muted">{p.brand}</span>{cleanName(p.name)}</span>
-                        <span className="font-semibold">{money(p.price)}</span>
+                        <span className="font-semibold">{p.price > 0 ? money(p.price) : "Sold out"}</span>
                       </Link>
                     </li>
                   ))}

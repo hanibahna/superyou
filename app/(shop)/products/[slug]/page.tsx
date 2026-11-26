@@ -120,7 +120,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
     ...(reviews.length ? { review: reviews.slice(0, 5).map((r) => ({ "@type": "Review", reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 }, author: { "@type": "Person", name: r.name || "SuperYou customer" }, datePublished: r.createdAt.slice(0, 10), ...(r.title ? { name: r.title } : {}), reviewBody: r.body.slice(0, 1000) })) } : {}),
     ...(vids.length ? { subjectOf: vids.map((v) => ({ "@type": "VideoObject", name: v.title, embedUrl: `https://www.youtube.com/embed/${v.id}`, contentUrl: `https://www.youtube.com/watch?v=${v.id}`, thumbnailUrl: `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`, ...(v.lang ? { inLanguage: v.lang } : {}), description: `${v.title} (${v.channel})`, uploadDate: initial.updatedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10) })) } : {}),
     ...(reviews.length ? { aggregateRating: { "@type": "AggregateRating", ratingValue: +(reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1), reviewCount: reviews.length } } : {}),
-    offers: variants.map((v) => ({
+    offers: variants.filter((v) => v.price > 0).map((v) => ({
       "@type": "Offer",
       url: `${siteUrl()}/products/${slug}/?v=${v.id}`,
       seller: { "@type": "Organization", name: settings.store.name },

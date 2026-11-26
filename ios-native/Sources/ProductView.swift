@@ -60,7 +60,7 @@ struct ProductView: View {
                             SuperPriceTag(was: was, price: v.price).id(v.id)
                         } else {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text(money(v.price)).font(.display(22)).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
+                                Text(v.price > 0 ? money(v.price) : "Sold out").font(.display(22)).foregroundStyle(v.compareAt != nil ? Color.rose : Color.ink)
                                 if let c = v.compareAt, c > v.price { Text(money(c)).strikethrough().foregroundStyle(.secondary) }
                             }
                         }
