@@ -13,6 +13,39 @@ export const maxDuration = 300;
 // GET → summary by brand; GET ?csv=1 → one row per product.
 type Live = Map<string, { price: number; compare: number; available: boolean }>;
 const KEY = "neo-audit:live";
+const HKEY = "neo-audit:handles";
+const VKEY = "neo-audit:verified";
+
+// One product at a time: open each NeoVitale product's own page data (/products/<handle>.js),
+// read the price shown and the crossed-out "was" price per variant, and keep them.
+// Called in slices (?verify=0, ?verify=400, …) so each call stays within the time limit.
+async function verifySlice(from: number, size: number) {
+  const hs = JSON.parse((await db.cmd<string | null>(["GET", HKEY])) ?? "[]") as string[];
+  const slice = hs.slice(from, from + size);
+  const got: Record<string, [number, number, number]> = {};
+  let failed = 0;
+  let i = 0;
+  const worker = async () => {
+    while (i < slice.length) {
+      const h = slice[i++];
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const r = await fetch(`https://neovitale.com/products/${encodeURIComponent(h)}.js`, { headers: { "User-Agent": "SuperYou-Catalog-Import/1.0", Accept: "application/json" }, cache: "no-store" });
+          if (r.status === 404) break;
+          if (!r.ok) throw new Error(String(r.status));
+          const j = (await r.json()) as { variants: { id: number; price: number; compare_at_price: number | null; available: boolean }[] };
+          for (const v of j.variants) got[String(v.id)] = [v.price / 100, (v.compare_at_price ?? 0) / 100, v.available ? 1 : 0];
+          break;
+        } catch { if (attempt === 2) failed++; else await new Promise((res) => setTimeout(res, 1500 * (attempt + 1))); }
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  const prev = JSON.parse((await db.cmd<string | null>(["GET", VKEY])) ?? "{}") as Record<string, [number, number, number]>;
+  Object.assign(prev, got);
+  await db.cmd(["SET", VKEY, JSON.stringify(prev), "EX", 172800]);
+  return { from, checked: slice.length, variants: Object.keys(got).length, failed, totalHandles: hs.length, verifiedSoFar: Object.keys(prev).length, next: from + size < hs.length ? from + size : null };
+}
 // NeoVitale's live catalog, kept for 6 hours so repeated reports don't re-crawl their site.
 async function liveNeo(fresh: boolean): Promise<Live> {
   if (!fresh) {
@@ -21,25 +54,36 @@ async function liveNeo(fresh: boolean): Promise<Live> {
   }
   const origin = new URL("https://neovitale.com");
   const live: Live = new Map();
+  const handles: string[] = [];
   for (let page = 1; page < 200; page++) {
     let list: Awaited<ReturnType<typeof fetchSourcePage>> = [];
     for (let attempt = 0; ; attempt++) {
       try { list = await fetchSourcePage(origin, page); break; } catch (e) { if (attempt >= 3) throw e; await new Promise((r) => setTimeout(r, 2000 * (attempt + 1))); }
     }
     if (!list.length) break;
+    for (const p of list) handles.push(p.handle);
     for (const p of list) for (const v of p.variants) live.set(String(v.id), { price: Number(v.price), compare: v.compare_at_price ? Number(v.compare_at_price) : 0, available: !!v.available });
     await new Promise((r) => setTimeout(r, 250));
   }
   const compact: Record<string, [number, number, number]> = {};
   for (const [k, v] of live) compact[k] = [v.price, v.compare, v.available ? 1 : 0];
   await db.cmd(["SET", KEY, JSON.stringify(compact), "EX", 21600]).catch(() => null);
+  await db.cmd(["SET", HKEY, JSON.stringify(handles), "EX", 86400]).catch(() => null);
   return live;
 }
 
 export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
+  const v = req.nextUrl.searchParams.get("verify");
+  if (v !== null) {
+    if (v === "reset") { await db.cmd(["DEL", VKEY]); await liveNeo(true); return NextResponse.json({ reset: true }); }
+    return NextResponse.json(await verifySlice(Number(v) || 0, 400));
+  }
   const live = await liveNeo(req.nextUrl.searchParams.has("fresh"));
+  const verified = JSON.parse((await db.cmd<string | null>(["GET", VKEY]).catch(() => null)) ?? "{}") as Record<string, [number, number, number]>;
+  let pageChecked = 0;
+  for (const [k, [p, c, a]] of Object.entries(verified)) { live.set(k, { price: p, compare: c, available: !!a }); pageChecked++; }
   const idx = await getIndex();
   const neo = idx.all.filter((p) => p.source === "neovitale.com");
   const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -57,7 +101,7 @@ export async function GET(req: NextRequest) {
       discountPct: typeof pct === "number" ? pct : pct === null ? "1+1" : null,
       correctCost: correctCost ?? null,
       marginNow: correctCost !== undefined && p.price > 0 ? r2(((p.price - correctCost) / p.price) * 100) : null,
-      found: !!nv,
+      found: !!nv, checkedOnPage: vid in verified,
       baseDiff: base !== undefined ? r2(ourBase - base) : null,
     };
   });
@@ -85,7 +129,7 @@ export async function GET(req: NextRequest) {
   const worst = rows.filter((r) => r.correctCost !== null && r.ourPrice < r.correctCost).sort((a, b) => (a.marginNow ?? 0) - (b.marginNow ?? 0)).slice(0, 25);
   const baseOff = rows.filter((r) => r.baseDiff !== null && Math.abs(r.baseDiff) > 0.01).sort((a, b) => Math.abs(b.baseDiff ?? 0) - Math.abs(a.baseDiff ?? 0)).slice(0, 25);
   return NextResponse.json({
-    checkedAt: new Date().toISOString(), nvVariantsLive: live.size, ourNeoProducts: rows.length,
+    checkedAt: new Date().toISOString(), nvVariantsLive: live.size, variantsCheckedOnProductPage: pageChecked, ourNeoProducts: rows.length,
     totals: { foundOnNV: tot("foundOnNV"), onSaleAtNV: tot("onSaleAtNV"), costUnderstated: tot("costUnderstated"), sellingBelowCost: tot("sellingBelowCost"), ourBaseDiffers: tot("ourBaseDiffers"), noSheetDiscount: rows.filter((r) => r.discountPct === null).length },
     brands, worst, baseOff,
   });
