@@ -202,14 +202,29 @@ struct ShopView: View {
     @State private var who = ""
     @State private var text = ""
     @State private var submitted = ""
-    private let cats: [(String, String)] = [("Skin care", "collection=skin-care"), ("Make up", "collection=make-up"), ("Fragrance", "collection=fragrances"), ("Hair", "collection=hair-expert"), ("Bath & body", "collection=bath-body"), ("Baby & mom", "collection=baby-mom"), ("Supplements", "category=supplements"), ("Parapharmacy", "collection=parapharmacy"), ("Imported from the USA", "origin=international"), ("On sale", "sale=1")]
+    // Shown until the website's menu loads (and if it can't): categories that always have products.
+    private let cats: [(String, String)] = [("Skin care", "category=skincare"), ("Make up", "category=makeup"), ("Hair", "category=hair"), ("Fragrance", "category=fragrance"), ("Sun care", "category=suncare"), ("Baby & mom", "category=baby"), ("Supplements", "category=supplements"), ("On sale", "sale=1")]
+    @State private var menu: [MenuItem] = []
+    @EnvironmentObject private var router: Router
     var body: some View {
         NavigationStack {
             Group {
                 if submitted.isEmpty {
                     List {
                         Picker("For", selection: $who) { Text("Everyone").tag(""); Text("Women").tag("women"); Text("Men").tag("men") }.pickerStyle(.segmented)
-                        ForEach(cats, id: \.0) { c in NavigationLink(c.0) { ProductListView(title: c.0, query: c.1 + (who.isEmpty ? "" : "&for=\(who)")) } }
+                        if menu.isEmpty {
+                            ForEach(cats, id: \.0) { c in NavigationLink(c.0) { ProductListView(title: c.0, query: c.1 + (who.isEmpty ? "" : "&for=\(who)")) } }
+                        } else {
+                            // Same sections as the website's menu (Women and Men are the picker above).
+                            ForEach(menu.filter { !$0.href.contains("for=") }) { m in
+                                if m.children.isEmpty {
+                                    NavigationLink(m.label) { MenuDest(item: m, onTab: { router.tab = $0 }) }
+                                } else {
+                                    NavigationLink(m.label) { SubMenu(item: m, onTab: { router.tab = $0 }) }
+                                }
+                            }
+                            NavigationLink("On sale") { ProductListView(title: "On sale", query: "sale=1" + (who.isEmpty ? "" : "&for=\(who)")) }
+                        }
                     }
                 } else {
                     ProductListView(title: "“\(submitted)”", query: "q=\(submitted.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" + (who.isEmpty ? "" : "&for=\(who)")).id(submitted + who)
@@ -220,6 +235,7 @@ struct ShopView: View {
             .searchable(text: $text, prompt: "Products, brands or concerns")
             .onSubmit(of: .search) { submitted = text.trimmingCharacters(in: .whitespaces) }
             .onChange(of: text) { _, t in if t.isEmpty { submitted = "" } }
+            .task { if menu.isEmpty, let m = (try? await API.config())?.menu { menu = m } }
         }
     }
 }

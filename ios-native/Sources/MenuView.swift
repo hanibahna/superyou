@@ -25,7 +25,7 @@ struct MenuView: View {
             List {
                 if let menu = config?.menu, !menu.isEmpty {
                     Section("Shop") {
-                        ForEach(menu) { item in row(item) }
+                        ForEach(menu.filter { !$0.children.isEmpty || ($0.href != "#" && !$0.href.isEmpty) }) { item in row(item) }
                     }
                 } else if loading {
                     HStack { Spacer(); ProgressView(); Spacer() }
@@ -89,7 +89,7 @@ struct SubMenu: View {
             if !item.href.isEmpty, item.href != "#" {
                 NavigationLink { MenuDest(item: item, onTab: onTab) } label: { Text("All \(item.label.lowercased())").fontWeight(.semibold) }
             }
-            ForEach(item.children) { c in
+            ForEach(item.children.filter { !$0.children.isEmpty || ($0.href != "#" && !$0.href.isEmpty) }) { c in
                 if c.children.isEmpty {
                     NavigationLink { MenuDest(item: c, onTab: onTab) } label: { Text(c.label) }
                 } else {
