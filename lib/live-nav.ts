@@ -42,6 +42,7 @@ export async function liveNav(): Promise<LiveNav> {
     add(brandCats, slugify(p.brand).replace(/-/g, ""), p.category);
     categories.add(p.category);
     add(originCats, p.origin ?? "local", p.category);
+    if (p.origin === "international" && p.shipFrom) add(originCats, `from:${p.shipFrom.toLowerCase()}`, p.category);
     for (const c of p.concerns) concerns.add(c);
     brands.add(slugify(p.brand));
   }

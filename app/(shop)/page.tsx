@@ -1,6 +1,6 @@
 import { BrandStrip, Banners, CategoryTiles, Countdown, HeroSlider, NewsletterSection, ShopByConcern, TextBlock, TikTokProfile, VideoSection } from "@/components/Home";
 import { shopImgDeep } from "@/lib/img-server";
-import { autoCategories, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
+import { autoCategories, hrefIsLive, liveHrefsDeep, liveNav, pruneLinks } from "@/lib/live-nav";
 import { CampaignHero, Circles, OffersGrid, PromoTiles } from "@/components/Campaign";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { PharmacistBand, PromiseStrip, QuickJump, ScanBanner } from "@/components/HomeExtras";
@@ -48,7 +48,11 @@ export default async function HomePage() {
   // Tiles and circles that would lead to an empty category (source or brand switched off) are left out.
   const nav = await liveNav();
   const auto = autoCategories(await getTaxonomy(), nav);
-  const onSale = landing.sections.filter((s) => s.enabled).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => shopImgDeep(liveHrefsDeep(s, nav)));
+  // Hero slides about a catalog that is switched off (e.g. "Imported from the USA" with no US catalog on) are dropped.
+  const usOn = [...nav.originCats.keys()].some((k) => /^from:(us|usa|united states)/.test(k));
+  const slideLive = (sl: { href?: string; eyebrow?: string; title?: string; text?: string }) =>
+    (!sl.href || hrefIsLive(sl.href, nav) !== false) && (usOn || !/\bimport|\busa\b|\bus beauty|united states|all-in price/i.test(`${sl.eyebrow ?? ""} ${sl.title ?? ""} ${sl.text ?? ""} ${sl.href ?? ""}`));
+  const onSale = landing.sections.filter((s) => s.enabled).map((s) => (s.type === "hero" ? { ...s, slides: s.slides.filter(slideLive) } : s)).filter((s) => !(s.type === "hero" && !s.slides.length)).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => shopImgDeep(liveHrefsDeep(s, nav)));
   const sections = await translateDeep(onSale, lang, ["eyebrow", "title", "text", "cta", "cta2", "badge", "body"]);
   // Product rows, campaign products and reviews are the same for every visitor: worked out at most once a minute.
   const minute = Math.floor(Date.now() / 60_000);
