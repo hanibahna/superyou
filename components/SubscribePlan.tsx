@@ -41,7 +41,12 @@ export function SubscribeChoice({ price, value, onChange, life, start, onStart, 
               <span className="font-semibold">{t("Auto-replenish")}</span>
               <span className="ms-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">{pct}% {t("off")}</span>
             </span>
-            <span className="text-end text-sm font-semibold"><span className="text-[#b42318]">{money(price * (1 - pct / 100))}</span> <s className="text-xs font-normal text-muted">{money(price)}</s></span>
+            {/* What is charged today: the campaign's first-order % if one is live, otherwise full price (the % is earned). */}
+            {fast && promo?.firstPct ? (
+              <span className="text-end text-sm font-semibold"><span className="text-[#b42318]">{money(price * (1 - promo.firstPct / 100))}</span> <s className="text-xs font-normal text-muted">{money(price)}</s><span className="block text-[11px] font-normal text-muted">{t("today, then")} {money(price * (1 - pct / 100))}</span></span>
+            ) : (
+              <span className="text-end text-sm font-semibold">{money(price)}<span className="block text-[11px] font-normal text-muted">{t("then")} {money(price * (1 - pct / 100))}</span></span>
+            )}
           </label>
           {value !== 0 && (
             <div className="mt-3 ps-7">
