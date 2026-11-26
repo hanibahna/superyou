@@ -1,5 +1,7 @@
 import { getTaxonomy } from "@/lib/catalog";
 import { liveProducts } from "@/lib/pricing";
+import { createHash } from "node:crypto";
+import { shopImg } from "@/lib/img-server";
 import { siteUrl } from "@/lib/seo";
 
 // Product feed for Meta Commerce Manager (Instagram Shop and Facebook Shop), as CSV.
@@ -31,7 +33,11 @@ export async function GET() {
     if (!p.image || !p.price) continue;
     const cat = catName.get(p.category) ?? p.category ?? "";
     const gpc = GPC.find(([re]) => re.test(cat))?.[1] ?? 469; // 469 = Health & Beauty
-    const img = p.image.startsWith("http") ? p.image : `${base}${p.image.startsWith("/") ? "" : "/"}${p.image}`;
+    // Photos through SuperYou's own /img/ address, so no supplier server or file name shows.
+    const own = shopImg(p.image) ?? p.image;
+    const img = own.startsWith("http") ? own : `${base}${own.startsWith("/") ? "" : "/"}${own}`;
+    // Size/shade group: an opaque code (the raw group key can carry the supplier's prefix).
+    const grp = p.group ? `g${createHash("sha1").update(p.group).digest("hex").slice(0, 12)}` : "";
     const title = `${p.brand} ${p.name}${p.size && !p.name.includes(p.size) ? ` ${p.size}` : ""}`.slice(0, 150);
     const desc = `${p.brand} ${p.name}${p.size ? `, ${p.size}` : ""}. 100% original from official distributors in Lebanon. Delivered across Lebanon, pay when it arrives.`;
     // Was-price only when it's a real reduction (sale or SuperPrice).
@@ -39,7 +45,7 @@ export async function GET() {
     rows.push([
       p.id, title, desc, p.inStock ? "in stock" : "out of stock", "new",
       usd(was || p.price), was ? usd(p.price) : "",
-      `${base}/products/${p.slug}/`, img, p.brand, gpc, cat, p.group || "", p.variant || p.size || "",
+      `${base}/products/${p.slug}/`, img, p.brand, gpc, cat, grp, p.variant || p.size || "",
       gtinOk(p.barcode) ? p.barcode : "", typeof p.stock === "number" ? Math.max(0, p.stock) : "",
     ].map(cell).join(","));
   }
