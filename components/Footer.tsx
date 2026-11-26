@@ -113,7 +113,7 @@ export function FloatingWidgets() {
       target="_blank"
       rel="noreferrer"
       aria-label="Chat on WhatsApp"
-      className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] end-3 z-40 h-12 w-12 place-items-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-105 md:bottom-5 md:end-5 md:grid md:h-14 md:w-14 ${busy ? "hidden" : "grid"}`}
+      className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] end-3 z-40 h-12 w-12 place-items-center rounded-full bg-[#25D366] text-white shadow-lg hover:scale-105 md:bottom-5 md:end-5 md:h-14 md:w-14 hidden ${busy ? "" : "md:grid"}`}
     >
       <ChatIcon width={26} height={26} />
     </a>

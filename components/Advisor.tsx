@@ -2,9 +2,11 @@
 
 import { cleanName } from "@/lib/data/catalog";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/format";
 import { useShop } from "@/lib/store";
+import { useSettings } from "@/lib/site-context";
 
 type P = { slug: string; name: string; brand: string; price: number; compareAt?: number; image?: string; inStock: boolean; variantCount?: number; id: string };
 type M = { role: "user" | "assistant"; content: string; products?: P[] };
@@ -14,6 +16,9 @@ const KEY = "sy-advisor";
 
 /** AI shopping advisor: a chat that suggests products from our catalogue (app/api/advisor). */
 export function Advisor({ cfg }: { cfg: Cfg }) {
+  const { store } = useSettings();
+  // Pages with a sticky buy bar keep the button higher; elsewhere it takes the spot the WhatsApp button had.
+  const raised = /^\/(products|cart|checkout|pay)\//.test(usePathname() ?? "");
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<M[]>([]);
   const [text, setText] = useState("");
@@ -62,7 +67,7 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
       <button
         onClick={() => setOpen(true)}
         aria-label={`Ask ${cfg.name}`}
-        className={`fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom))] end-3 z-40 flex h-12 min-w-12 items-center justify-center gap-2 rounded-full bg-ink px-3 font-semibold md:px-4 text-white shadow-lg transition hover:scale-105 md:bottom-5 md:end-24 md:h-14 md:px-5 ${open ? "hidden" : ""}`}
+        className={`fixed ${raised ? "bottom-[calc(8.5rem+env(safe-area-inset-bottom))]" : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))]"} end-3 z-40 flex h-12 min-w-12 items-center justify-center gap-2 rounded-full bg-ink px-3 font-semibold md:px-4 text-white shadow-lg transition hover:scale-105 md:bottom-5 md:end-24 md:h-14 md:px-5 ${open ? "hidden" : ""}`}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
         <span className="hidden text-sm md:inline">Ask AI</span>
@@ -73,7 +78,7 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
           <div className="flex items-center justify-between gap-3 bg-ink px-5 py-4 text-white">
             <div>
               <p className="font-semibold">{cfg.name}</p>
-              <p className="text-xs text-white/70">Suggests products we have in stock</p>
+              <p className="text-xs text-white/70">Suggests products we have in stock · <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="font-semibold text-[#7ee2a8] underline">WhatsApp a pharmacist</a></p>
             </div>
             <div className="flex items-center gap-1">
               {msgs.length > 0 && <button onClick={() => { setMsgs([]); setErr(""); }} className="rounded-full px-3 py-2 text-xs text-white/80 hover:bg-white/10">New chat</button>}

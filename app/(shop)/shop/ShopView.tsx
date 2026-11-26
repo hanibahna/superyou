@@ -1,5 +1,7 @@
 "use client";
 
+import { Fragment } from "react";
+
 import { ShareButton } from "@/components/ShareButton";
 import { SectionBanner, type SectionBannerData } from "@/components/SectionBanner";
 import { useT } from "@/lib/site-context";
@@ -139,7 +141,8 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
       <nav className="mb-2 text-xs text-muted">
         <Link href="/" className="hover:underline">Home</Link> / <span>{fullTitle}</span>
       </nav>
-      {section && <SectionBanner s={section} />}
+      {/* Phones: the section banner waits until after the first 6 products, so products show on the first screen. */}
+      {section && <div className="hidden md:block"><SectionBanner s={section} /></div>}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold">{fullTitle}<ShareMenu align="start" size={34} text={`🛍️ ${fullTitle} · SuperYou (${total.toLocaleString("en-US")} products)\n${typeof window !== "undefined" ? window.location.href.split("#")[0] : ""}`} /></h1>
@@ -150,7 +153,6 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           <button onClick={() => setFiltersOpen(true)} className="tap flex-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold lg:hidden">
             Filters{activeCount ? ` (${activeCount})` : ""}
           </button>
-          <ShareButton compact title={`${fullTitle} – SuperYou`} />
           <select aria-label={tx("Sort by")} value={query.sort ?? ""} onChange={(e) => set("sort", e.target.value)} className="tap flex-1 rounded-lg border border-line px-3 py-2 text-sm outline-none lg:flex-none">
             {!query.sort && <option value="">{tx("Sort by")}</option>}
             {Object.entries(sorts).map(([k, v]) => <option key={k} value={k}>{query.q && k === "featured" ? tx("Best match") : tx(v)}</option>)}
@@ -194,7 +196,12 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
             </div>
           ) : (
             <div className="pgrid grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-              {items.map((p) => <ProductCard key={p.slug} product={p} />)}
+              {items.map((p, i) => (
+                <Fragment key={p.slug}>
+                  <ProductCard product={p} />
+                  {i === Math.min(5, items.length - 1) && section && page === 1 && <div className="col-span-2 md:hidden"><SectionBanner s={section} /></div>}
+                </Fragment>
+              ))}
             </div>
           )}
           {pages > 1 && <Pager page={page} pages={pages} href={pageHref} />}

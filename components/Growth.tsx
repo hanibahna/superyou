@@ -277,11 +277,11 @@ export function SignupPopup() {
           <div className="absolute inset-0 bg-black/50" onClick={close} />
           <div className="sheet-up relative grid max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white md:max-w-3xl md:grid-cols-2 md:rounded-2xl">
             <button onClick={close} aria-label={tx("Close")} className="absolute end-3 top-3 z-10 rounded-full bg-white/90 p-2"><CloseIcon width={18} height={18} /></button>
-            <div className="relative min-h-[230px] bg-ink md:min-h-[380px]">
+            <div className="relative min-h-[220px] bg-ink md:min-h-[380px]">
               {wheelOn ? (
                 <div className="absolute inset-0 grid place-items-center overflow-hidden">
                   <div className="wheel-glow absolute h-64 w-64 rounded-full bg-[#c0587a]/30 blur-3xl md:h-80 md:w-80" aria-hidden />
-                  <div className="relative h-56 w-56 md:h-72 md:w-72">
+                  <div className="relative mt-3 h-44 w-44 md:mt-0 md:h-72 md:w-72">
                     <div className={`absolute -top-3 left-1/2 z-10 -translate-x-1/2 ${spinning ? "wheel-tick" : ""}`} aria-hidden>
                       <div className="h-0 w-0 border-x-[12px] border-t-[22px] border-x-transparent border-t-white drop-shadow" />
                     </div>
