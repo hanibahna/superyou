@@ -36,6 +36,7 @@ struct ProductListView: View {
     @State private var f = ListFilter()
     @State private var facets: Facets?
     @State private var showFilters = false
+    @State private var failed = false
 
     static let sorts: [(String, String)] = [("", "Featured"), ("price-asc", "Price: low to high"), ("price-desc", "Price: high to low"), ("discount", "Biggest discount"), ("new", "New arrivals")]
 
@@ -68,7 +69,9 @@ struct ProductListView: View {
                     }
                 }.padding(.horizontal)
                 if loading { ProgressView().frame(maxWidth: .infinity).padding() }
-                if !loading && items.isEmpty {
+                if !loading && items.isEmpty && failed {
+                    ContentUnavailable(text: "Couldn't load these products.") { Task { await load(1) } }
+                } else if !loading && items.isEmpty {
                     VStack(spacing: 10) {
                         Text("Nothing matches.").foregroundStyle(.secondary)
                         if f.count > 0 { Button("Clear filters") { f = ListFilter(sort: f.sort) } }
@@ -90,10 +93,17 @@ struct ProductListView: View {
         var parts = [query].filter { !$0.isEmpty }
         if !origin.isEmpty { parts.append("origin=\(origin)") }
         parts.append(contentsOf: f.params)
-        if let r = try? await API.products(parts.joined(separator: "&"), page: p) {
-            items = p == 1 ? r.items : items + r.items
-            page = r.page; pages = r.pages; total = r.total
-            if p == 1, let fc = r.facets, f.count == 0 || facets == nil { facets = fc }
+        // Retry once: a list opened while the screen behind it refreshes can have its first request cancelled.
+        for attempt in 0..<2 {
+            do {
+                let r = try await API.products(parts.joined(separator: "&"), page: p)
+                items = p == 1 ? r.items : items + r.items
+                page = r.page; pages = r.pages; total = r.total; failed = false
+                if p == 1, let fc = r.facets, f.count == 0 || facets == nil { facets = fc }
+                return
+            } catch {
+                if attempt == 0 { try? await Task.sleep(nanoseconds: 400_000_000) } else { failed = true }
+            }
         }
     }
 }
@@ -205,6 +215,7 @@ struct ShopView: View {
     // Shown until the website's menu loads (and if it can't): categories that always have products.
     private let cats: [(String, String)] = [("Skin care", "category=skincare"), ("Make up", "category=makeup"), ("Hair", "category=hair"), ("Fragrance", "category=fragrance"), ("Sun care", "category=suncare"), ("Baby & mom", "category=baby"), ("Supplements", "category=supplements"), ("On sale", "sale=1")]
     @State private var menu: [MenuItem] = []
+    @State private var menuTried = false
     @EnvironmentObject private var router: Router
     var body: some View {
         NavigationStack {
@@ -212,7 +223,9 @@ struct ShopView: View {
                 if submitted.isEmpty {
                     List {
                         Picker("For", selection: $who) { Text("Everyone").tag(""); Text("Women").tag("women"); Text("Men").tag("men") }.pickerStyle(.segmented)
-                        if menu.isEmpty {
+                        if menu.isEmpty && !menuTried {
+                            HStack { Spacer(); ProgressView(); Spacer() }.task { try? await Task.sleep(nanoseconds: 4_000_000_000); menuTried = true }
+                        } else if menu.isEmpty {
                             ForEach(cats, id: \.0) { c in NavigationLink(c.0) { ProductListView(title: c.0, query: c.1 + (who.isEmpty ? "" : "&for=\(who)")) } }
                         } else {
                             // Same sections as the website's menu (Women and Men are the picker above).
@@ -235,7 +248,10 @@ struct ShopView: View {
             .searchable(text: $text, prompt: "Products, brands or concerns")
             .onSubmit(of: .search) { submitted = text.trimmingCharacters(in: .whitespaces) }
             .onChange(of: text) { _, t in if t.isEmpty { submitted = "" } }
-            .task { if menu.isEmpty, let m = (try? await API.config())?.menu { menu = m } }
+            .task {
+                if menu.isEmpty, let m = (await API.sharedConfig())?.menu { menu = m }
+                if menu.isEmpty, let m = (try? await API.config())?.menu { menu = m }
+            }
         }
     }
 }

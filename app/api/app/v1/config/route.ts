@@ -17,7 +17,25 @@ const slim = (m: MenuItem[], depth = 0): { label: string; href: string; children
 export async function GET() {
   const [s, methods, svc, g, x, theme, layout] = await Promise.all([getSettings(), checkoutMethods(), getServices(), getGrowth(), getExtras(), getTheme(), getLayout()]);
   const [nav, tax] = await Promise.all([liveNav(), getTaxonomy()]);
-  const menu = slim(shopNav(s, nav, tax, g.bulk.wholesale).menu);
+  const menu0 = slim(shopNav(s, nav, tax, g.bulk.wholesale).menu);
+  // Brand/range pages (/pages/vichy/) open as the app's own product list instead of a web page.
+  const { pageProducts } = await import("@/lib/info-pages");
+  const cache = new Map<string, string>();
+  const native = async (href: string) => {
+    const m = /^\/pages\/([^/]+)\/?$/.exec(href);
+    if (!m || ["about", "delivery", "payment", "rewards", "privacy", "contact"].includes(m[1])) return href;
+    if (!cache.has(m[1])) {
+      const pr = await pageProducts(m[1], s.pages[m[1]]?.title ?? "").catch(() => null);
+      const q = new URLSearchParams();
+      if (pr?.brand) q.set("brand", pr.brand);
+      if (pr?.query) q.set("q", pr.query);
+      cache.set(m[1], q.size ? `/shop/?${q}` : href);
+    }
+    return cache.get(m[1])!;
+  };
+  type M = { label: string; href: string; children: M[] };
+  const fix = async (l: M[]): Promise<M[]> => Promise.all(l.map(async (x) => ({ ...x, href: await native(x.href), children: await fix(x.children) })));
+  const menu = await fix(menu0 as M[]);
   const pal = buildPalette(theme) as Record<string, string>;
   return NextResponse.json({
     store: { name: s.store.name, tagline: s.store.tagline, whatsapp: s.store.whatsapp, phone: s.store.phone, email: s.store.email },
