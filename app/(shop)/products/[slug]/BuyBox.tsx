@@ -5,7 +5,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { SubscribeChoice } from "@/components/SubscribePlan";
 import type { Every } from "@/lib/every";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { track } from "@/lib/track";
 import { Qty } from "@/components/CartDrawer";
 import { HeartIcon } from "@/components/Icons";
@@ -46,6 +46,16 @@ export function BuyBox({
   children: ReactNode;
 }) {
   const tx = useT();
+  // The floating Add to bag bar only shows once the main button has scrolled off screen, so there is never two.
+  const mainBuy = useRef<HTMLSpanElement>(null);
+  const [mainOnScreen, setMainOnScreen] = useState(true);
+  useEffect(() => {
+    const el = mainBuy.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setMainOnScreen(e.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const { add, toggleWish, isWished } = useShop();
   const [id, setId] = useState(initialId);
   const [qty, setQty] = useState(1);
@@ -159,7 +169,7 @@ export function BuyBox({
           {v.inStock ? (
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
-              <span className="relative flex flex-1">
+              <span ref={mainBuy} className="relative flex flex-1">
                 <SuperPriceButton show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to bag")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600" />
               </span>
             </>
@@ -196,8 +206,8 @@ export function BuyBox({
         </ul>
         {growth.trust.returnsSummary && <p className="mt-2 text-xs text-muted">{growth.trust.returnsSummary}</p>}
         {/* Sticky buy bar on phones */}
-        {v.inStock && (
-          <div className="fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-[22px] border border-line bg-white/90 px-3 py-2 shadow-lg backdrop-blur-xl md:hidden">
+        {v.inStock && !mainOnScreen && (
+          <div className="sheet-up fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-[22px] border border-line bg-white/90 px-3 py-2 shadow-lg backdrop-blur-xl md:hidden">
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs text-muted">{v.brand}</p>
               <p className={`font-bold ${pct ? "text-sale" : ""}`}>{v.price > 0 ? money(v.price) : t("Sold out")}</p>
