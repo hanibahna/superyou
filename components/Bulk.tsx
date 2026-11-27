@@ -40,7 +40,7 @@ export function BulkOffer({ price, qty, onQty }: { price: number; qty: number; o
 export function BulkNote({ productId, qty, every, className = "" }: { productId: string; qty: number; every?: number; className?: string }) {
   const t = useT();
   const g = useGrowth().bulk;
-  const { quote } = useShop();
+  const { quote, lines: cart } = useShop();
   const b = quote?.bulk?.business ? { enabled: true, pct: quote.bulk.pct } : g;
   if (!b?.enabled || !b.pct || every) return null;
   const l = quote?.lines.find((x) => x.productId === productId);
@@ -49,6 +49,9 @@ export function BulkNote({ productId, qty, every, className = "" }: { productId:
   if (info && info.saving > 0)
     return <p className={`sp-in rounded-lg bg-[#e6f4ee] px-2 py-1 text-[11px] font-semibold text-[#046c4e] ${className}`}>📦 {info.business ? t("Business price") : t("Bulk buy")} −{info.pct}% {t("on")} {info.units} · {t("you save")} {money(info.saving)}</p>;
   if (info && info.left === 0) return <p className={`text-[11px] text-muted ${className}`}>{t("Bulk discount already used today for this product")}</p>;
+  // One nudge per bag, on the first single item, not on every line.
+  const first = quote?.lines.find((x) => cart.find((c) => c.productId === x.productId && !c.every)?.qty === 1 && !x.matchWas && !(x.bulk && (x.bulk.saving > 0 || x.bulk.left === 0)))?.productId;
+  if (quote && first && first !== productId) return null;
   if (qty === 1 && !quote?.bulk?.business) return <p className={`text-[11px] font-semibold text-[#9b2c50] ${className}`}>📦 {t("Add 1 more and save")} {b.pct}% {t("(bulk buy, paid now)")}</p>;
   return null;
 }

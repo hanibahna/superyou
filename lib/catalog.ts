@@ -82,6 +82,9 @@ const CLINIC = /^skin\s*society\s+the\s+clinic$/i;
 /** Text from a supplier ("…our clients at Skin Society The Clinic…") speaks as SuperYou. */
 export const asSuperYou = (t: string) => (t && SUPPLIER.test(t) ? t.replace(/skin[\s_-]*society([\s_-]+the[\s_-]+clinic)?([\s_-]+para)?|neo[\s_-]*vitale/gi, "SuperYou") : t);
 
+const TYPO_FIX: Record<string, string> = { "showel gel": "Shower Gel", "shower gell": "Shower Gel", "moisturiser cream cream": "Moisturiser Cream" };
+const TYPOS = new RegExp(Object.keys(TYPO_FIX).join("|"), "gi");
+
 /** Squashed brand key: "La Roche Posay", "La Roche-Posay" and "la roche-posay" are one brand. */
 export const brandKey = (b: string) => b.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "");
 /** Official spellings where the supplier feeds disagree with the brand's own. */
@@ -115,6 +118,8 @@ function buildIndex(ver: string, raw: string[]): Index {
     }
   }
   for (const p of parsed) if (SUPPLIER.test(p.name)) p.name = asSuperYou(p.name);
+  // Spelling slips in the supplier feeds, fixed on the way to the shop.
+  for (const p of parsed) if (TYPOS.test(p.name)) p.name = p.name.replace(TYPOS, (m) => TYPO_FIX[m.toLowerCase()] ?? m);
   canonBrands(parsed);
   const all = parsed.sort((a, b) => a.name.localeCompare(b.name) || (a.price - b.price));
   const byId = new Map(all.map((p) => [p.id, p]));

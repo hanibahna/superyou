@@ -111,7 +111,7 @@ export function MobileTabBar() {
   const [search, setSearch] = useState(false);
   const scanOn = !!useGrowth().skinScan?.enabled;
   if (path.startsWith("/checkout")) return null;
-  const item = "flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium";
+  const item = "flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium";
   const on = (p: string) => (p === "/" ? path === "/" : path.startsWith(p)) ? "text-ink" : "text-muted";
   return (
     <>
@@ -128,7 +128,7 @@ export function MobileTabBar() {
         {!scanOn && <button onClick={() => setSearch(true)} className={`${item} text-muted`}><SearchIcon width={22} height={22} />{t("Search")}</button>}
         <button onClick={() => setDrawerOpen(true)} className={`${item} relative text-muted`}>
           <BagIcon data-bag width={22} height={22} />{t("Bag")}
-          {count > 0 && <span className="absolute top-1.5 grid h-4 min-w-4 translate-x-3 place-items-center rounded-full bg-sale px-1 text-[10px] font-bold text-white">{count}</span>}
+          {count > 0 && <span className="absolute top-1.5 grid h-4 min-w-4 translate-x-3 place-items-center rounded-full bg-sale px-1 text-[11px] font-bold text-white">{count}</span>}
         </button>
         <Link href="/account/" className={`${item} ${on("/account")}`}><UserIcon width={22} height={22} />{t("Account")}</Link>
       </nav>

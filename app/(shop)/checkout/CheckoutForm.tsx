@@ -164,7 +164,12 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
                 )}
               </div>
             </div>
-            <p className="mt-2 text-sm text-muted">🚚 Estimated delivery: {settings.delivery.estimate}</p>
+            <p className="mt-2 text-sm text-muted">🚚 Estimated delivery: {(() => {
+              // Same days as shown on each item: the slowest item decides.
+              const ps = detailed.map((l) => l.product as { daysMin?: number; daysMax?: number });
+              const lo = Math.max(0, ...ps.map((p) => p.daysMin ?? 0)), hi = Math.max(0, ...ps.map((p) => p.daysMax ?? 0));
+              return hi ? `${lo && lo !== hi ? `${lo}–` : ""}${hi} working day${hi > 1 ? "s" : ""}. We'll call before arriving.` : settings.delivery.estimate;
+            })()}</p>
           </fieldset>
 
           <fieldset className="min-w-0">
@@ -196,7 +201,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
                   <ProductImage product={product} className="h-14 w-14 rounded-lg" />
                   <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-ink text-[10px] text-white">{qty}</span>
                 </span>
-                <span className="flex-1 leading-snug">{cleanName(product.name)}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge p={product} className="mt-1" /><PriceMatchBadge p={product} className="ml-1 mt-1" /><LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} readOnly /><BulkNote productId={product.id} qty={qty} every={every} className="mt-1" /></span>
+                <span className="flex-1 leading-snug">{cleanName(product.name)}{product.variant && <span className="block text-xs text-muted">{product.variant}</span>}<ShipBadge quiet p={product} className="mt-1" /><PriceMatchBadge p={product} className="ml-1 mt-1" /><LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} readOnly /><BulkNote productId={product.id} qty={qty} every={every} className="mt-1" /></span>
                 <span className="font-medium">{money(lineTotal)}</span>
               </li>
             ))}

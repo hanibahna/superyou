@@ -13,10 +13,10 @@ import { useShop } from "@/lib/store";
 import { ChevronLeft, ChevronRight } from "./Icons";
 import { BfLogo } from "./BfLogo";
 
-const Img = ({ src, w, className = "" }: { src: string; w: number; className?: string }) =>
+const Img = ({ src, w, className = "", eager = false }: { src: string; w: number; className?: string; eager?: boolean }) =>
   src ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={imgUrl(src, w)} alt="" loading="lazy" className={className} />
+    <img src={imgUrl(src, w)} alt="" loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : undefined} className={className} />
   ) : (
     <span className={`block bg-brand-50 ${className}`} />
   );
@@ -54,24 +54,24 @@ export function CampaignHero(p: { eyebrow: string; title: string; text: string; 
       {p.video && <HeroVideo src={p.video} poster={p.poster} overlay={p.overlay ?? 50} />}
       <div className="container-x relative grid items-center gap-8 py-10 md:py-14 lg:grid-cols-[1fr_1.1fr]">
         <div>
-          {live ? <BfLogo className="bf-logo h-20 w-auto text-white md:h-24" /> : p.eyebrow && <p className="bf-eyebrow inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
+          {live ? <BfLogo className="bf-logo h-20 w-auto text-white max-md:hidden md:h-24" /> : p.eyebrow && <p className="bf-eyebrow inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
           <h1 className="bf-title mt-5 text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-7xl">{highlight(p.title)}</h1>
           {p.text && <p className="bf-text mt-4 max-w-md text-lg text-white/80">{p.text}</p>}
           {live && (
             <div className="bf-day mt-4 max-w-md">
               <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-widest">
                 <span className={lastDay ? "bf-blink text-sale" : ""}>{lastDay ? tx("Last day") : `${tx("Day")} ${live.day} / ${live.days}`}</span>
-                {live.daily && <span className="text-white/70">{tx("A new deal unlocks every day")}</span>}
+                {live.daily && <span className="text-white/70 max-md:hidden">{tx("A new deal unlocks every day")}</span>}
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="bf-bar h-full rounded-full" style={{ width: `${progress}%` }} /></div>
             </div>
           )}
           {p.endsAt && left !== null && left > 0 && (
-            <div dir="ltr" className="mt-6 flex items-end gap-2">
+            <div dir="ltr" className={`mt-6 flex items-end gap-2 ${live ? "max-md:hidden" : ""}`}>
               {parts.map(([k, v]) => (
                 <div key={k} className="text-center">
                   <div key={live ? `${k}${v}` : k} className={`bf-count w-16 rounded bg-white/10 py-2 text-3xl font-bold tabular-nums ${live ? "bf-tick" : ""}`}>{String(v).padStart(2, "0")}</div>
-                  <div className="mt-1 text-[10px] uppercase tracking-widest text-white/60">{{ d: tx("days"), h: tx("hours"), m: tx("mins"), s: tx("secs") }[k]}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-widest text-white/60">{{ d: tx("days"), h: tx("hours"), m: tx("mins"), s: tx("secs") }[k]}</div>
                 </div>
               ))}
             </div>
@@ -165,8 +165,8 @@ function HeroMarquee({ products, tiles, seconds }: { products?: HeroProduct[]; t
         <div key={r} dir="ltr" className={`hero-track flex w-max gap-3 ${r ? "mt-3" : ""}`} style={{ animationDuration: `${Math.max(12, row.length * seconds)}s`, animationDelay: r ? `-${(row.length * seconds) / 2}s` : undefined }}>
           {[...row, ...row].map((t, i) => (
             <div key={`${t.key}-${i}`} aria-hidden={i >= row.length} className="group relative aspect-square w-40 shrink-0 overflow-hidden rounded-lg bg-white text-ink sm:w-48 lg:w-52">
-              <Link href={t.href} tabIndex={i >= row.length ? -1 : 0} className="block h-full w-full">
-                <Img src={t.image ?? ""} w={420} className="h-full w-full object-contain p-4 pb-12 transition duration-500 group-hover:scale-105" />
+              <Link href={t.href} tabIndex={i >= row.length ? -1 : 0} aria-label={[t.product ? `${t.product.brand} ${t.product.name}` : t.title, t.price].filter(Boolean).join(", ")} className="block h-full w-full">
+                <Img eager={r === 0 && i < 3} src={t.image ?? ""} w={420} className="h-full w-full object-contain p-4 pb-12 transition duration-500 group-hover:scale-105" />
               </Link>
               {t.badge && <span dir="ltr" className="absolute start-2 top-2 rounded bg-sale px-2 py-1 text-xs font-bold text-white">{t.badge}</span>}
               <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-1 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8 text-white">
@@ -256,7 +256,7 @@ export function OffersGrid({ eyebrow, title, items }: { eyebrow: string; title: 
               <Img src={t.image} w={280} className="h-full w-full object-contain p-2 mix-blend-multiply" />
             </span>
             <span className="flex min-w-0 flex-col">
-              {t.badge && <span className="mb-1 w-fit rounded bg-sale px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">{t.badge}</span>}
+              {t.badge && <span className="mb-1 w-fit rounded bg-sale px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">{t.badge}</span>}
               <span className="font-bold leading-snug">{t.title}</span>
               {t.text && <span className="mt-1 text-sm text-muted">{t.text}</span>}
               {t.cta && <span className="mt-auto pt-2 text-sm font-bold group-hover:underline">{t.cta} ▸</span>}

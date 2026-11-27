@@ -44,7 +44,7 @@ export function ProductCard({ product }: { product: Card }) {
         </Link>
         {reviews.showOnCards && !!product.reviewCount && product.rating && <div className="mt-1"><Stars value={product.rating} count={product.reviewCount} size={12} /></div>}
         {multi && <p className="mt-0.5 text-xs text-muted">{product.variantCount} {t("options")}</p>}
-        <ShipBadge p={product as Parameters<typeof ShipBadge>[0]["p"]} className="mt-1.5 self-start" />
+        <ShipBadge quiet p={product as Parameters<typeof ShipBadge>[0]["p"]} className="mt-1.5 self-start" />
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
             <span className={`font-semibold ${pct ? "text-sale" : ""}`}>

@@ -49,7 +49,7 @@ export function CartDrawer() {
                     <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
                     <p className="text-sm font-medium leading-snug">{cleanName(product.name)}</p>
                     {product.variant && <p className="text-xs text-muted">{product.variant}</p>}
-                    <ShipBadge p={product} className="mt-1 self-start" />
+                    <ShipBadge quiet p={product} className="mt-1 self-start" />
                     <PriceMatchBadge p={product} className="mt-1 self-start" />
                     <LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} />
                     <BulkNote productId={product.id} qty={qty} every={every} className="mt-1 self-start" />

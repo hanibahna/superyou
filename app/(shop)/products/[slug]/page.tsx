@@ -145,11 +145,6 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           {category && <><Link href={`/shop/?category=${category.slug}`} className="hover:underline">{L(category.name)}</Link> / </>}
           <span>{initial.name}</span>
         </nav>
-        {/* Shortcuts and tips sit above the product on desktop; on phones they move below it so name and price come first. */}
-        <div className="hidden md:block">
-          <QuickHelp className="mb-3" />
-          <TipLine tips={sec.tips} slug={slug} name={fullName(initial.brand, initial.name)} banner={sec.banner} />
-        </div>
 
         <BuyBox underImage={<HowToUse slug={slug} name={initial.name} brand={initial.brand} how={L(detail.howToUse) ?? ""} tips={ptips} initialGuide={await (await import("@/lib/product-guide")).getGuide(slug)} />} subOk={subOk} life={life && life.every ? { days: life.days, every: life.every, basis: life.basis } : null} variants={variants} initialId={initial.id} gallery={gallery} concernNames={Object.fromEntries(concerns.map((c) => [c.slug, L(c.name)]))} freeOver={settings.delivery.freeThreshold > 0 ? money(settings.delivery.freeThreshold) : ""}>
           <div className="mt-8 divide-y divide-line border-y border-line">
@@ -170,7 +165,8 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
             </Section>
           </div>
         </BuyBox>
-        <div className="mt-8 md:hidden">
+        {/* Shortcuts and tips come after the product, so name, price and Add to bag come first on every screen. */}
+        <div className="mt-8">
           <QuickHelp className="mb-3" />
           <TipLine tips={sec.tips} slug={slug} name={fullName(initial.brand, initial.name)} banner={sec.banner} />
         </div>

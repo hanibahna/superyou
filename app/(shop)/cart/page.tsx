@@ -64,7 +64,7 @@ export default function CartPage() {
                 <p className="text-xs font-semibold uppercase text-muted">{product.brand}</p>
                 <Link href={`/products/${product.slug}/`} className="font-medium hover:text-brand-600">{cleanName(product.name)}</Link>
                 <p className="text-sm text-muted">{money(product.price)}{product.variant ? ` · ${product.variant}` : product.size ? ` · ${product.size}` : ""}</p>
-                <ShipBadge p={product} className="mt-1 self-start" />
+                <ShipBadge quiet p={product} className="mt-1 self-start" />
                     <PriceMatchBadge p={product} className="mt-1 self-start" />
                 <LinePlan name={product.name} productId={product.id} every={every} start={start} forMonths={forMonths} />
                 <BulkNote productId={product.id} qty={qty} every={every} className="mt-1 self-start" />

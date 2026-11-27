@@ -77,17 +77,15 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
             <img src="/brand/superyou-logo-white.svg" alt="" aria-hidden className="logo-on-dark h-5 w-auto md:h-7" />
             {/* Phones & tablets: our address right under the name */}
             {/* Letters spread to exactly the width of the wordmark, on every screen size */}
-            <SiteUrl className="site-id-sm flex w-full justify-between text-[9px] font-extrabold leading-none md:text-[11px] xl:hidden">
+            <SiteUrl className="site-id-sm hidden w-full justify-between text-[11px] font-extrabold leading-none md:flex xl:hidden">
               {"SHOPSUPERYOU.COM".split("").map((ch, i) => <span key={i} aria-hidden className={i < 4 || i > 11 ? "sy-accent" : undefined}>{ch}</span>)}
             </SiteUrl>
             {/* Tablets: the promise sits under the address, lined up with the logo (doesn't widen it) */}
-            {store.tagline && <span className="site-id-sm hidden w-0 min-w-full whitespace-nowrap text-[11px] leading-none text-muted md:block lg:hidden">{store.tagline}</span>}
           </span>
         </Link>
         {/* Our web address (so people remember it) and our promise, next to the logo. */}
         <div className="site-id -ms-1 hidden w-[250px] shrink-0 flex-col justify-center border-s border-line ps-3 leading-tight xl:flex 2xl:w-[300px]">
           <SiteUrl className="self-start text-[13px] font-extrabold tracking-[0.08em]"><span className="sy-accent">SHOP</span>SUPERYOU<span className="sy-accent">.COM</span></SiteUrl>
-          {store.tagline && <span className="mt-0.5 text-[11px] leading-snug text-muted [text-wrap:balance]">{store.tagline}</span>}
         </div>
 
         <SearchBox className="hdr-search mx-auto hidden max-w-xl flex-1 lg:block" />
@@ -107,8 +105,6 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
           </button>
         </nav>
       </div>
-      {/* Phones & tablets: our promise as a slim line under the logo row */}
-      {store.tagline && <p className="site-id-sm container-x -mt-1.5 pb-1.5 text-center text-[10px] leading-snug tracking-[-0.01em] text-muted [text-wrap:balance] min-[400px]:text-[10.5px] hidden lg:block lg:text-start lg:text-xs xl:hidden">{store.tagline}</p>}
       {/* Phones: on the home page, search sits in plain view under the logo. */}
       {path === "/" && <div className="container-x pb-3 lg:hidden"><SearchBox /></div>}
 
@@ -224,7 +220,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
 
 function Badge({ n }: { n: number }) {
   return (
-    <span className="absolute right-0.5 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
+    <span className="absolute right-0.5 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[11px] font-bold text-white">
       {n}
     </span>
   );

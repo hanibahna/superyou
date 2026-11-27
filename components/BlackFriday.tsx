@@ -63,7 +63,7 @@ function Flip({ v, label, hot }: { v: number; label: string; hot?: boolean }) {
           <span key={`${i}${c}`} className={`bf-anim inline-block w-[1.15em] rounded-[5px] py-1 text-center font-mono text-[15px] font-bold tabular-nums shadow-[inset_0_-1px_0_rgba(0,0,0,.4)] sm:text-base ${hot ? "bg-sale text-white" : "bg-white/12 text-white"}`} style={{ animation: "bf-flip .45s ease-out", background: hot ? undefined : "linear-gradient(#2a2a2e 50%,#1c1c20 50%)" }}>{c}</span>
         ))}
       </span>
-      <span className="mt-0.5 text-[8px] uppercase tracking-widest text-white/50">{label}</span>
+      <span className="mt-0.5 text-[11px] uppercase tracking-widest text-white/50">{label}</span>
     </span>
   );
 }
@@ -113,7 +113,7 @@ export function BfStrip() {
           <span key={msg} className="bf-anim truncate text-sm font-medium" style={{ animation: "bf-rise .5s ease-out" }}>{line}</span>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
-          <span className="me-1 hidden text-[10px] font-bold uppercase tracking-widest text-white/60 sm:inline">{b.phase === "soon" ? t("Starts in") : t("Ends in")}</span>
+          <span className="me-1 hidden text-[11px] font-bold uppercase tracking-widest text-white/60 sm:inline">{b.phase === "soon" ? t("Starts in") : t("Ends in")}</span>
           <span dir="ltr" className="flex items-start gap-1">
             {l.d > 0 && <Flip v={l.d} label={t("days")} hot={finalHours} />}
             <Flip v={l.h} label={t("hrs")} hot={finalHours} />
@@ -144,7 +144,7 @@ export function BfDoors({ b }: { b: BfPublic }) {
       <style>{KEYFRAMES}</style>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div className="flex items-center gap-3">
-          <BfLogo className="h-14 w-auto text-ink" />
+          <BfLogo variant="pill" className="h-9 w-auto shrink-0" />
           <h2 className="text-2xl font-bold">{t("A new pick unlocks every day")}</h2>
         </div>
         {b.nextUnlock && <p className="text-sm">{t("Next door opens in")} <b><Clock to={b.nextUnlock} /></b></p>}

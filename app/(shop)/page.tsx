@@ -20,6 +20,8 @@ import { getLanding, getSettings, getVideoLibrary } from "@/lib/site-store";
 import { memo } from "@/lib/memo";
 import { BfDoors } from "@/components/BlackFriday";
 import { bfPublic } from "@/lib/bf-public";
+import { honestTiles, soldBrands } from "@/lib/home-truth";
+import type { Section } from "@/lib/site";
 
 export async function generateMetadata() {
   return { ...(await canonical("/")) };
@@ -55,11 +57,27 @@ export default async function HomePage() {
   const usOn = [...nav.originCats.keys()].some((k) => /^from:(us|usa|united states)/.test(k));
   const slideLive = (sl: { href?: string; eyebrow?: string; title?: string; text?: string }) =>
     (!sl.href || hrefIsLive(sl.href, nav) !== false) && (usOn || !/\bimport|\busa\b|\bus beauty|united states|all-in price/i.test(`${sl.eyebrow ?? ""} ${sl.title ?? ""} ${sl.text ?? ""} ${sl.href ?? ""}`));
-  const onSale = landing.sections.filter((s) => s.enabled).map((s) => (s.type === "hero" ? { ...s, slides: s.slides.filter(slideLive) } : s)).filter((s) => !(s.type === "hero" && !s.slides.length)).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => shopImgDeep(liveHrefsDeep(s, nav)));
+  const onSale = landing.sections.filter((s) => s.enabled).map((s) => (s.type === "hero" ? { ...s, slides: s.slides.filter(slideLive) } : s)).filter((s) => !(s.type === "hero" && !s.slides.length)).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "circles" || s.type === "offers") ? { ...s, items: pruneLinks(s.items, nav, auto) } : s)).map((s) => ("items" in s && Array.isArray(s.items) && (s.type === "tiles" || s.type === "offers") ? { ...s, items: honestTiles(s.items, cards) } : s)).filter((s) => !((s.type === "tiles" || s.type === "circles" || s.type === "offers") && !s.items.length)).map((s) => shopImgDeep(liveHrefsDeep(s, nav)));
+  // The homepage always shows products: if the saved layout has no product row, add Best sellers and New in under the first banner.
+  if (!onSale.some((s) => s.type === "products")) {
+    const at = Math.max(0, onSale.findIndex((s) => s.type === "bfhero" || s.type === "hero")) + 1;
+    const rowsIn: Section[] = [
+      { id: "auto-best", type: "products", enabled: true, eyebrow: "Loved in Lebanon", title: "Best sellers", source: { kind: "tag", value: "favorite" }, limit: 16, sort: "featured", layout: "carousel" },
+      { id: "auto-new", type: "products", enabled: true, eyebrow: "Just landed", title: "New in", source: { kind: "newest", value: "" }, limit: 16, sort: "new", layout: "carousel" },
+    ];
+    onSale.splice(at, 0, rowsIn[0]);
+    const mid = Math.min(onSale.length, at + 4);
+    onSale.splice(mid, 0, rowsIn[1]);
+  }
   const sections = await translateDeep(onSale, lang, ["eyebrow", "title", "text", "cta", "cta2", "badge", "body"]);
   // Product rows, campaign products and reviews are the same for every visitor: worked out at most once a minute.
   const minute = Math.floor(Date.now() / 60_000);
-  const rows = await memo(`home:rows:${lang}:${minute}`, 70_000, () => Promise.all(sections.map((s) => (s.type === "products" ? cardsFor(s.source, s.limit, s.sort) : Promise.resolve(null)))));
+  const rows = await memo(`home:rows:${lang}:${minute}`, 70_000, () => Promise.all(sections.map(async (s) => {
+    if (s.type !== "products") return null;
+    const got = await cardsFor(s.source, s.limit, s.sort);
+    // Few products tagged as favourites yet: fall back to the featured skincare picks.
+    return s.id === "auto-best" && got.length < 4 ? cardsFor({ kind: "category", value: "skincare" }, s.limit, "featured") : got;
+  })));
 
   const settings = await getSettings();
   // Latest approved reviews for the "Loved by our customers" section.
@@ -161,7 +179,7 @@ export default async function HomePage() {
           case "concerns":
             return <ShopByConcern key={s.id} concerns={tax.concerns.filter((c) => counts[c.slug])} counts={counts} eyebrow={s.eyebrow} title={s.title} />;
           case "brands":
-            return <BrandStrip key={s.id} title={s.title} brands={(s.brands.length ? s.brands : topBrands).slice(0, s.limit)} logos={Object.fromEntries((s.logos ?? []).filter((l) => l.image).map((l) => [l.brand.toLowerCase(), l.image]))} />;
+            return <BrandStrip key={s.id} title={s.title} brands={soldBrands(s.brands.length ? s.brands : topBrands, cards).slice(0, s.limit)} logos={Object.fromEntries((s.logos ?? []).filter((l) => l.image).map((l) => [l.brand.toLowerCase(), l.image]))} />;
           case "reviews": {
             const list = homeReviews.filter((r) => r.rating >= s.minRating).slice(0, s.limit);
             if (list.length < 3) return null;

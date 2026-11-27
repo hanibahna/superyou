@@ -5,9 +5,11 @@ import { useT } from "@/lib/site-context";
 
 type Ship = { origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number };
 
-export function ShipBadge({ p, size = "sm", className = "" }: { p: Ship; size?: "sm" | "md"; className?: string }) {
+export function ShipBadge({ p, size = "sm", className = "", quiet = false }: { p: Ship; size?: "sm" | "md"; className?: string; quiet?: boolean }) {
   const t = useT();
   if (!p.origin) return null;
+  // Cards, bag and checkout: everything ships from Lebanon, so only an imported item needs a badge.
+  if (quiet && p.origin !== "international") return null;
   const days = p.daysMin && p.daysMax ? (p.daysMin === p.daysMax ? `${p.daysMax}` : `${p.daysMin}–${p.daysMax}`) : "";
   const intl = p.origin === "international";
   const cls = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]";

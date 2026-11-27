@@ -182,7 +182,7 @@ export function BrandStrip({ brands, title = "Shop by brand", logos = {} }: { br
             aria-hidden={i >= brands.length ? true : undefined}
             tabIndex={i >= brands.length ? -1 : undefined}
             href={`/shop/?brand=${encodeURIComponent(b)}`}
-            className="grid h-20 min-w-40 place-items-center rounded-xl border border-line bg-white px-6 text-center font-serif text-lg font-semibold tracking-[0.15em] text-ink transition hover:border-ink hover:shadow-sm"
+            className="grid h-20 min-w-40 place-items-center rounded-xl border border-line bg-white px-6 text-center text-base font-bold tracking-[0.12em] text-ink transition hover:border-ink hover:shadow-sm"
           >
             {logos[b.toLowerCase()] ? (
               // eslint-disable-next-line @next/next/no-img-element

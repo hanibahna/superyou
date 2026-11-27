@@ -35,6 +35,8 @@ export function SuperPrimeBox() {
         </div>
       </div>
     );
+  // Delivery is already free on this order and the shopper hasn't chosen SuperPrime: don't sell what they already have.
+  if (quote && quote.delivery === 0 && !primeChoice) return null;
   const trialAvail = !q?.trialUsed && pr.trialMonths > 0;
   const needed = Math.max(0, pr.trialMinOrder - after);
   return (

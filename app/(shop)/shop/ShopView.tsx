@@ -143,7 +143,6 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
         <Link href="/" className="hover:underline">Home</Link> / <span>{fullTitle}</span>
       </nav>
       {/* Phones: the section banner waits until after the first 6 products, so products show on the first screen. */}
-      {section && <div className="hidden md:block"><SectionBanner s={section} /></div>}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold">{fullTitle}<ShareMenu align="start" size={34} text={`🛍️ ${fullTitle} · SuperYou (${total.toLocaleString("en-US")} products)\n${typeof window !== "undefined" ? window.location.href.split("#")[0] : ""}`} /></h1>
@@ -202,6 +201,8 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
                 <Fragment key={p.slug}>
                   <ProductCard product={p} />
                   {i === Math.min(5, items.length - 1) && section && page === 1 && <div className="col-span-2 md:hidden"><SectionBanner s={section} /></div>}
+                  {/* Desktop: help and tips after the first two rows, so products start on the first screen. */}
+                  {i === Math.min(7, items.length - 1) && section && page === 1 && <div className="col-span-full hidden md:block"><SectionBanner s={section} /></div>}
                 </Fragment>
               ))}
             </div>

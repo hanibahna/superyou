@@ -140,8 +140,20 @@ export function BuyBox({
           </div>
         )}
 
-        {v.inStock && subOk && <SubscribeChoice price={v.price} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} forMonths={forMonths} onFor={setFor} />}
-        {v.inStock && !plan && !v.matchWas && <BulkOffer price={v.price} qty={qty} onQty={setQty} />}
+        {/* Subscribe & save and Bulk buy sit behind one "Save more" choice, so price → delivery → Add to bag stays clear.
+            It opens by itself once the shopper has picked a plan or more than one. */}
+        {v.inStock && (subOk || !v.matchWas) && (
+          <details className="save-more group rounded-2xl border border-line" open={!!plan || qty > 1}>
+            <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold">
+              <span>{tx("Save more")} <span className="font-normal text-muted">· {[subOk && tx("subscribe"), !v.matchWas && tx("buy 2 or more")].filter(Boolean).join(` ${tx("or")} `)}</span></span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition group-open:rotate-180"><path d="M6 9l6 6 6-6" /></svg>
+            </summary>
+            <div className="space-y-3 px-3 pb-3">
+              {subOk && <SubscribeChoice price={v.price} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} forMonths={forMonths} onFor={setFor} />}
+              {!plan && !v.matchWas && <BulkOffer price={v.price} qty={qty} onQty={setQty} />}
+            </div>
+          </details>
+        )}
         <div className="mt-6 flex items-center gap-3">
           {v.inStock ? (
             <>

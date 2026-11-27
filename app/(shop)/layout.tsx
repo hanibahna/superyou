@@ -15,6 +15,7 @@ import { ShopProvider } from "@/lib/store";
 import { ScrollCue } from "@/components/ScrollCue";
 import { BfStrip } from "@/components/BlackFriday";
 import { headers } from "next/headers";
+import { bfPublic } from "@/lib/bf-public";
 
 // Catalog lives in the database, so pages render on request and always show current data.
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const ai = (await getExtras()).advisor;
   const aiCfg = ai.enabled && (await anthropicKey()) ? await translateDeep({ name: ai.name, greeting: ai.greeting, suggestions: ai.suggestions }, lang, ["greeting", "suggestions"]) : null;
   // Inside the iPhone app (its web pages say "SuperYouApp"): no site header, footer, tab bar or pop-ups; the app has its own.
+  const bfNow = await bfPublic().catch(() => null);
+  const bfOn = !!bfNow && bfNow.fx.strip && (bfNow.phase === "soon" || bfNow.phase === "live") && Date.parse(bfNow.endsAt) > Date.now();
   const inApp = /SuperYouApp/.test((await headers()).get("user-agent") ?? "");
   if (inApp)
     return (
@@ -42,8 +45,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   return (
     <ShopNavProvider nav={menus}>
     <ShopProvider>
-      <BfStrip />
-      <AnnouncementBar />
+      {bfOn ? <div className="min-h-[44px] bg-black sm:min-h-[48px]"><BfStrip /></div> : <><BfStrip /><AnnouncementBar /></>}
       <Header taxonomy={taxonomy} />
       <main className="min-h-[60vh]">{children}</main>
       <TrustStrip />
