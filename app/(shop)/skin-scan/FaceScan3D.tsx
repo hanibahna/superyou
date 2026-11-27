@@ -229,7 +229,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       ) : (
         <>
           <p className="mb-6 min-h-[3.2em] max-w-xs text-center text-[19px] font-semibold leading-snug text-white" aria-live="polite">{stage === "loading" ? t("Starting SuperScan…") : msg}</p>
-          <div className="relative aspect-square w-full max-w-[400px]">
+          <div className="relative aspect-square" style={{ width: "min(100%, 400px, 62dvh)" }}>
             <canvas ref={canvas} className="h-full w-full" />
           </div>
           {stage !== "done" && (

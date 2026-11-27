@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { liveNav, shopNav } from "@/lib/live-nav";
 import "./globals.css";
 import { getIndex, getTaxonomy } from "@/lib/catalog";
@@ -15,6 +15,10 @@ import { Tracking } from "@/components/Tracking";
 import { AppBridge } from "@/components/AppBridge";
 import { buildPalette, paletteCss } from "@/lib/theme";
 import { getTheme } from "@/lib/theme-store";
+
+// Edge to edge on every iPhone and iPad (no white bars beside the notch in landscape);
+// the layout pads itself with the safe areas instead.
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#ffffff" };
 
 export async function generateMetadata(): Promise<Metadata> {
   await getIndex();

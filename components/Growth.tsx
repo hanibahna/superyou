@@ -115,7 +115,7 @@ export function MobileTabBar() {
   const on = (p: string) => (p === "/" ? path === "/" : path.startsWith(p)) ? "text-ink" : "text-muted";
   return (
     <>
-      <nav className="tabbar fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label={tx("Shortcuts")}>
+      <nav className="tabbar fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-left)] pe-[env(safe-area-inset-right)] backdrop-blur md:hidden" aria-label={tx("Shortcuts")}>
         <Link href="/" className={`${item} ${on("/")}`}><HomeIcon width={22} height={22} />{t("Home")}</Link>
         <Link href="/shop/" className={`${item} ${on("/shop")}`}><GridIcon width={22} height={22} />{t("Shop")}</Link>
         {scanOn && (

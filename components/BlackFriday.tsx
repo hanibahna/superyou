@@ -99,7 +99,7 @@ export function BfStrip() {
     <Link href="/shop/?bf=1" className={`bf-strip relative block overflow-hidden bg-black text-white ${finalHours ? "bf-final" : ""}`}>
       <style>{KEYFRAMES}</style>
       <div className="bf-anim pointer-events-none absolute inset-0 opacity-25" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)", backgroundSize: "200% 100%", animation: "bf-shine 4s linear infinite" }} />
-      <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-1.5 sm:px-5">
+      <div className="safe-x relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-1.5 sm:px-5">
         <BfLogo variant="pill" className="h-7 w-auto shrink-0 sm:h-8" />
         <div className="hidden min-w-0 flex-1 items-center justify-center gap-4 md:flex">
           {b.phase === "live" && (
