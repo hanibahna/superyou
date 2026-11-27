@@ -218,6 +218,7 @@ export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth
         <div className="space-y-5">
           <Card title="SuperScan (3D AI skin scan)" sub="Page /skin-scan/: a guided 3D face scan (front and both sides, camera only, no uploads) is read by an AI vision model and a routine is built from stock. Photos are not stored.">
             <Toggle label="Skin scan page is on" checked={g.skinScan.enabled} onChange={(enabled) => up("skinScan", { enabled })} />
+            <Toggle label="Show the 3D face mesh (points and lines) during the scan. Off = clean camera picture, like Face ID setup" checked={g.skinScan.mesh !== false} onChange={(mesh) => up("skinScan", { mesh })} />
             <div className="mt-3"><Area label="Intro" value={g.skinScan.intro} onChange={(intro) => up("skinScan", { intro })} /></div>
             <p className={`mt-3 text-sm ${aiReady ? "text-green-700" : "text-sale"}`}>{aiReady ? "✓ AI key found — the scan works." : "Not connected: paste a Claude API key in Admin → Sections & AI. Until then the page offers the quiz."}</p>
           </Card>

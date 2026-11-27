@@ -329,7 +329,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
  *  sweeps the ring clockwise and the ticks behind it turn green; when the circle is full, a green tick,
  *  then it starts again. */
 function ScanPlaceholder({ caption }: { caption: string }) {
-  const T = 90, P = 4200, HOLD = 1300;
+  const T = 120, P = 4200, HOLD = 1300;
   const [t, setT] = useState(0);
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setT(P * 0.6); return; }
@@ -360,7 +360,7 @@ function ScanPlaceholder({ caption }: { caption: string }) {
           const a = -Math.PI / 2 + (i / T) * Math.PI * 2;
           const lit = done || i / T <= p;
           const len = lit ? 16 : 10;
-          return <line key={i} x1={cx + Math.cos(a) * RR} y1={cy + Math.sin(a) * RR} x2={cx + Math.cos(a) * (RR + len)} y2={cy + Math.sin(a) * (RR + len)} stroke={lit ? "#34c759" : "rgba(255,255,255,.28)"} strokeWidth="2.6" strokeLinecap="round" />;
+          return <line key={i} x1={cx + Math.cos(a) * RR} y1={cy + Math.sin(a) * RR} x2={cx + Math.cos(a) * (RR + len)} y2={cy + Math.sin(a) * (RR + len)} stroke={lit ? "#34c759" : "rgba(255,255,255,.28)"} strokeWidth="2" strokeLinecap="round" />;
         })}
         <circle cx={cx} cy={cy} r={R} fill="#1c1a1d" />
         {!done && (

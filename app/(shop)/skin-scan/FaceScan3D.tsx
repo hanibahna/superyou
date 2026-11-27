@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useT } from "@/lib/site-context";
+import { useGrowth, useT } from "@/lib/site-context";
 
 // Face ID setup-style scan: the camera in a circle on black, a ring of fine ticks around it that grow and
 // turn green as the head moves in a circle, then the picture fades and a green tick draws itself.
 // Tracking runs on the phone; only the 5 finished photos are sent (front, both sides, chin up, chin down).
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
 const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const TICKS = 120; // dense like the iPhone ring
+const TICKS = 150; // fine, dense ring
 const GREEN: [number, number, number] = [52, 199, 89]; // iOS system green
 
 type P = { x: number; y: number; z: number };
@@ -18,6 +18,7 @@ const ease = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 
 export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: string[], meshImage?: string) => void; onFallback: () => void; onClose: () => void }) {
   const t = useT();
+  const meshOn = (useGrowth().skinScan as { mesh?: boolean } | undefined)?.mesh !== false;
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [stage, setStage] = useState<"loading" | "front" | "circle" | "done" | "error">("loading");
@@ -122,7 +123,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       // sweeping down it. Drawn inside the circle only, and gone once the scan is complete.
       // keep the last mesh for a moment after the scan completes, so the result picture shows it
       const meshPts = lm && !doneAt ? lm.map((q) => ({ x: W - ((q.x * vw - sx) / s) * W, y: ((q.y * vh - sy) / s) * W })) : doneAt && since < 450 ? lastPts : null;
-      if (meshPts?.length) {
+      if (meshOn && meshPts?.length) {
         const pts = meshPts; if (lm) lastPts = pts;
         g.save();
         g.beginPath(); g.arc(cx, cy, CR, 0, Math.PI * 2); g.clip();
@@ -167,7 +168,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
           if (mag > 0.075) {
             const ang = (Math.atan2(sdy, sdx) + Math.PI * 2) % (Math.PI * 2);
             const i = Math.round((ang / (Math.PI * 2)) * TICKS) % TICKS;
-            for (let k = -3; k <= 3; k++) lit[(i + k + TICKS) % TICKS] = 1;
+            for (let k = -4; k <= 4; k++) lit[(i + k + TICKS) % TICKS] = 1;
           }
           if (sdx > 0.14 && !shots.a) shots.a = capture(v);
           if (sdx < -0.14 && !shots.b) shots.b = capture(v);
@@ -205,10 +206,10 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         const p = prog[i];
         const ripple = doneAt && !reduce ? Math.max(0, Math.sin(Math.min(Math.PI, (since / 450 - ((i + TICKS * 0.75) % TICKS) / TICKS) * Math.PI))) * 10 : 0;
         const idle = !base && !reduce ? 3 * (0.5 + 0.5 * Math.sin(now / 420 + i / 6)) : 0;
-        const len = 14 + p * 18 + ripple + idle;
+        const len = 12 + p * 14 + ripple + idle;
         const col = mix(p, [120, 120, 128], GREEN);
         g.strokeStyle = `rgba(${col},${(0.55 + p * 0.45).toFixed(2)})`;
-        g.lineWidth = 3.2; g.lineCap = "round";
+        g.lineWidth = 2.4; g.lineCap = "round";
         g.beginPath(); g.moveTo(cx + Math.cos(a) * RR, cy + Math.sin(a) * RR); g.lineTo(cx + Math.cos(a) * (RR + len), cy + Math.sin(a) * (RR + len)); g.stroke();
       }
       // Face ID-style curved arrow: rides just outside the ring and points the way to the part still to fill.

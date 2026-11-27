@@ -48,7 +48,7 @@ export type Growth = {
   bundles: { enabled: boolean; minSteps: number; percent: number };
   reorder: { enabled: boolean; days: { category: string; days: number }[]; defaultDays: number };
   advent: { enabled: boolean; year: number; title: string; intro: string; doors: AdventDoor[] };
-  skinScan: { enabled: boolean; intro: string };
+  skinScan: { enabled: boolean; intro: string; mesh?: boolean }; // mesh: face matrix (points + lines) during the scan
   /** Bulk buy: 2 to maxUnits of the same product in one order, paid now, get the Subscribe & save 3-month %
    *  (pct 0 = follow it). At most maxUnits discounted units per product per customer a day. */
   apps: { ios: string; android: string; note: string; firstPct: number; doublePoints: boolean }; // firstPct: % off the first app order (auto); doublePoints: Club points ×2 on app orders // App Store / Google Play links; empty = not shown
@@ -334,7 +334,7 @@ export const growthSchema = z.object({
     enabled: z.boolean(), year: z.number().int().min(2025).max(2100), title: z.string().max(100), intro: z.string().max(300),
     doors: z.array(z.object({ day: z.number().int().min(1).max(31), title: z.string().max(80), text: z.string().max(300), code: z.string().max(40), href: z.string().max(300), image: z.string().max(500) })).max(31),
   }),
-  skinScan: z.object({ enabled: z.boolean(), intro: z.string().max(400) }),
+  skinScan: z.object({ enabled: z.boolean(), intro: z.string().max(400), mesh: z.boolean().optional() }),
   subscribe: z.object({ enabled: z.boolean(), monthly: z.number().min(0).max(50), quarterly: z.number().min(0).max(50), collection: z.string().max(200), note: z.string().max(200), unlockMonthly: z.number().int().min(1).max(12).default(3), unlockQuarterly: z.number().int().min(1).max(12).default(2), maxRebate: z.number().min(0).max(500).default(15), cooldownDays: z.number().int().min(0).max(365).default(90), promo: z.object({ enabled: z.boolean(), endsAt: z.string().max(10), firstPct: z.number().min(0).max(50).default(5), freeDelivery: z.boolean().default(true) }).default({ enabled: false, endsAt: "", firstPct: 5, freeDelivery: true }) }).default({ enabled: true, monthly: 10, quarterly: 10, collection: "", note: "", unlockMonthly: 3, unlockQuarterly: 2, maxRebate: 15, cooldownDays: 90, promo: { enabled: true, endsAt: "", firstPct: 5, freeDelivery: true } }),
   apps: z.object({ ios: z.string().max(300).default(""), android: z.string().max(300).default(""), note: z.string().max(160).default(""), firstPct: z.number().min(0).max(50).default(10), doublePoints: z.boolean().default(true) }).default({ ios: "", android: "", note: "", firstPct: 10, doublePoints: true }),
   bulk: z.object({ enabled: z.boolean(), pct: z.number().min(0).max(50), maxUnits: z.number().int().min(2).max(10), wholesale: z.boolean().default(false) }).default({ enabled: true, pct: 0, maxUnits: 3, wholesale: false }),
@@ -413,7 +413,7 @@ export function publicGrowth(g: Growth, aiKey?: boolean) {
     bundles: g.bundles,
     advent: { enabled: g.advent.enabled },
     // Only offered to shoppers once the AI key is in place (otherwise the page just says "not connected").
-    skinScan: { enabled: g.skinScan.enabled && (aiKey ?? (typeof process !== "undefined" && !!process.env.ANTHROPIC_API_KEY)) },
+    skinScan: { enabled: g.skinScan.enabled && (aiKey ?? (typeof process !== "undefined" && !!process.env.ANTHROPIC_API_KEY)), mesh: g.skinScan.mesh !== false },
     subscribe: { ...g.subscribe, promoLive: subPromoLive(g) },
     bulk: { enabled: g.bulk.enabled, pct: bulkPct(g), maxUnits: g.bulk.maxUnits },
     wholesale: g.bulk.wholesale,
