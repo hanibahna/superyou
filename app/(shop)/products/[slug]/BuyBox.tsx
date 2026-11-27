@@ -20,7 +20,7 @@ import { localeOf } from "@/lib/i18n";
 import { useGrowth, useLang, useSettings, useT } from "@/lib/site-context";
 import { snap, useShop } from "@/lib/store";
 import { ShipBadge } from "@/components/ShipBadge";
-import { PriceMatchBadge, SuperPriceCard, SuperPriceSticker, SuperPriceTag } from "@/components/PriceMatch";
+import { PriceMatchBadge, SuperPriceButton, SuperPriceCard, SuperPriceTag } from "@/components/PriceMatch";
 import { BulkOffer } from "@/components/Bulk";
 
 export function BuyBox({
@@ -159,8 +159,7 @@ export function BuyBox({
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
               <span className="relative flex flex-1">
-                <button onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
-                {sp && <SuperPriceSticker p={v} />}
+                <SuperPriceButton show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to cart")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600" />
               </span>
             </>
           ) : (
@@ -202,7 +201,7 @@ export function BuyBox({
               <p className="truncate text-xs text-muted">{v.brand}</p>
               <p className={`font-bold ${pct ? "text-sale" : ""}`}>{v.price > 0 ? money(v.price) : t("Sold out")}</p>
             </div>
-            <button onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
+            <SuperPriceButton show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to bag")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap min-w-[11.5rem] rounded-full bg-ink px-6 font-semibold text-white" />
           </div>
         )}
         </div>

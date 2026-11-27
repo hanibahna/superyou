@@ -686,3 +686,6 @@ html[data-bf-strip] .offer-tab { display: none !important; }
 
 /* Phones: the Filters / Sort bar runs to the page margins whatever the screen's gutter. */
 @media (max-width: 1023px) { .filter-bar { margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); width: auto; } }
+
+/* Add to cart rolling to "SuperPrice guaranteed": rose for that moment, whatever the look. */
+button.sp-roll.is-sp, [data-preset] button.sp-roll.is-sp { background-color: #9b2c50 !important; }
