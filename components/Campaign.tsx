@@ -36,26 +36,40 @@ function useCountdown(endsAt: string) {
 /** Campaign hero: black panel, huge headline, product collage, optional countdown. */
 type HeroProduct = { id: string; slug: string; name: string; brand: string; price: number; compareAt?: number; size: string; variant?: string; image?: string; shape: "bottle" | "tube" | "jar" | "dropper" | "spray" | "box" | "tub"; color: string; inStock: boolean; variantCount?: number };
 
-export function CampaignHero(p: { eyebrow: string; title: string; text: string; badge: string; cta: string; href: string; cta2: string; href2: string; endsAt: string; images: Tile[]; slider?: { enabled: boolean; interval: number }; products?: HeroProduct[]; video?: string; poster?: string; overlay?: number }) {
+export function CampaignHero(p: { eyebrow: string; title: string; text: string; badge: string; cta: string; href: string; cta2: string; href2: string; endsAt: string; images: Tile[]; slider?: { enabled: boolean; interval: number }; products?: HeroProduct[]; video?: string; poster?: string; overlay?: number; live?: { day: number; days: number; startsAt: string; endsAt: string; daily: boolean } }) {
   const settings = useSettings();
   const tx = useT();
   const left = useCountdown(p.endsAt);
   const s = Math.floor((left ?? 0) / 1000);
   const parts = [["d", Math.floor(s / 86400)], ["h", Math.floor((s % 86400) / 3600)], ["m", Math.floor((s % 3600) / 60)], ["s", s % 60]] as const;
   const imgs = p.images.filter((t) => t.image).slice(0, 6);
+  // Black Friday is on (Admin → Black Friday): the hero switches to its animated night look.
+  const live = p.live;
+  const progress = live && left !== null ? Math.min(100, Math.max(2, (1 - left / Math.max(1, Date.parse(live.endsAt) - Date.parse(live.startsAt))) * 100)) : 0;
+  const lastDay = live && left !== null && left < 864e5;
   return (
-    <section className={`bf-hero ${p.video ? "has-video" : ""} relative overflow-hidden bg-black text-white`}>
+    <section className={`bf-hero ${p.video ? "has-video" : ""} ${live ? "bf-live" : ""} relative overflow-hidden bg-black text-white`}>
+      {live && <><span className="bf-glow" aria-hidden /><span className="bf-sparkles" aria-hidden /></>}
       {p.video && <HeroVideo src={p.video} poster={p.poster} overlay={p.overlay ?? 50} />}
       <div className="container-x relative grid items-center gap-8 py-10 md:py-14 lg:grid-cols-[1fr_1.1fr]">
         <div>
           {p.eyebrow && <p className="bf-eyebrow inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
           <h1 className="bf-title mt-5 text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-7xl">{highlight(p.title)}</h1>
           {p.text && <p className="bf-text mt-4 max-w-md text-lg text-white/80">{p.text}</p>}
+          {live && (
+            <div className="bf-day mt-4 max-w-md">
+              <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-widest">
+                <span className={lastDay ? "bf-blink text-sale" : ""}>{lastDay ? tx("Last day") : `${tx("Day")} ${live.day} / ${live.days}`}</span>
+                {live.daily && <span className="text-white/70">{tx("A new deal unlocks every day")}</span>}
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="bf-bar h-full rounded-full" style={{ width: `${progress}%` }} /></div>
+            </div>
+          )}
           {p.endsAt && left !== null && left > 0 && (
             <div dir="ltr" className="mt-6 flex items-end gap-2">
               {parts.map(([k, v]) => (
                 <div key={k} className="text-center">
-                  <div className="bf-count w-16 rounded bg-white/10 py-2 text-3xl font-bold tabular-nums">{String(v).padStart(2, "0")}</div>
+                  <div key={live ? `${k}${v}` : k} className={`bf-count w-16 rounded bg-white/10 py-2 text-3xl font-bold tabular-nums ${live ? "bf-tick" : ""}`}>{String(v).padStart(2, "0")}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-widest text-white/60">{{ d: tx("days"), h: tx("hours"), m: tx("mins"), s: tx("secs") }[k]}</div>
                 </div>
               ))}

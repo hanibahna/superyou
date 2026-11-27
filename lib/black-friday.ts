@@ -183,8 +183,9 @@ export async function saveBanner(b: Banner) {
       const ends = b.endsAt ? new Date(b.endsAt).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Beirut" }) : "";
       return {
         title: top > 0 ? `Up to *${top}%* off` : "Our Black Friday picks",
-        badge: [s.eyebrow, offer, `Free delivery over $${settings.delivery.freeThreshold}`, "Book a free skin diagnosis"].filter(Boolean).join(" · "),
-        text: `Skin care, make up, fragrance and pharmacy favourites${top > 0 ? " with Black Friday discounts" : ""}.${ends ? ` Ends ${ends}.` : ""}`,
+        badge: ["Black Friday", offer, `Free delivery over $${settings.delivery.freeThreshold}`, "Book a free skin diagnosis"].filter(Boolean).join(" · "),
+        text: top > 0 ? `Original skincare, make up, fragrance and pharmacy favourites${(b.fx?.daily ?? true) ? ", with a new deal unlocking every day" : ""}.${ends ? ` Ends ${ends}.` : ""}` : `Skin care, make up, fragrance and pharmacy favourites.${ends ? ` Ends ${ends}.` : ""}`,
+        eyebrow: top > 0 ? "Black Friday is on" : "Black Friday 2026",
       };
     })() : {}),
     ...(b.endsAt ? { endsAt: b.endsAt } : {}),

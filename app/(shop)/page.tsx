@@ -127,7 +127,7 @@ export default async function HomePage() {
   function renderSection(s: (typeof sections)[number], n: number) {
         switch (s.type) {
           case "bfhero":
-            return <CampaignHero key={s.id} {...s} products={s.slider?.enabled ? heroProducts.get(s.id) : undefined} />;
+            return <CampaignHero key={s.id} {...s} products={s.slider?.enabled ? heroProducts.get(s.id) : undefined} live={bf.phase === "live" ? { day: bf.day, days: bf.days, startsAt: bf.startsAt, endsAt: bf.endsAt, daily: bf.fx.daily } : undefined} />;
           case "tiles":
             return <PromoTiles key={s.id} eyebrow={s.eyebrow} title={s.title} items={s.items} />;
           case "circles":

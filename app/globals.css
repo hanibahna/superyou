@@ -527,3 +527,30 @@ html[data-motion="off"] .scroll-cue-down, html[data-motion="off"] .scroll-cue-do
   main .text-\[9px\], main .text-\[10px\], main .text-\[10\.5px\], main .text-\[11px\] { font-size: 12px; }
   [role="dialog"] .text-\[10px\], [role="dialog"] .text-\[11px\] { font-size: 12px; }
 }
+
+/* ── Black Friday live: the campaign hero's animated night look (Admin → Black Friday) ── */
+@keyframes bfl-drift { 0% { transform: translate(-10%, -10%) scale(1); } 50% { transform: translate(10%, 6%) scale(1.15); } 100% { transform: translate(-10%, -10%) scale(1); } }
+@keyframes bfl-twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+@keyframes bfl-shine { 0% { background-position: 200% 50%; } 100% { background-position: -200% 50%; } }
+@keyframes bfl-glowpulse { 0%, 100% { box-shadow: 0 0 0 0 rgb(244 63 94 / .55); } 50% { box-shadow: 0 0 0 12px rgb(244 63 94 / 0); } }
+@keyframes bfl-tick { 0% { transform: rotateX(70deg); opacity: .3; } 100% { transform: rotateX(0); opacity: 1; } }
+@keyframes bfl-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes bfl-bar { 0% { background-position: 0 0; } 100% { background-position: 40px 0; } }
+[data-preset] .bf-hero.bf-live:not(.has-video), .bf-hero.bf-live { background: #07060a !important; color: #fff !important; }
+.bf-hero.bf-live .container-x { position: relative; z-index: 1; }
+.bf-hero.bf-live .bf-glow { position: absolute; inset: -30%; background: radial-gradient(40% 35% at 30% 30%, rgb(244 63 94 / .45), transparent 70%), radial-gradient(35% 30% at 75% 65%, rgb(250 204 21 / .28), transparent 70%), radial-gradient(30% 30% at 60% 20%, rgb(217 70 239 / .3), transparent 70%); filter: blur(30px); animation: bfl-drift 14s ease-in-out infinite; pointer-events: none; }
+.bf-hero.bf-live .bf-sparkles { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent), radial-gradient(1px 1px at 30% 70%, #fff, transparent), radial-gradient(1.5px 1.5px at 55% 15%, #fde68a, transparent), radial-gradient(1px 1px at 70% 80%, #fff, transparent), radial-gradient(2px 2px at 85% 35%, #fda4af, transparent), radial-gradient(1px 1px at 45% 50%, #fff, transparent), radial-gradient(1.5px 1.5px at 92% 75%, #fde68a, transparent); animation: bfl-twinkle 2.8s ease-in-out infinite; }
+.bf-hero.bf-live .bf-eyebrow { background: linear-gradient(90deg, #f43f5e, #d946ef) !important; color: #fff !important; border: 0 !important; border-radius: 9999px; padding: 8px 14px; animation: bfl-glowpulse 2s ease-out infinite; }
+.bf-hero.bf-live .bf-title { color: #fff; }
+.bf-hero.bf-live .bf-title .text-sale { background: linear-gradient(100deg, #fda4af, #fde68a, #f43f5e, #fde68a, #fda4af); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: bfl-shine 4s linear infinite; }
+.bf-hero.bf-live .bf-text { color: rgb(255 255 255 / .85) !important; }
+.bf-hero.bf-live .bf-count { background: rgb(255 255 255 / .1) !important; color: #fff !important; border: 1px solid rgb(255 255 255 / .18); border-radius: 14px; backdrop-filter: blur(6px); }
+.bf-hero.bf-live .bf-count + div { color: rgb(255 255 255 / .65) !important; }
+.bf-hero.bf-live .bf-tick { animation: bfl-tick .35s ease-out; transform-origin: 50% 100%; }
+.bf-hero.bf-live .bf-cta1 { background: linear-gradient(90deg, #f43f5e, #d946ef) !important; color: #fff !important; animation: bfl-glowpulse 2.2s ease-out infinite; }
+.bf-hero.bf-live .bf-cta2 { background: transparent !important; color: #fff !important; border: 1px solid rgb(255 255 255 / .6) !important; }
+.bf-hero.bf-live .bf-trust { color: rgb(255 255 255 / .7); }
+.bf-hero.bf-live .bf-bar { background: repeating-linear-gradient(45deg, #f43f5e 0 10px, #fb7185 10px 20px); animation: bfl-bar 1s linear infinite; }
+.bf-hero.bf-live .bf-blink { animation: bfl-blink 1s ease-in-out infinite; }
+.bf-hero.bf-live .bf-ticker { background: #000; }
+@media (prefers-reduced-motion: reduce) { .bf-hero.bf-live *, .bf-hero.bf-live .bf-glow, .bf-hero.bf-live .bf-sparkles { animation: none !important; } }
