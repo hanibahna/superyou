@@ -35,7 +35,7 @@ export function AnnouncementBar() {
           <p className="mx-auto truncate font-medium sm:mx-0">{a.text}</p>
         )}
         <div className="hidden gap-3 opacity-90 sm:flex">
-          {club.enabled && <Link href="/club/" className="font-semibold">{club.name}</Link>}
+          {club.enabled && <Link href="/rewards/" className="font-semibold">{club.name} &amp; rewards</Link>}
           {a.showContacts && (["instagram", "facebook", "tiktok", "youtube"] as const).filter((k) => social[k]).map((k) => (
             <a key={k} href={social[k]} target="_blank" rel="noreferrer" className="capitalize">{k === "tiktok" ? "TikTok" : k === "youtube" ? "YouTube" : k}</a>
           ))}
@@ -195,7 +195,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
                   onNavigate={() => setMenuOpen(false)}
                   footer={
                     <div className="mt-4 space-y-1 border-t border-line pt-3 text-[15px]">
-                      {[[growthFlags.eventsOn === false ? "Services" : "Services & Events", "/services/"], ...(growthFlags.wholesale ? [["Wholesale", "/wholesale/"]] : []), ["SuperYou Club", "/club/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
+                      {[[growthFlags.eventsOn === false ? "Services" : "Services & Events", "/services/"], ...(growthFlags.wholesale ? [["Wholesale", "/wholesale/"]] : []), ["SuperYou Club", "/club/"], ["Your rewards", "/rewards/"], ["My account", "/account/"], ["Wishlist", "/wishlist/"]].map(([l, h]) => (
                         <Link key={h} href={h} onClick={() => setMenuOpen(false)} className="flex min-h-[48px] items-center">{tx(l)}{h === "/wishlist/" && wishlist.length > 0 ? ` (${wishlist.length})` : ""}</Link>
                       ))}
                       <a href={`https://wa.me/${store.whatsapp}`} target="_blank" rel="noreferrer" className="mt-2 flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#25D366] font-semibold text-white">{tx("WhatsApp us")}</a>

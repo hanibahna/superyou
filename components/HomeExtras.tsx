@@ -6,7 +6,7 @@ import { waLink } from "@/lib/growth";
 
 export function PromiseStrip({ t, freeOver }: { t: (s: string) => string; freeOver: number }) {
   const items = [
-    { icon: <ShieldIcon width={22} height={22} />, title: t("100% original"), text: t("From official Lebanese distributors") },
+    { icon: <ShieldIcon width={22} height={22} />, title: t("100% original"), text: t("Sealed, genuine brand products") },
     { icon: <ChatIcon width={22} height={22} />, title: t("A pharmacist to ask"), text: t("Free advice on WhatsApp") },
     { icon: <TruckIcon width={22} height={22} />, title: t("Pay on delivery"), text: freeOver > 0 ? `${t("Free delivery over")} $${freeOver}` : t("Delivered all over Lebanon") },
     { icon: <StarIcon width={22} height={22} />, title: t("Easy returns"), text: t("Unopened items within 7 days") },

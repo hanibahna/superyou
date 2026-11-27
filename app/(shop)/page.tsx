@@ -41,11 +41,13 @@ export default async function HomePage() {
   const catCount: Record<string, number> = {};
   const catImage: Record<string, string> = {};
   const brandCount = new Map<string, number>();
+  const brandImage: Record<string, string> = {};
   for (const c of cards) {
     for (const k of c.concerns) counts[k] = (counts[k] ?? 0) + 1;
     catCount[c.category] = (catCount[c.category] ?? 0) + 1;
     if (!catImage[c.category] && c.image && c.inStock) catImage[c.category] = c.image;
     brandCount.set(c.brand, (brandCount.get(c.brand) ?? 0) + 1);
+    if (!brandImage[c.brand.toLowerCase()] && c.image && c.inStock) brandImage[c.brand.toLowerCase()] = c.image;
   }
   const topBrands = [...brandCount.entries()].sort((a, b) => b[1] - a[1]).map(([b]) => b);
 
@@ -172,14 +174,14 @@ export default async function HomePage() {
           }
           case "categories": {
             const list = (s.slugs.length ? s.slugs.map((slug) => tax.categories.find((c) => c.slug === slug)).filter((c) => !!c) : tax.categories.filter((c) => c.menu !== false))
-              .map((c) => ({ slug: c!.slug, name: c!.name, image: c!.image || catImage[c!.slug], count: catCount[c!.slug] ?? 0 }))
+              .map((c) => ({ slug: c!.slug, name: c!.name, image: catImage[c!.slug] || c!.image, count: catCount[c!.slug] ?? 0 }))
               .filter((c) => c.count > 0);
             return <CategoryTiles key={s.id} eyebrow={s.eyebrow} title={s.title} tiles={list} />;
           }
           case "concerns":
             return <ShopByConcern key={s.id} concerns={tax.concerns.filter((c) => counts[c.slug])} counts={counts} eyebrow={s.eyebrow} title={s.title} />;
           case "brands":
-            return <BrandStrip key={s.id} title={s.title} brands={soldBrands(s.brands.length ? s.brands : topBrands, cards).slice(0, s.limit)} logos={Object.fromEntries((s.logos ?? []).filter((l) => l.image).map((l) => [l.brand.toLowerCase(), l.image]))} />;
+            return <BrandStrip key={s.id} title={s.title} brands={soldBrands(s.brands.length ? s.brands : topBrands, cards).slice(0, s.limit)} logos={Object.fromEntries((s.logos ?? []).filter((l) => l.image).map((l) => [l.brand.toLowerCase(), l.image]))} photos={brandImage} />;
           case "reviews": {
             const list = homeReviews.filter((r) => r.rating >= s.minRating).slice(0, s.limit);
             if (list.length < 3) return null;

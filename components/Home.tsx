@@ -169,7 +169,7 @@ export function ShopByConcern({ concerns, counts, eyebrow = "Got concerns? We go
 }
 
 // ── Brand strip ─────────────────────────────────────────────
-export function BrandStrip({ brands, title = "Shop by brand", logos = {} }: { brands: string[]; title?: string; logos?: Record<string, string> }) {
+export function BrandStrip({ brands, title = "Shop by brand", logos = {}, photos = {} }: { brands: string[]; title?: string; logos?: Record<string, string>; photos?: Record<string, string> }) {
   return (
     <section className="hsec container-x py-10">
       {title && <h2 className="mb-5 text-2xl font-semibold md:text-3xl">{title}</h2>}
@@ -187,6 +187,13 @@ export function BrandStrip({ brands, title = "Shop by brand", logos = {} }: { br
             {logos[b.toLowerCase()] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logos[b.toLowerCase()]} alt={b} loading="lazy" className="max-h-10 max-w-32 object-contain" />
+            ) : photos[b.toLowerCase()] ? (
+              // No logo uploaded: one of the brand's own products, in the same photo style as the rest of the page.
+              <span className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photos[b.toLowerCase()]} alt="" loading="lazy" className="h-12 w-12 object-contain mix-blend-multiply" />
+                <span className="text-sm font-bold uppercase tracking-[0.1em]">{b}</span>
+              </span>
             ) : b.toUpperCase()}
           </Link>
         ))}
@@ -206,9 +213,9 @@ export function CategoryTiles({ eyebrow, title, tiles }: { eyebrow: string; titl
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {tiles.map((c) => (
           <Link key={c.slug} href={`/shop/?category=${c.slug}`} className="pcard group overflow-hidden rounded-xl border border-line bg-white">
-            <div className="aspect-square overflow-hidden bg-brand-50">
+            <div className="aspect-square overflow-hidden rounded-lg bg-[#f6f1f3]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {c.image ? <img src={c.image} alt="" className="h-full w-full object-contain p-3 transition group-hover:scale-105" loading="lazy" /> : <span className="grid h-full place-items-center text-3xl font-bold text-brand-500">{c.name[0]}</span>}
+              {c.image ? <img src={c.image} alt="" className="h-full w-full object-contain p-5 mix-blend-multiply transition group-hover:scale-105" loading="lazy" /> : <span className="grid h-full place-items-center text-3xl font-bold text-brand-500">{c.name[0]}</span>}
             </div>
             <p className="px-3 pt-2 font-semibold">{c.name}</p>
             <p className="px-3 pb-3 text-xs text-muted">{c.count.toLocaleString("en-US")} products</p>

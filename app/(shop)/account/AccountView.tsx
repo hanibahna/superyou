@@ -71,7 +71,7 @@ export function AccountView() {
             ) : (
               <div className="rounded-2xl border border-line p-6">
                 <p className="font-semibold">You're not in {g.club.name} yet.</p>
-                <Link href="/club/" className="mt-3 inline-block rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white">{t("Join the club")}</Link>
+                <Link href="/club/" className="mt-3 inline-block rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white">{t("Join the club")}</Link> <Link href="/rewards/" className="ms-3 text-sm font-semibold underline">{t("How rewards work")}</Link>
               </div>
             )
           )}
