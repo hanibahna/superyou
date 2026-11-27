@@ -554,3 +554,7 @@ html[data-motion="off"] .scroll-cue-down, html[data-motion="off"] .scroll-cue-do
 .bf-hero.bf-live .bf-blink { animation: bfl-blink 1s ease-in-out infinite; }
 .bf-hero.bf-live .bf-ticker { background: #000; }
 @media (prefers-reduced-motion: reduce) { .bf-hero.bf-live *, .bf-hero.bf-live .bf-glow, .bf-hero.bf-live .bf-sparkles { animation: none !important; } }
+
+/* Black Friday strip replaces the announcement bar while it shows (same offer, one bar). */
+[data-bf-strip="1"] .announce { display: none; }
+.bf-strip.bf-final { box-shadow: inset 0 -2px 0 #f43f5e; }

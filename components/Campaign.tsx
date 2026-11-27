@@ -11,6 +11,7 @@ import type { Tile } from "@/lib/site";
 import { useSettings } from "@/lib/site-context";
 import { useShop } from "@/lib/store";
 import { ChevronLeft, ChevronRight } from "./Icons";
+import { BfLogo } from "./BfLogo";
 
 const Img = ({ src, w, className = "" }: { src: string; w: number; className?: string }) =>
   src ? (
@@ -53,7 +54,7 @@ export function CampaignHero(p: { eyebrow: string; title: string; text: string; 
       {p.video && <HeroVideo src={p.video} poster={p.poster} overlay={p.overlay ?? 50} />}
       <div className="container-x relative grid items-center gap-8 py-10 md:py-14 lg:grid-cols-[1fr_1.1fr]">
         <div>
-          {p.eyebrow && <p className="bf-eyebrow inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
+          {live ? <BfLogo className="bf-logo h-20 w-auto text-white md:h-24" /> : p.eyebrow && <p className="bf-eyebrow inline-block border border-white/40 px-3 py-1 text-xs font-bold uppercase tracking-[0.3em]">{p.eyebrow}</p>}
           <h1 className="bf-title mt-5 text-5xl font-black uppercase leading-[0.95] tracking-tight md:text-7xl">{highlight(p.title)}</h1>
           {p.text && <p className="bf-text mt-4 max-w-md text-lg text-white/80">{p.text}</p>}
           {live && (

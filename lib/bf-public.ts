@@ -12,7 +12,7 @@ const dayNo = (t: number) => Math.floor((t + TZ) / DAY);
 
 export type BfDeal = { slug: string; brand: string; name: string; image?: string; price: number; was?: number; pct: number };
 export type BfPublic = {
-  phase: "off" | "soon" | "live" | "ended"; startsAt: string; endsAt: string; day: number; days: number; nextUnlock?: string;
+  phase: "off" | "soon" | "live" | "ended"; startsAt: string; endsAt: string; day: number; days: number; nextUnlock?: string; top?: number;
   fx: BfFx; deal?: BfDeal; doors: { day: number; open: boolean; today: boolean; unlocksAt: string; deal?: BfDeal }[];
 };
 
@@ -40,7 +40,8 @@ export async function bfPublic(now = Date.now()): Promise<BfPublic> {
       return { day: d, open, today: phase === "live" && d === day, unlocksAt: new Date(Math.max(unlocks, s)).toISOString(), deal: open && picks.length ? picks[k % picks.length] : undefined };
     });
     const nextUnlock = phase === "live" && day < days ? new Date((dayNo(now) + 1) * DAY - TZ).toISOString() : undefined;
-    return { phase, startsAt, endsAt, day, days, nextUnlock, fx, deal: phase === "live" && picks.length ? picks[(day - 1) % picks.length] : undefined, doors };
+    const top = Math.max(0, ...(b.enabled ? b.items.map((i) => i.pct) : []), ...(lines.enabled ? Object.values(lines.pct) : []));
+    return { phase, startsAt, endsAt, day, days, nextUnlock, top, fx, deal: phase === "live" && picks.length ? picks[(day - 1) % picks.length] : undefined, doors };
   });
 }
 

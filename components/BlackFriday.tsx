@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { money } from "@/lib/format";
-import { useT } from "@/lib/site-context";
+import { useSettings, useT } from "@/lib/site-context";
+import { BfLogo } from "./BfLogo";
 import type { BfPublic } from "@/lib/bf-public";
 
 // Black Friday on the shop: a live countdown strip, a door a day on the homepage, and confetti on add-to-cart.
@@ -14,6 +15,8 @@ const KEYFRAMES = `
 @keyframes bf-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 @keyframes bf-wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
 @keyframes bf-pop{0%{transform:rotateY(90deg);opacity:0}100%{transform:rotateY(0);opacity:1}}
+@keyframes bf-flip{0%{transform:perspective(200px) rotateX(-80deg);opacity:.4}100%{transform:perspective(200px) rotateX(0);opacity:1}}
+@keyframes bf-rise{0%{transform:translateY(70%);opacity:0}100%{transform:translateY(0);opacity:1}}
 @keyframes bf-fall{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx),110vh) rotate(var(--r));opacity:.2}}
 @media (prefers-reduced-motion:reduce){.bf-anim{animation:none!important}}
 `;
@@ -48,29 +51,77 @@ export function useBf() {
   return b;
 }
 
-/** Sticky bar on every page while Black Friday is coming or on. */
+/** Flip-style digits: each change replays a short flip. */
+function Flip({ v, label, hot }: { v: number; label: string; hot?: boolean }) {
+  const txt = pad(v);
+  return (
+    <span className="flex flex-col items-center leading-none">
+      <span className="flex gap-0.5">
+        {txt.split("").map((c, i) => (
+          <span key={`${i}${c}`} className={`bf-anim inline-block w-[1.15em] rounded-[5px] py-1 text-center font-mono text-[15px] font-bold tabular-nums shadow-[inset_0_-1px_0_rgba(0,0,0,.4)] sm:text-base ${hot ? "bg-sale text-white" : "bg-white/12 text-white"}`} style={{ animation: "bf-flip .45s ease-out", background: hot ? undefined : "linear-gradient(#2a2a2e 50%,#1c1c20 50%)" }}>{c}</span>
+        ))}
+      </span>
+      <span className="mt-0.5 text-[8px] uppercase tracking-widest text-white/50">{label}</span>
+    </span>
+  );
+}
+
+/** Sticky bar on every page while Black Friday is coming or on: logo, flip countdown, day progress, rotating news. */
 export function BfStrip() {
   const t = useT();
   const b = useBf();
   const now = useNow();
+  const settings = useSettings();
+  const [msg, setMsg] = useState(0);
+  useEffect(() => { const i = setInterval(() => setMsg((m) => m + 1), 3200); return () => clearInterval(i); }, []);
+  useEffect(() => {
+    const on = !!b && b.fx.strip && (b.phase === "soon" || b.phase === "live");
+    if (on) document.documentElement.dataset.bfStrip = "1"; else delete document.documentElement.dataset.bfStrip;
+  }, [b]);
   if (!b || !b.fx.strip || (b.phase !== "soon" && b.phase !== "live")) return null;
-  const s = Date.parse(b.startsAt), e = Date.parse(b.endsAt);
-  const progress = b.phase === "live" ? Math.min(100, ((now - s) / (e - s)) * 100) : 0;
+  const e = Date.parse(b.endsAt);
+  if (b.phase === "live" && now >= e) return null;
+  const to = b.phase === "soon" ? Date.parse(b.startsAt) : e;
+  const l = left(to, now);
   const lastDay = b.phase === "live" && e - now < 864e5;
   const finalHours = b.phase === "live" && e - now < 3 * 3600e3;
-  if (b.phase === "live" && now >= e) return null;
+  const news = [
+    b.phase === "soon" ? t("Black Friday starts soon") : b.top ? `${t("Up to")} ${b.top}% ${t("off")}` : t("Black Friday deals are on"),
+    ...(b.fx.daily && b.nextUnlock ? [`🎁 ${t("Next door opens in")} ${pad(left(Date.parse(b.nextUnlock), now).h)}:${pad(left(Date.parse(b.nextUnlock), now).m)}`] : []),
+    ...(b.fx.daily && b.deal ? [`${t("Today's door")}: ${b.deal.brand} −${b.deal.pct}%`] : []),
+    ...(settings.delivery.freeThreshold > 0 ? [`${t("Free delivery over")} $${settings.delivery.freeThreshold}`] : []),
+    ...(b.fx.stamps ? [`✦ ${t("Collect a stamp every day")}`] : []),
+  ];
+  const line = news[msg % news.length];
   return (
-    <Link href="/shop/?bf=1" className="relative block overflow-hidden bg-black text-white">
+    <Link href="/shop/?bf=1" className={`bf-strip relative block overflow-hidden bg-black text-white ${finalHours ? "bf-final" : ""}`}>
       <style>{KEYFRAMES}</style>
-      <div className="bf-anim pointer-events-none absolute inset-0 opacity-30" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)", backgroundSize: "200% 100%", animation: "bf-shine 3.5s linear infinite" }} />
-      <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-2 text-sm">
-        <span className={`bf-anim rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${finalHours ? "bg-sale" : "bg-white text-black"}`} style={lastDay ? { animation: "bf-pulse 1s ease-in-out infinite" } : undefined}>
-          {b.phase === "soon" ? t("Black Friday") : finalHours ? t("Final hours") : lastDay ? t("Last day") : `${t("Black Friday")} · ${t("Day")} ${b.day}/${b.days}`}
+      <div className="bf-anim pointer-events-none absolute inset-0 opacity-25" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)", backgroundSize: "200% 100%", animation: "bf-shine 4s linear infinite" }} />
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-1.5 sm:px-5">
+        <BfLogo variant="pill" className="h-7 w-auto shrink-0 sm:h-8" />
+        <div className="hidden min-w-0 flex-1 items-center justify-center gap-4 md:flex">
+          {b.phase === "live" && (
+            <span className="flex items-center gap-1.5" title={`${t("Day")} ${b.day} / ${b.days}`}>
+              {Array.from({ length: b.days }, (_, i) => (
+                <span key={i} className={`bf-anim h-2.5 w-2.5 rounded-full ${i + 1 < b.day ? "bg-white/70" : i + 1 === b.day ? "bg-sale" : "bg-white/20"}`} style={i + 1 === b.day ? { animation: "bf-pulse 1.2s ease-in-out infinite", boxShadow: "0 0 10px #f43f5e" } : undefined} />
+              ))}
+              <span className="ms-1 text-xs font-bold uppercase tracking-wider">{lastDay ? <span className="text-sale">{finalHours ? t("Final hours") : t("Last day")}</span> : `${t("Day")} ${b.day}/${b.days}`}</span>
+            </span>
+          )}
+          <span key={msg} className="bf-anim truncate text-sm font-medium" style={{ animation: "bf-rise .5s ease-out" }}>{line}</span>
+        </div>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span className="me-1 hidden text-[10px] font-bold uppercase tracking-widest text-white/60 sm:inline">{b.phase === "soon" ? t("Starts in") : t("Ends in")}</span>
+          <span dir="ltr" className="flex items-start gap-1">
+            {l.d > 0 && <Flip v={l.d} label={t("days")} hot={finalHours} />}
+            <Flip v={l.h} label={t("hrs")} hot={finalHours} />
+            <Flip v={l.m} label={t("min")} hot={finalHours} />
+            <Flip v={l.s} label={t("sec")} hot={finalHours || lastDay} />
+          </span>
         </span>
-        <span>{b.phase === "soon" ? t("Starts in") : t("Ends in")} <b><Clock to={b.phase === "soon" ? b.startsAt : b.endsAt} /></b></span>
-        <span className="font-semibold underline underline-offset-4">{t("Shop the deals")} →</span>
+        <span className="bf-anim hidden shrink-0 rounded-full px-4 py-1.5 text-sm font-bold text-black sm:inline-block" style={{ background: "linear-gradient(100deg,#f9a8c0,#fde68a,#f9a8c0)", backgroundSize: "200% 100%", animation: "bf-shine 3s linear infinite" }}>{t("Shop deals")} →</span>
       </div>
-      {b.phase === "live" && <div className="absolute bottom-0 left-0 h-0.5 bg-white/80 transition-[width] duration-1000" style={{ width: `${progress}%` }} />}
+      {b.phase === "live" && <div className="absolute bottom-0 left-0 h-[2px] transition-[width] duration-1000" style={{ width: `${Math.min(100, ((now - Date.parse(b.startsAt)) / (e - Date.parse(b.startsAt))) * 100)}%`, background: "linear-gradient(90deg,#c0587a,#fde68a)" }} />}
     </Link>
   );
 }
@@ -90,8 +141,8 @@ export function BfDoors({ b }: { b: BfPublic }) {
     <section className="mx-auto max-w-6xl px-4 py-8">
       <style>{KEYFRAMES}</style>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted">{t("Black Friday")}</p>
+        <div className="flex items-center gap-3">
+          <BfLogo className="h-14 w-auto text-ink" />
           <h2 className="text-2xl font-bold">{t("A new pick unlocks every day")}</h2>
         </div>
         {b.nextUnlock && <p className="text-sm">{t("Next door opens in")} <b><Clock to={b.nextUnlock} /></b></p>}
@@ -154,7 +205,8 @@ export function BfProductTag({ slug, price, was }: { slug: string; price: number
     <div className="mt-3 overflow-hidden rounded-2xl bg-black p-3 text-white">
       <style>{KEYFRAMES}</style>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="bf-anim rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest" style={{ background: "linear-gradient(100deg,#f43f5e,#fde68a,#d946ef,#f43f5e)", backgroundSize: "300% 100%", animation: "bf-shine 3s linear infinite", color: "#000" }}>{t("Black Friday")}{pct ? ` −${pct}%` : ""}</span>
+        <BfLogo variant="pill" className="h-7 w-auto" />
+        {pct ? <span className="bf-anim rounded-full px-3 py-1 text-sm font-black text-black" style={{ background: "linear-gradient(100deg,#f9a8c0,#fde68a,#f9a8c0)", backgroundSize: "300% 100%", animation: "bf-shine 3s linear infinite" }}>−{pct}%</span> : null}
         {isToday && <span className="bf-anim rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-black" style={{ animation: "bf-pulse 1.2s ease-in-out infinite" }}>🎁 {t("Today's door deal")}</span>}
         <span className="ms-auto text-xs">{t("Price ends in")} <b><Clock to={b.endsAt} /></b></span>
       </div>
@@ -173,6 +225,7 @@ export function BfCartBar({ saving }: { saving: number }) {
       <style>{KEYFRAMES}</style>
       <div className="bf-anim pointer-events-none absolute inset-0 opacity-30" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)", backgroundSize: "200% 100%", animation: "bf-shine 3s linear infinite" }} />
       <div className="relative flex flex-wrap items-center justify-between gap-2">
+        <BfLogo variant="pill" className="h-6 w-auto" />
         <span>{saving > 0 ? <>🎉 {t("Black Friday is saving you")} <b>{money(saving)}</b></> : <>🎁 {t("Black Friday is on")}: <a href="/shop/?bf=1" className="underline">{t("see the deals")}</a></>}</span>
         <span className="text-xs">{t("Ends in")} <b><Clock to={b.endsAt} /></b></span>
       </div>

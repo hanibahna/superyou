@@ -10,6 +10,7 @@ import { Stars } from "./Stars";
 import { HeartIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
 import { bfConfetti } from "./BlackFriday";
+import { BfLogo } from "./BfLogo";
 
 type Card = (AnyProduct | ProductSnap) & { variantCount?: number; priceMax?: number; rating?: number; reviewCount?: number };
 
@@ -32,7 +33,7 @@ export function ProductCard({ product }: { product: Card }) {
       >
         <HeartIcon filled={wished} width={18} height={18} />
       </button>
-      {"bf" in product && product.bf && <span className="pointer-events-none absolute start-2 top-2 z-10 rounded-full bg-black px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">{tx("Black Friday")}</span>}
+      {"bf" in product && product.bf && <BfLogo variant="pill" animated={false} className="pointer-events-none absolute start-2 top-2 z-10 h-6 w-auto" />}
       <Link href={href} className="block overflow-hidden rounded-lg">
         <ProductImage product={product} width={480} className="pimg aspect-square w-full transition duration-300 group-hover:scale-105" />
       </Link>
