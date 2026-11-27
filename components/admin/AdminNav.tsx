@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { areaOf, can, roleInfo, type Role } from "@/lib/roles";
 
 const groups: { title: string; links: { href: string; label: string }[] }[] = [
@@ -73,6 +74,9 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
 
 export function AdminNav({ role, name }: { role: Role; name: string }) {
   const path = usePathname();
+  // Black Friday test mode: a blinking marker so it isn't forgotten (turn it off in Marketing → Black Friday).
+  const [bfTest, setBfTest] = useState(false);
+  useEffect(() => { fetch("/api/admin/black-friday/?test=1").then((r) => (r.ok ? r.json() : null)).then((j) => setBfTest(!!j?.on)).catch(() => {}); }, [path]);
   const all = groups.flatMap((g) => g.links.map((l) => l.href));
   // The most specific link wins (Orders vs Pickup sheet).
   const best = all.filter((h) => (h === "/admin/" ? path === "/admin" || path === "/admin/" : path.startsWith(h.replace(/\/$/, "")))).sort((a, b) => b.length - a.length)[0];
@@ -80,6 +84,8 @@ export function AdminNav({ role, name }: { role: Role; name: string }) {
   const visible = groups.map((g) => ({ ...g, links: g.links.filter((l) => can(role, areaOf(l.href))) })).filter((g) => g.links.length);
   return (
     <aside className="bg-ink text-white/80 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto print:hidden">
+      <style>{"@keyframes bfblink{0%,100%{opacity:1}50%{opacity:.3}}"}</style>
+      {bfTest && <Link href="/admin/black-friday/" className="block bg-red-600 px-4 py-2 text-center text-xs font-bold text-white" style={{ animation: "bfblink 1s ease-in-out infinite" }}>● Black Friday TEST MODE is on · turn off</Link>}
       <div className="flex items-center justify-between px-5 py-5 lg:block">
         <Link href="/admin/" className="text-xl font-extrabold text-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,6 +101,7 @@ export function AdminNav({ role, name }: { role: Role; name: string }) {
             {g.links.map((l) => (
               <Link key={l.href} href={l.href} className={`block shrink-0 rounded-lg px-3 py-2 ${active(l.href) ? "bg-white/10 font-semibold text-white" : "hover:bg-white/5 hover:text-white"}`}>
                 {l.label}
+                {bfTest && l.href === "/admin/black-friday/" && <span className="ms-2 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white" style={{ animation: "bfblink 1s ease-in-out infinite" }}>TEST</span>}
               </Link>
             ))}
           </div>

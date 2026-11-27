@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
   if (req.nextUrl.searchParams.has("banner")) return NextResponse.json(await bannerReport());
+  if (req.nextUrl.searchParams.has("test")) return NextResponse.json(await (await import("@/lib/bf-test")).testStatus());
   const q = req.nextUrl.searchParams.get("search");
   if (q !== null) return NextResponse.json(await searchCandidates(q));
   if (req.nextUrl.searchParams.has("picks")) { const b = await getBanner(); return NextResponse.json({ ...b, items: await bannerItems(b) }); }
@@ -25,6 +26,11 @@ export async function POST(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
   const body = await req.json().catch(() => null);
+  const t = await import("@/lib/bf-test");
+  const me0 = await currentAdmin();
+  if (body?.action === "test-on") { const r = await t.testOn(); await audit(me0?.name ?? "admin", "Black Friday test mode ON").catch(() => {}); return NextResponse.json(r); }
+  if (body?.action === "test-off") { const r = await t.testOff(); await audit(me0?.name ?? "admin", "Black Friday test mode OFF (manual setup restored)").catch(() => {}); return NextResponse.json(r); }
+  if (body?.action === "ai" && typeof body.prompt === "string") return NextResponse.json(await t.aiPlan(body.prompt));
   const b = bannerSchema.safeParse(body);
   if (b.success) {
     const r = await saveBanner(b.data.banner);
