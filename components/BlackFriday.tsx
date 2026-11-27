@@ -21,9 +21,10 @@ const KEYFRAMES = `
 @media (prefers-reduced-motion:reduce){.bf-anim{animation:none!important}}
 `;
 
+// 0 until the page is running in the browser, so server and browser draw the same first frame.
 function useNow(ms = 1000) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(t); }, [ms]);
+  const [now, setNow] = useState(0);
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(t); }, [ms]);
   return now;
 }
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,6 +34,7 @@ function left(to: number, now: number) {
 }
 function Clock({ to }: { to: string }) {
   const now = useNow();
+  if (!now) return <span className="font-mono tabular-nums">--:--:--</span>;
   const l = left(Date.parse(to), now);
   return <span className="font-mono tabular-nums">{l.d > 0 ? `${l.d}d ` : ""}{pad(l.h)}:{pad(l.m)}:{pad(l.s)}</span>;
 }
@@ -78,7 +80,7 @@ export function BfStrip() {
     const on = !!b && b.fx.strip && (b.phase === "soon" || b.phase === "live");
     if (on) document.documentElement.dataset.bfStrip = "1"; else delete document.documentElement.dataset.bfStrip;
   }, [b]);
-  if (!b || !b.fx.strip || (b.phase !== "soon" && b.phase !== "live")) return null;
+  if (!now || !b || !b.fx.strip || (b.phase !== "soon" && b.phase !== "live")) return null;
   const e = Date.parse(b.endsAt);
   if (b.phase === "live" && now >= e) return null;
   const to = b.phase === "soon" ? Date.parse(b.startsAt) : e;
@@ -133,7 +135,7 @@ export function BfDoors({ b }: { b: BfPublic }) {
   const now = useNow();
   useEffect(() => {
     const next = b.phase === "soon" ? Date.parse(b.startsAt) : b.nextUnlock ? Date.parse(b.nextUnlock) : 0;
-    if (next && now >= next) router.refresh();
+    if (now && next && now >= next) router.refresh();
   }, [now, b, router]);
   if (!b.fx.daily || !b.doors.length || (b.phase !== "soon" && b.phase !== "live")) return null;
   const today = b.doors.find((d) => d.today);
@@ -163,7 +165,7 @@ export function BfDoors({ b }: { b: BfPublic }) {
           <div key={d.day} className="relative flex aspect-square flex-col items-center justify-center rounded-2xl bg-black p-3 text-center text-white">
             <div className="bf-anim text-4xl" style={{ animation: "bf-wiggle 2.4s ease-in-out infinite" }} aria-hidden>🎁</div>
             <p className="mt-2 text-xs font-bold uppercase tracking-wider">{t("Day")} {d.day}</p>
-            {d.open ? <p className="text-xs opacity-80">{t("Opened")}</p> : <p className="text-xs opacity-80">{t("Opens")} {new Date(d.unlocksAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</p>}
+            {d.open ? <p className="text-xs opacity-80">{t("Opened")}</p> : <p className="text-xs opacity-80">{t("Opens")} {new Date(d.unlocksAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Beirut" })}</p>}
           </div>
         ))}
       </div>
