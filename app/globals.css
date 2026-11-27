@@ -652,7 +652,7 @@ html[data-bf-strip] .offer-tab { display: none !important; }
   .bf-hero .bf-trust, .bf-hero .bf-ticker { display: none !important; }
   /* product slider: one row of smaller cards that run inside the card's edges */
   .bf-hero .hero-marquee { margin-inline: -18px !important; }
-  .bf-hero .hero-track + .hero-track { display: none; }
+  .bf-hero .hero-row + .hero-row { display: none; }
   .bf-hero .hero-marquee .group { width: 7.25rem; }
 }
 /* Shorter phones (SE, mini, or a browser with big toolbars): drop the slider so headline and buttons fit the first screen. */

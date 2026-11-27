@@ -162,7 +162,7 @@ function HeroMarquee({ products, tiles, seconds }: { products?: HeroProduct[]; t
   return (
     <div className="hero-marquee relative -mx-4 overflow-hidden md:mx-0" style={{ maskImage: "linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent)" }}>
       {rows.map((row, r) => (
-        <div key={r} dir="ltr" className={`hero-track flex w-max gap-3 ${r ? "mt-3" : ""}`} style={{ animationDuration: `${Math.max(12, row.length * seconds)}s`, animationDelay: r ? `-${(row.length * seconds) / 2}s` : undefined }}>
+        <SwipeRow key={r} seconds={Math.max(12, row.length * seconds)} start={r ? 0.5 : 0} className={r ? "mt-3" : ""}>
           {[...row, ...row].map((t, i) => (
             <div key={`${t.key}-${i}`} aria-hidden={i >= row.length} className="group relative aspect-square w-40 shrink-0 overflow-hidden rounded-lg bg-white text-ink sm:w-48 lg:w-52">
               <Link href={t.href} tabIndex={i >= row.length ? -1 : 0} aria-label={[t.product ? `${t.product.brand} ${t.product.name}` : t.title, t.price].filter(Boolean).join(", ")} className="block h-full w-full">
@@ -180,8 +180,63 @@ function HeroMarquee({ products, tiles, seconds }: { products?: HeroProduct[]; t
               </div>
             </div>
           ))}
-        </div>
+        </SwipeRow>
       ))}
+    </div>
+  );
+}
+
+/** A row of offers that glides by itself, and that you can drag or flick with a finger (or trackpad):
+ *  it pauses while you touch it, follows your swipe at your speed, and glides on again a moment after you let go.
+ *  The items are doubled, so it loops without an end in both directions. */
+function SwipeRow({ children, seconds, start = 0, className = "" }: { children: React.ReactNode; seconds: number; start?: number; className?: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    let raf = 0, last = 0, pos = 0, touching = false, hover = false, userAt = 0, mine = -1;
+    const half = () => el.scrollWidth / 2;
+    const wrap = () => {
+      const h = half();
+      if (h <= 0) return;
+      if (el.scrollLeft >= h) { el.scrollLeft -= h; pos = el.scrollLeft; mine = el.scrollLeft; }
+      else if (el.scrollLeft <= 0) { el.scrollLeft += h; pos = el.scrollLeft; mine = el.scrollLeft; }
+    };
+    const init = () => { pos = half() * start + 1; el.scrollLeft = pos; mine = el.scrollLeft; };
+    init();
+    const onScroll = () => {
+      if (Math.abs(el.scrollLeft - mine) > 1.5) userAt = performance.now(); // moved by a finger or momentum, not by us
+      wrap();
+    };
+    const down = () => { touching = true; userAt = performance.now(); };
+    const up = () => { touching = false; userAt = performance.now(); };
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const dt = last ? Math.min(64, now - last) : 16; last = now;
+      // resume ~0.7 s after the last swipe or flick has settled
+      if (reduce || touching || hover || now - userAt < 700) { pos = el.scrollLeft; return; }
+      pos += (half() / (seconds * 1000)) * dt;
+      el.scrollLeft = pos;
+      mine = el.scrollLeft;
+      wrap();
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("touchstart", down, { passive: true });
+    el.addEventListener("touchend", up, { passive: true });
+    el.addEventListener("touchcancel", up, { passive: true });
+    el.addEventListener("pointerdown", down);
+    window.addEventListener("pointerup", up);
+    el.addEventListener("wheel", () => { userAt = performance.now(); }, { passive: true });
+    el.addEventListener("mouseenter", () => { hover = true; });
+    el.addEventListener("mouseleave", () => { hover = false; });
+    window.addEventListener("resize", init);
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("pointerup", up); window.removeEventListener("resize", init); el.removeEventListener("scroll", onScroll); };
+  }, [seconds, start]);
+  return (
+    <div ref={box} dir="ltr" className={`hero-row no-scrollbar overflow-x-auto overscroll-x-contain ${className}`} style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}>
+      <div className="flex w-max gap-3">{children}</div>
     </div>
   );
 }
