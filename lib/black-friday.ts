@@ -59,9 +59,12 @@ export async function bannerReport() {
   const auto = promos.discounts.filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
   const rows: { banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[] = [];
   for (const s of landing.sections) {
-    if (s.type !== "bfhero" || !s.enabled || !s.slider?.enabled) continue;
-    const cards = (await cardsFor(s.slider.source, s.slider.limit * 2, "featured")).filter((c) => c.image && c.inStock).slice(0, s.slider.limit);
-    for (const c of cards) {
+    if (s.type !== "bfhero" || !s.enabled) continue;
+    // The picture tiles (each links to a product) and the sliding product row.
+    const tileSlugs = s.images.map((t) => /\/products\/([^/?#]+)/.exec(t.href ?? "")?.[1]).filter((x): x is string => !!x).map((x) => decodeURIComponent(x));
+    const tiles = tileSlugs.flatMap((slug) => { const vs = live.list.filter((p) => p.slug === slug); const raw = idx.all.filter((p) => p.slug === slug); return vs.length ? [vs.find((v) => v.inStock) ?? vs[0]] : raw.length ? [raw[0]] : []; });
+    const slid = s.slider?.enabled ? (await cardsFor(s.slider.source, s.slider.limit * 2, "featured")).filter((c) => c.image && c.inStock).slice(0, s.slider.limit) : [];
+    for (const c of [...tiles, ...slid]) {
       const raw = idx.byId.get(c.id);
       const lp = live.byId.get(c.id) ?? c;
       const was = lp.compareAt && lp.compareAt > lp.price ? lp.compareAt : lp.matchWas;
@@ -71,12 +74,13 @@ export async function bannerReport() {
         : raw?.compareAt && raw.compareAt > raw.price ? `Sale price copied from ${srcName(raw.source)} at import (their crossed-out price $${raw.compareAt})`
         : "No discount";
       const cost = raw?.cost;
-      rows.push({ banner: s.title || s.eyebrow || "Campaign hero", name: `${c.name}${c.variant ? ` · ${c.variant}` : ""}`, brand: c.brand, source: srcName(raw?.source), neovitale: raw?.source === "neovitale.com",
+      rows.push({ banner: tiles.includes(c as ProductLite) ? "Picture tile" : "Product slider", name: `${c.name}${c.variant ? ` · ${c.variant}` : ""}`, brand: c.brand, source: srcName(raw?.source), neovitale: raw?.source === "neovitale.com",
         regular: r2(raw?.price ?? lp.price), was: was ? r2(was) : undefined, now: r2(lp.price), offPct: was ? Math.round((1 - lp.price / was) * 100) : 0, basis,
         cost: cost ? r2(cost) : undefined, marginNowPct: cost ? pct((lp.price - cost) / lp.price) : null });
     }
   }
-  return rows;
+  const sec = landing.sections.find((x) => x.type === "bfhero" && x.enabled);
+  return { headline: sec && sec.type === "bfhero" ? `${sec.eyebrow} · ${sec.title.replace(/\*/g, "")}` : "", onSaleNow: live.list.filter((p) => p.inStock && (p.compareAt ?? 0) > p.price).length, rows };
 }
 
 /** Replace the Black Friday discounts: one automatic discount per line with a % above 0. */

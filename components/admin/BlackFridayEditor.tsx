@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { BfLine } from "@/lib/black-friday";
 
 type State = { startsAt: string; endsAt: string; enabled: boolean; pct: Record<string, number> };
-type Banner = { banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[];
+type Banner = { headline: string; onSaleNow: number; rows: { banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[] };
 
 const local = (iso: string) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: "Asia/Beirut" }).slice(0, 16).replace(" ", "T") : "");
 const toIso = (v: string) => (v ? new Date(`${v}:00+02:00`).toISOString() : "");
@@ -45,13 +45,14 @@ export function BlackFridayEditor({ state, lines, banner }: { state: State; line
 
       <section className="rounded-2xl border border-line bg-white p-5">
         <h2 className="font-semibold">Homepage Black Friday banner: what it shows now</h2>
-        <p className="text-sm text-muted">The banner's product slider lists items that are on sale. Here is where each discount comes from.</p>
+        <p className="text-sm text-muted">Headline: <b>{banner.headline || "none"}</b> · products on sale in the shop right now: <b>{banner.onSaleNow}</b>{banner.onSaleNow === 0 ? <span className="text-sale"> (the headline promises a discount nothing has yet)</span> : null}</p>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-muted"><th className="py-1 pr-2">Product</th><th className="pr-2">Catalog</th><th className="pr-2 text-right">Was</th><th className="pr-2 text-right">Now</th><th className="pr-2 text-right">Off</th><th className="pr-2 text-right">Cost</th><th className="pr-2 text-right">Margin</th><th>Discount basis</th></tr></thead>
-            <tbody>{banner.map((b, i) => (
+            <thead><tr className="text-left text-muted"><th className="py-1 pr-2">Where</th><th className="pr-2">Product</th><th className="pr-2">Catalog</th><th className="pr-2 text-right">Was</th><th className="pr-2 text-right">Now</th><th className="pr-2 text-right">Off</th><th className="pr-2 text-right">Cost</th><th className="pr-2 text-right">Margin</th><th>Discount basis</th></tr></thead>
+            <tbody>{banner.rows.map((b, i) => (
               <tr key={i} className="border-t border-line align-top">
-                <td className="py-1 pr-2">{b.brand} · {b.name}</td>
+                <td className="py-1 pr-2 text-xs text-muted">{b.banner}</td>
+                <td className="pr-2">{b.brand} · {b.name}</td>
                 <td className={`pr-2 ${b.neovitale ? "" : "font-semibold text-amber-700"}`}>{b.source}</td>
                 <td className="pr-2 text-right">{b.was ? `$${b.was}` : "—"}</td>
                 <td className="pr-2 text-right">${b.now}</td>
@@ -60,7 +61,7 @@ export function BlackFridayEditor({ state, lines, banner }: { state: State; line
                 <td className={`pr-2 text-right ${tone(b.marginNowPct)}`}>{b.marginNowPct === null ? "—" : `${b.marginNowPct}%`}</td>
                 <td className="text-xs">{b.basis}</td>
               </tr>))}
-              {!banner.length && <tr><td colSpan={8} className="py-2 text-muted">The banner has no product slider switched on.</td></tr>}
+              {!banner.rows.length && <tr><td colSpan={9} className="py-2 text-muted">The banner has no product slider switched on.</td></tr>}
             </tbody>
           </table>
         </div>
