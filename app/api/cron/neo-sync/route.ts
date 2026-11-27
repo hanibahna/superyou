@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   after(async () => {
     if (!hop) await sync.startSync();
     const { more } = await sync.stepSync().catch((e) => (console.error("[neo-sync step]", e), { more: false }));
-    if (more && hop < 30)
+    if (more && hop < 200)
       await fetch(`${siteUrl()}/api/cron/neo-sync/?hop=${hop + 1}`, { headers: secret ? { authorization: `Bearer ${secret}` } : {}, cache: "no-store" }).catch((e) => console.error("[neo-sync chain]", e));
   });
   return NextResponse.json({ ok: true, hop });
