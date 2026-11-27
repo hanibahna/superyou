@@ -60,6 +60,8 @@ export async function stepSync(): Promise<{ more: boolean }> {
   const run = await load();
   if (!run || run.done) return { more: false };
   const idx = await getIndex();
+  // Duplicates hidden by /api/admin/neo-dupes (a cheaper copy is sold instead): left as they are.
+  const dupes = new Set((await db.cmd<string[] | null>(["SMEMBERS", "neo:dupes"]).catch(() => null)) ?? []);
   const { brandName } = await import("@/lib/brand-names");
   const known = brandName(idx.all);
   const seen = new Set(run.seen);
@@ -86,7 +88,7 @@ export async function stepSync(): Promise<{ more: boolean }> {
         seen.add(String(v.id));
         const id = idx.skuToId.get(`${SKU}-${v.id}`.toLowerCase());
         const ours = id ? idx.byId.get(id) : undefined;
-        if (!ours || ours.source !== "neovitale.com") continue;
+        if (!ours || ours.source !== "neovitale.com" || dupes.has(ours.id)) continue;
         const price = Number(v.price), was = v.compare_at_price ? Number(v.compare_at_price) : 0;
         const base = r2(was > price ? was : price);
         const pct = discountFor(ours.brand, ours.name);
