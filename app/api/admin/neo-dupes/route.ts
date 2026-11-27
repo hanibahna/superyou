@@ -10,12 +10,14 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
   const apply = req.nextUrl.searchParams.has("apply");
   const list = req.nextUrl.searchParams.has("list");
-  const { candidates, hide, rows, keptBecauseOtherNotLive, pairs, vs } = await findDupes(apply);
+  const { candidates, hide, rows, keptBecauseOtherNotLive, pairs, vs, restored } = await findDupes(apply);
   const NEO = "neovitale.com";
   return NextResponse.json({
     applied: apply,
     neovitaleActive: candidates.filter((p) => p.source === NEO).length,
     toHide: hide.size,
+    restored: restored.length,
+    restoredSample: restored.slice(0, list ? 500 : 30),
     byBarcode: pairs.filter((x) => x.how === "barcode").length,
     byNameAndSize: pairs.filter((x) => x.how !== "barcode").length,
     cheaperCopyIs: { neovitale: pairs.filter((x) => vs(x.other.source) === "neovitale").length, otherSource: pairs.filter((x) => vs(x.other.source) !== "neovitale").length },

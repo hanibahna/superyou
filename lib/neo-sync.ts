@@ -151,7 +151,7 @@ export async function stepSync(): Promise<{ more: boolean }> {
     // Hide NeoVitale copies of items we already sell cheaper (new ones may have just been added).
     if (!run.errors.length) {
       const d = await (await import("@/lib/neo-dupes")).findDupes(true).catch((e) => (console.error("[neo-dupes]", e), null));
-      if (d) { run.dupesHidden = d.rows; run.dupesKept = d.keptBecauseOtherNotLive; }
+      if (d) { run.dupesHidden = d.rows; run.dupesKept = d.keptBecauseOtherNotLive; if (d.restored.length) run.dupesKept = [...d.keptBecauseOtherNotLive, ...d.restored.map((x) => `Shown again (its cheaper copy is no longer on sale to customers): ${x}`)]; }
     }
     run.seen = [];
     if (run.backInStock.length) await (await import("@/lib/stock-alerts")).sendStockAlerts().catch(() => 0);
