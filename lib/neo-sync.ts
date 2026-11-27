@@ -26,7 +26,7 @@ type Line = string;
 type Run = {
   startedAt: string; page: number; done: boolean; seen: string[];
   added: Line[]; addedSoldOut: Line[]; priceUp: Line[]; priceDown: Line[]; costFixed: number;
-  backInStock: Line[]; nowSoldOut: Line[]; gone: Line[]; errors: string[]; finishedAt?: string; retries?: number;
+  backInStock: Line[]; nowSoldOut: Line[]; gone: Line[]; errors: string[]; finishedAt?: string; retries?: number; dupesHidden?: string[]; dupesKept?: string[];
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -148,6 +148,11 @@ export async function stepSync(): Promise<{ more: boolean }> {
   }
   if (run.done) {
     run.finishedAt = new Date().toISOString();
+    // Hide NeoVitale copies of items we already sell cheaper (new ones may have just been added).
+    if (!run.errors.length) {
+      const d = await (await import("@/lib/neo-dupes")).findDupes(true).catch((e) => (console.error("[neo-dupes]", e), null));
+      if (d) { run.dupesHidden = d.rows; run.dupesKept = d.keptBecauseOtherNotLive; }
+    }
     run.seen = [];
     if (run.backInStock.length) await (await import("@/lib/stock-alerts")).sendStockAlerts().catch(() => 0);
     await db.cmd(["SET", LAST, JSON.stringify(run), "EX", 60 * 86400]);
@@ -175,6 +180,8 @@ export function reportText(r: Run) {
     section("Back in stock", r.backInStock),
     section("Now sold out", r.nowSoldOut),
     section("No longer listed by NeoVitale (marked sold out)", r.gone),
+    section("Duplicates hidden (we already sell the same item for less)", r.dupesHidden ?? []),
+    section("Duplicates kept live (the cheaper copy is sold out)", r.dupesKept ?? []),
   ].join("\n");
 }
 
