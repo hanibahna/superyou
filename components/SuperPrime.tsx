@@ -5,12 +5,15 @@
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 import { useShop } from "@/lib/store";
+import { PrimeLogo } from "./PrimeLogo";
 
 const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
-export function SuperPrimeBadge({ className = "" }: { className?: string }) {
+/** SuperPrime's permanent badge (the drawn logo). A renamed programme falls back to a text badge. */
+export function SuperPrimeBadge({ className = "", tone = "dark" }: { className?: string; tone?: "dark" | "light" }) {
   const name = useGrowth().prime?.name ?? "SuperPrime";
-  return <span className={`inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white ${className}`}><span className="text-[#e8b4c4]">✦</span>{name}</span>;
+  if (/^super\s*prime$/i.test(name)) return <PrimeLogo tone={tone} className={`inline-block h-6 w-auto ${className}`} />;
+  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${tone === "dark" ? "bg-ink text-white" : "bg-white text-ink"} ${className}`}><span className="text-[#e8b4c4]">✦</span>{name}</span>;
 }
 
 export function SuperPrimeBox() {
@@ -23,10 +26,13 @@ export function SuperPrimeBox() {
   const member = q?.status === "trial" || q?.status === "active";
   if (member)
     return (
-      <div className="sp-in rounded-2xl border border-ink bg-ink p-4 text-sm text-white">
-        <SuperPrimeBadge className="bg-white !text-ink" />
+      <div className="sp-in flex gap-3 rounded-2xl border border-ink bg-ink p-4 text-sm text-white">
+        <PrimeLogo variant="seal" tone="dark" className="h-16 w-16 shrink-0" />
+        <div>
+        <SuperPrimeBadge tone="light" />
         <p className="mt-2 font-semibold">{t("You're a member: free delivery on this order.")}</p>
         <p className="text-xs text-white/70">{q?.status === "trial" ? t("Free trial") : t("Member")} {t("until")} {fmt(q?.until)}.{pr.unlimitedSuperPrice ? ` ${t("SuperPrice on every order, no daily limit.")}` : ""}</p>
+        </div>
       </div>
     );
   const trialAvail = !q?.trialUsed && pr.trialMonths > 0;
@@ -67,7 +73,7 @@ export function SuperPrimeTeaser({ className = "" }: { className?: string }) {
   const free = pr.trialMonths > 0 && (pr.promoLive || after >= pr.trialMinOrder);
   return (
     <div className={`sp-in flex items-center gap-3 rounded-xl bg-ink px-3 py-2 text-xs text-white ${className}`}>
-      <SuperPrimeBadge className="shrink-0 bg-white !text-ink" />
+      <SuperPrimeBadge tone="light" className="shrink-0" />
       <span>
         {t("Free delivery on every order.")}{" "}
         {free ? <b className="text-[#e8b4c4]">{pr.trialMonths} {t("months free")}</b> : <b>{money(pr.monthlyPrice)}/{t("month")}</b>}
