@@ -2,7 +2,7 @@
 
 // SuperPrice Guaranteed: an item another shop sells for less is sold here for less again
 // (3% below, never under cost + margin). Prices are compared every night at 3 am (Beirut).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/format";
 import { useGrowth, useT } from "@/lib/site-context";
 
@@ -355,6 +355,16 @@ export function SuperPriceButton({ label, onClick, className = "", show = true, 
   const t = useT();
   const [sp, setSp] = useState(false);
   const [hold, setHold] = useState(false);
+  // The full "SuperPrice guaranteed" only when the button is wide enough; otherwise "SuperPrice ✓".
+  const ref = useRef<HTMLButtonElement>(null);
+  const [narrow, setNarrow] = useState(short);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || short) return;
+    const ro = new ResizeObserver(([e]) => setNarrow(e.contentRect.width < 250));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [short]);
   useEffect(() => {
     if (!show || hold || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setSp(false); return; }
     let on = false;
@@ -363,6 +373,7 @@ export function SuperPriceButton({ label, onClick, className = "", show = true, 
   }, [show, hold]);
   return (
     <button
+      ref={ref}
       onClick={onClick}
       onPointerEnter={() => setHold(true)} onPointerLeave={() => setHold(false)} onFocus={() => setHold(true)} onBlur={() => setHold(false)}
       aria-label={show ? `${label}, SuperPrice ${t("guaranteed")}` : label}
@@ -373,7 +384,7 @@ export function SuperPriceButton({ label, onClick, className = "", show = true, 
         <span aria-hidden className={`absolute inset-0 flex items-center justify-center gap-1.5 whitespace-nowrap px-3 transition-all duration-500 ${sp ? "translate-y-0 opacity-100" : "translate-y-[150%] opacity-0"}`}>
           <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[11px] font-black text-[#9b2c50]">S</span>
           {/* Narrow buttons (the floating bar on phones) say less, so nothing is cut off. */}
-          <span className={`truncate font-bold ${short ? "text-[14px]" : "text-[15px]"}`}>{short ? <>SuperPrice <span aria-hidden>✓</span></> : <>SuperPrice {t("guaranteed")}</>}</span>
+          <span className={`truncate font-bold ${narrow ? "text-[15px]" : "text-[16px]"}`}>{narrow ? <>SuperPrice <span aria-hidden>✓</span></> : <>SuperPrice {t("guaranteed")}</>}</span>
         </span>
       )}
     </button>
