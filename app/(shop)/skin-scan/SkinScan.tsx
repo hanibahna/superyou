@@ -377,6 +377,10 @@ function ScanPlaceholder({ caption }: { caption: string }) {
           const len = lit ? 16 : 10;
           return <line key={i} x1={cx + Math.cos(a) * RR} y1={cy + Math.sin(a) * RR} x2={cx + Math.cos(a) * (RR + len)} y2={cy + Math.sin(a) * (RR + len)} stroke={lit ? "#34c759" : "rgba(255,255,255,.28)"} strokeWidth="2" strokeLinecap="round" />;
         })}
+        <defs>
+          <clipPath id="sy-circle"><circle cx={cx} cy={cy} r={R} /></clipPath>
+          <linearGradient id="sy-glass" x1="0" x2="1"><stop offset="0" stopColor="#aad7ff" stopOpacity=".15" /><stop offset=".5" stopColor="#e6f3ff" stopOpacity=".6" /><stop offset="1" stopColor="#96c8ff" stopOpacity=".2" /></linearGradient>
+        </defs>
         <circle cx={cx} cy={cy} r={R} fill="#1c1a1d" />
         {!done && (
           <g transform={`translate(${look.x} ${look.y})`}>
@@ -384,6 +388,13 @@ function ScanPlaceholder({ caption }: { caption: string }) {
             <g stroke="#ffaacd" strokeOpacity=".5" strokeWidth=".8">{MESH.lines.map(([a, b], k) => <line key={k} x1={cx + MESH.pts[a][0]} y1={cy + MESH.pts[a][1]} x2={cx + MESH.pts[b][0]} y2={cy + MESH.pts[b][1]} />)}</g>
             <g fill="#fff">{MESH.pts.map(([x, y], k) => <rect key={k} x={cx + x - 1.2} y={cy + y - 1.2} width="2.4" height="2.4" />)}</g>
             <rect x={cx - 46} y={cy - 58 + ((t / 1400) % 1) * 116} width="92" height="4" rx="2" fill="#ff9fcb" opacity=".55" />
+          </g>
+        )}
+        {!done && (
+          // the orbiting glass light sweep
+          <g clipPath="url(#sy-circle)" fill="none">
+            <ellipse cx={cx} cy={cy} rx={Math.max(2, Math.abs(Math.cos(t / 1100)) * R * 0.9)} ry={R * 1.05} stroke="url(#sy-glass)" strokeWidth="16" />
+            <ellipse cx={cx} cy={cy - R * 0.42} rx={R * 1.05} ry={Math.abs(Math.sin(t / 1600)) * R * 0.35 + 3} stroke="url(#sy-glass)" strokeWidth="14" />
           </g>
         )}
         {done && <path d={`M${cx - 34} ${cy + 2} l22 22 l46 -48`} fill="none" stroke="#34c759" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />}

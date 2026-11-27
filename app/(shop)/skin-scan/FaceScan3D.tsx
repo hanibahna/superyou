@@ -144,6 +144,31 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         }
         g.restore();
       }
+      // Light sweep: a glassy band orbiting the head like a ring around a globe. It turns with time and
+      // leans with the head (yaw and pitch), so the face looks scanned in 3D.
+      if (!doneAt && !reduce && lm) {
+        const spin = now / 1100 + sdx * 6;
+        const tilt = sdy * 3;
+        const band = (rx: number, ry: number, rot: number, oy: number, alpha: number) => {
+          if (rx < 4) return;
+          g.save();
+          g.beginPath(); g.arc(cx, cy, CR, 0, Math.PI * 2); g.clip();
+          g.translate(cx, cy + oy); g.rotate(rot);
+          const grad = g.createLinearGradient(-rx, 0, rx, 0);
+          grad.addColorStop(0, `rgba(170,215,255,${(alpha * 0.25).toFixed(2)})`);
+          grad.addColorStop(0.5, `rgba(225,242,255,${alpha.toFixed(2)})`);
+          grad.addColorStop(1, `rgba(150,200,255,${(alpha * 0.35).toFixed(2)})`);
+          g.strokeStyle = grad; g.lineWidth = 30;
+          g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.stroke();
+          g.strokeStyle = `rgba(255,255,255,${(alpha * 0.9).toFixed(2)})`; g.lineWidth = 2.5;
+          g.beginPath(); g.ellipse(0, 0, rx + 13, ry, 0, 0, Math.PI * 2); g.stroke();
+          g.restore();
+        };
+        // vertical ring (meridian): its width breathes as it turns
+        band(Math.abs(Math.cos(spin)) * CR * 0.9, CR * 1.05, tilt * 0.15, 0, 0.5);
+        // horizontal ring (equator) high on the head, flattening and opening with the nod
+        band(CR * 1.05, Math.abs(Math.sin(spin * 0.7 + tilt)) * CR * 0.35 + 6, 0, -CR * 0.42, 0.42);
+      }
       if (lm && !doneAt) {
         const L = lm[234], R = lm[454], N = lm[1], T = lm[10], C = lm[152];
         const dir = { x: (N.x - L.x) / (R.x - L.x) - 0.5, y: (N.y - T.y) / (C.y - T.y) };
