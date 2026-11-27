@@ -194,6 +194,15 @@ export function SignupPopup() {
   const shown = useRef(false);
   const wheelTarget = useRef(0);
   const [landed, setLanded] = useState<number | null>(null);
+  // The "Spin to win" tab waits 10 seconds on a first visit, so the page speaks first.
+  const [tabReady, setTabReady] = useState(false);
+  useEffect(() => {
+    let seen = false;
+    try { seen = !!localStorage.getItem("sy:seen"); localStorage.setItem("sy:seen", "1"); } catch { /* private mode */ }
+    if (seen) { setTabReady(true); return; }
+    const id = setTimeout(() => setTabReady(true), 10_000);
+    return () => clearTimeout(id);
+  }, []);
   const wheelOn = g.wheel.length >= 2;
   const maxWin = Math.max(0, ...g.wheel.map((w) => Number(w.match(/\d+/)?.[0] ?? 0)));
   const blocked = path.startsWith("/checkout") || path.startsWith("/order") || path.startsWith("/pay");
@@ -267,7 +276,7 @@ export function SignupPopup() {
 
   return (
     <>
-      {g.tab && !open && !res && (
+      {g.tab && tabReady && !open && !res && (
         <button onClick={() => setOpen("popup")} className="offer-tab sp-shine fixed bottom-5 start-5 z-30 hidden rounded-full bg-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg md:block">
           {wheelOn ? `🎡 ${t("Spin to win")}${maxWin ? ` ${t("up to")} ${maxWin}%` : ""}` : g.tabLabel || t("Get 10% off")}
         </button>

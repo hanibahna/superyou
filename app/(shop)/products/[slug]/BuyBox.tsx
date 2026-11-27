@@ -177,6 +177,12 @@ export function BuyBox({
           <PriceMatchBadge p={v} size="md" />
           {v.inStock && <p className="text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
         </div>
+        {/* Reassurance where the decision is made. */}
+        <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted">
+          <span>✓ {t("Sealed, genuine product")}</span>
+          <span>✓ {t("Pay cash on delivery")}</span>
+          <span>✓ {t("Unopened returns within 7 days")}</span>
+        </p>
         <SuperPriceCard key={v.id} p={v} className="mt-3" />
         {v.origin === "international" && (
           <p className="mt-2 rounded-lg border border-[#c7d2fe] bg-[#eef2ff] p-3 text-xs leading-relaxed text-[#312e81]">

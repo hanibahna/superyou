@@ -41,7 +41,7 @@ export function QuickJump({ t, links }: { t: (s: string) => string; links: { lab
     // Sticks under the header on phones, so the aisles stay one tap away while scrolling.
     <nav aria-label={t("Shop quickly")} className="sticky top-[var(--hdr-h,116px)] z-30 border-b border-line bg-white/95 py-2 backdrop-blur md:static md:border-0 md:bg-transparent md:pt-6 md:backdrop-blur-none">
       <div className="container-x">
-      <ul className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+      <ul className="bleed no-scrollbar flex gap-2 overflow-x-auto md:mx-0 md:px-0">
         {links.map((l) => (
           <li key={l.href} className="shrink-0">
             <Link href={l.href} className={`inline-flex min-h-[44px] items-center rounded-full border px-4 text-sm font-semibold transition ${l.hot ? "border-ink bg-ink text-white hover:bg-black" : "border-line bg-white hover:border-ink"}`}>
