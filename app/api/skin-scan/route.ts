@@ -11,7 +11,7 @@ import { anthropicKey } from "@/lib/extras";
 // AI 3D skin scan: front + side photos from the guided face scan are read once by an AI vision model (photo never stored), the result
 // is mapped to the routine finder's answers, and a routine is built from products in stock.
 // Needs ANTHROPIC_API_KEY (optional ANTHROPIC_MODEL). Cosmetic guidance only, not a diagnosis.
-export const maxDuration = 60;
+export const maxDuration = 120; // reading the photos, then matching against the catalog
 
 const img = z.string().regex(/^data:image\/(jpeg|png|webp);base64,/).max(6_000_000);
 const bodySchema = z.object({ image: img, sides: z.array(img.max(2_500_000)).max(4).default([]), meta: z.object({ depth: z.boolean(), distanceCm: z.number(), light: z.number(), colorTemp: z.number() }).partial().optional() });
@@ -86,8 +86,25 @@ Return only JSON:
     goals: [], sensitive: !!a.sensitive, budget: "any" as const, length: "full" as const,
   };
   const live = await liveProducts();
-  const steps = buildRoutine(cfg, answers, toCards(live.list)).map(({ step, picks }) => ({ id: step.id, name: step.name, time: step.time, tip: step.tip, picks }));
+  // A wide shortlist per step from the whole visible catalog (the rules' order), then Claude chooses
+  // with the scan's zone-by-zone findings and each product's ingredients. If AI fails, the rules stand.
+  const wide = buildRoutine({ ...cfg, alternatives: 11 }, answers, toCards(live.list));
+  const analysisFor = { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label ?? answers.skinType, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), zones: (a.zones ?? []).slice(0, 5), redFlags: (a.redFlags ?? []).slice(0, 4) };
+  const plan = await (async () => {
+    const { getProductsDetailed } = await import("@/lib/catalog");
+    const details = new Map((await getProductsDetailed([...new Set(wide.flatMap((w) => w.picks.map((p) => p.id)))]).catch(() => [])).map((d) => [d.id, d]));
+    const { aiScanPlan } = await import("@/lib/routine-ai");
+    return aiScanPlan(analysisFor, wide.map(({ step, picks }) => ({ id: step.id, name: step.name, time: step.time, cands: picks.map((p) => ({ slug: p.slug, name: p.name, brand: p.brand, price: p.price, ingredients: details.get(p.id)?.ingredients, about: details.get(p.id)?.description?.replace(/<[^>]+>/g, " ") })) })));
+  })().catch((e) => (console.error("skin-scan: AI picks failed", e), null));
+  const n = cfg.alternatives + 1;
+  const steps = wide.map(({ step, picks }) => {
+    const ai = plan?.steps.find((x) => x.id === step.id);
+    const bySlug = (slug: string) => picks.find((p) => p.slug === slug);
+    const ordered = ai?.pick ? [bySlug(ai.pick)!, ...ai.alts.map(bySlug).filter((p): p is (typeof picks)[number] => !!p)] : picks;
+    const rest = picks.filter((p) => !ordered.includes(p));
+    return { id: step.id, name: step.name, time: step.time, tip: step.tip, why: ai?.why ?? "", skipped: !!plan && !!ai && !ai.pick, picks: [...ordered, ...rest].slice(0, n) };
+  }).filter((st) => st.picks.length);
   const { CLINIC, publicProcedure, treatmentsFor } = await import("@/lib/clinic");
   const treatments = a.redFlags?.length ? [] : treatmentsFor({ concerns: answers.concerns, observations: a.observations, zones: a.zones, sensitive: answers.sensitive }).map(publicProcedure);
-  return NextResponse.json({ clinic: { partner: CLINIC.partner, mock: CLINIC.mock, note: CLINIC.note }, treatments, analysis: { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), advice: a.advice ?? "", zones: (a.zones ?? []).slice(0, 5), confidence: ["high", "medium", "low"].includes(a.confidence ?? "") ? a.confidence : "medium", photoTips: a.photoTips ?? "", redFlags: (a.redFlags ?? []).slice(0, 4) }, steps });
+  return NextResponse.json({ ai: !!plan, summary: plan?.summary ?? "", notes: plan?.notes ?? [], actives: plan?.actives ?? [], clinic: { partner: CLINIC.partner, mock: CLINIC.mock, note: CLINIC.note }, treatments, analysis: { skinType: cfg.skinTypes.find((s) => s.id === answers.skinType)?.label, concerns: answers.concerns, sensitive: answers.sensitive, observations: (a.observations ?? []).slice(0, 5), advice: a.advice ?? "", zones: (a.zones ?? []).slice(0, 5), confidence: ["high", "medium", "low"].includes(a.confidence ?? "") ? a.confidence : "medium", photoTips: a.photoTips ?? "", redFlags: (a.redFlags ?? []).slice(0, 4) }, steps });
 }

@@ -3,15 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/site-context";
 
-// Face ID-style guided scan: live 3D face tracking in the browser (on the phone, nothing uploaded while
-// tracking), a ring that fills as the head turns in a circle, and three photos taken automatically:
-// front, one side, the other side. Falls back to a single live camera shot if tracking can't start.
+// Face ID setup-style scan: the camera in a circle on black, a ring of fine ticks around it that grow and
+// turn green as the head moves in a circle, then the picture fades and a green tick draws itself.
+// Tracking runs on the phone; only the 5 finished photos are sent (front, both sides, chin up, chin down).
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
 const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const TICKS = 72; // like the Face ID setup ring
+const TICKS = 120; // dense like the iPhone ring
+const GREEN: [number, number, number] = [52, 199, 89]; // iOS system green
 
 type P = { x: number; y: number; z: number };
-type Dir = "right" | "left" | "up" | "down";
+
+const mix = (p: number, from: [number, number, number], to: [number, number, number]) => from.map((f, i) => Math.round(f + (to[i] - f) * p)).join(",");
+const ease = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 
 export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: string[], meshImage?: string) => void; onFallback: () => void; onClose: () => void }) {
   const t = useT();
@@ -19,28 +22,25 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
   const canvas = useRef<HTMLCanvasElement>(null);
   const [stage, setStage] = useState<"loading" | "front" | "circle" | "done" | "error">("loading");
   const [msg, setMsg] = useState("");
-  const [pct, setPct] = useState(0);
-  const [guide, setGuide] = useState<Dir | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null, raf = 0, stopped = false;
     let landmarker: { detectForVideo: (v: HTMLVideoElement, ts: number) => { faceLandmarks: P[][] }; close: () => void } | null = null;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const lit = new Array<number>(TICKS).fill(0);
+    const prog = new Array<number>(TICKS).fill(0); // each tick grows smoothly 0 → 1 once reached
     const shots: { front?: string; a?: string; b?: string; up?: string; down?: string } = {};
-    const prog = new Array<number>(TICKS).fill(0); // each tick grows smoothly (0 → 1) once reached
-    let sdx = 0, sdy = 0; // smoothed head direction, so the ring and guide don't jitter
-    let hintAt = 0, arrowAng = 0, gapAng = 0;
-    // Oval safeguard: the scan only runs while the face sits inside the oval (smoothed, with hysteresis so it never flickers).
+    let sdx = 0, sdy = 0, hintAt = 0, arrowAng = 0, gapAng = 0;
     let inS = 0, inside = false, lastFrame = 0, placeAt = 0, lastPlace = "";
     let base: { x: number; y: number } | null = null, calib: { x: number; y: number }[] = [];
-    let startedCircle = 0, doneAt = 0, lastLit = 0, lastGuide: Dir | null = null;
-    let tess: { start: number; end: number }[] = [];
+    let startedCircle = 0, doneAt = 0, lastLit = 0, lastHint = "", snapshot = "";
 
+    // Square crop from the middle of the camera, un-mirrored (the skin reading needs the real face).
     const capture = (v: HTMLVideoElement) => {
       const h = v.videoHeight, w = Math.min(v.videoWidth, Math.round((h * 3) / 4)), k = Math.min(1, 900 / h);
       const c = document.createElement("canvas");
       c.width = Math.round(w * k); c.height = Math.round(h * k);
-      c.getContext("2d")!.drawImage(v, (v.videoWidth - w) / 2, 0, w, h, 0, 0, c.width, c.height); // un-mirrored
+      c.getContext("2d")!.drawImage(v, (v.videoWidth - w) / 2, 0, w, h, 0, 0, c.width, c.height);
       return c.toDataURL("image/jpeg", 0.85);
     };
 
@@ -58,12 +58,11 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         const files = await mp.FilesetResolver.forVisionTasks(WASM);
         const make = (delegate: "GPU" | "CPU") => mp.FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: "VIDEO", numFaces: 1 });
         landmarker = (await make("GPU").catch(() => make("CPU"))) as unknown as typeof landmarker;
-        tess = mp.FaceLandmarker.FACE_LANDMARKS_TESSELATION;
       } catch { return fail(t("The 3D scan couldn't start on this device.")); }
       if (stopped) return;
       clearTimeout(timeout);
       setStage("front");
-      setMsg(t("Look straight at the screen"));
+      setMsg(t("Position your face within the frame."));
       loop();
     })();
 
@@ -72,64 +71,51 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       raf = requestAnimationFrame(loop);
       const v = video.current, cv = canvas.current;
       if (!v || !cv || !landmarker || !v.videoWidth) return;
-      const vw = v.videoWidth, vh = v.videoHeight, cw = Math.min(vw, Math.round((vh * 3) / 4)), sx = (vw - cw) / 2;
-      if (cv.width !== 600) { cv.width = 600; cv.height = 800; }
+      const vw = v.videoWidth, vh = v.videoHeight, s = Math.min(vw, vh), sx = (vw - s) / 2, sy = (vh - s) / 2;
+      if (cv.width !== 800) { cv.width = 800; cv.height = 800; }
       const g = cv.getContext("2d")!;
-      const W = cv.width, H = cv.height, now = performance.now();
-      // mirrored preview
-      g.save(); g.translate(W, 0); g.scale(-1, 1); g.drawImage(v, sx, 0, cw, vh, 0, 0, W, H); g.restore();
-      const res = landmarker.detectForVideo(v, now);
-      const lm = res.faceLandmarks?.[0];
-      const cx = W / 2, OY = H * 0.45, ORX = W * 0.29, ORY = H * 0.27;
+      const W = 800, cx = 400, cy = 400, CR = 268, now = performance.now();
       const dt = lastFrame ? Math.min(100, now - lastFrame) : 16; lastFrame = now;
-      // Is the face inside the oval, at the right distance?
+      const since = doneAt ? now - doneAt : 0;
+
+      g.fillStyle = "#000"; g.fillRect(0, 0, W, W);
+      // Camera inside the circle (mirrored, like a selfie). After the scan it fades out for the tick.
+      const fade = doneAt ? 1 - ease((since - 450) / 500) : 1;
+      if (fade > 0) {
+        g.save();
+        g.beginPath(); g.arc(cx, cy, CR, 0, Math.PI * 2); g.clip();
+        g.globalAlpha = fade;
+        g.translate(W, 0); g.scale(-1, 1);
+        g.drawImage(v, sx, sy, s, s, 0, 0, W, W);
+        g.restore();
+        // soft inner edge, like the iPhone frame
+        const edge = g.createRadialGradient(cx, cy, CR * 0.78, cx, cy, CR);
+        edge.addColorStop(0, "rgba(0,0,0,0)"); edge.addColorStop(1, `rgba(0,0,0,${(0.45 * fade).toFixed(2)})`);
+        g.fillStyle = edge; g.beginPath(); g.arc(cx, cy, CR, 0, Math.PI * 2); g.fill();
+      }
+
+      const res = doneAt ? null : landmarker.detectForVideo(v, now);
+      const lm = res?.faceLandmarks?.[0];
+      // Is the face in the circle, at the right distance?
       let place = "none";
       if (lm) {
-        const P = (i: number) => ({ x: W - ((lm[i].x * vw - sx) / cw) * W, y: lm[i].y * H });
-        const fcx = (P(234).x + P(454).x) / 2, fcy = (P(10).y + P(152).y) / 2, fh = P(152).y - P(10).y;
-        const loose = !!base && !doneAt; // turning the head moves the face, so allow more room during the circle
-        const tol = loose ? 0.38 : 0.22, minH = ORY * 2 * (loose ? 0.5 : 0.62), maxH = ORY * 2 * (loose ? 1.12 : 1.02);
-        place = fh < minH ? "far" : fh > maxH ? "near" : Math.abs(fcx - cx) > ORX * tol || Math.abs(fcy - OY) > ORY * tol ? "off" : "ok";
+        const X = (i: number) => W - ((lm[i].x * vw - sx) / s) * W, Y = (i: number) => ((lm[i].y * vh - sy) / s) * W;
+        const fcx = (X(234) + X(454)) / 2, fcy = (Y(10) + Y(152)) / 2, fh = Y(152) - Y(10);
+        const loose = !!base; // turning the head moves the face, so allow more room during the circle
+        const tol = loose ? 0.4 : 0.24, minH = CR * 2 * (loose ? 0.42 : 0.52), maxH = CR * 2 * (loose ? 1.05 : 0.95);
+        place = fh < minH ? "far" : fh > maxH ? "near" : Math.hypot(fcx - cx, fcy - cy) > CR * tol ? "off" : "ok";
       }
       inS += ((place === "ok" ? 1 : 0) - inS) * 0.12;
       if (inside && inS < 0.35) inside = false;
       else if (!inside && inS > 0.7) inside = true;
       if (doneAt) inside = true;
-      // Darken everything outside the oval (like Face ID), lighter inside.
-      g.save();
-      g.fillStyle = "rgba(0,0,0,.55)";
-      g.beginPath(); g.rect(0, 0, W, H); g.ellipse(cx, OY, ORX, ORY, 0, 0, Math.PI * 2); g.fill("evenodd");
-      g.fillStyle = "rgba(0,0,0,.12)"; g.beginPath(); g.ellipse(cx, OY, ORX, ORY, 0, 0, Math.PI * 2); g.fill();
-      g.restore();
-      // Oval outline: fades from white to green as the face settles in.
-      const og = Math.round(255 - inS * (255 - 222)), orr = Math.round(255 - inS * (255 - 74)), ob = Math.round(255 - inS * (255 - 128));
-      g.strokeStyle = `rgba(${orr},${og},${ob},${(0.55 + inS * 0.45).toFixed(2)})`;
-      g.lineWidth = 3; g.setLineDash(inside ? [] : [10, 8]);
-      g.beginPath(); g.ellipse(cx, OY, ORX, ORY, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
       if (!inside && !doneAt && now - placeAt > 700 && place !== lastPlace) {
         lastPlace = place; placeAt = now;
-        setGuide(null); lastGuide = null;
-        setMsg(place === "far" ? t("Move a little closer") : place === "near" ? t("Move back a little") : place === "off" ? t("Centre your face in the oval") : base ? t("Move back into the oval to continue") : t("Place your face in the oval"));
+        setMsg(place === "far" ? t("Move a little closer.") : place === "near" ? t("Move a little farther away.") : place === "off" ? t("Centre your face in the circle.") : base ? t("Move back into the circle to continue.") : t("Position your face within the frame."));
       }
-      if (inside && lastPlace) { lastPlace = ""; if (!base) setMsg(t("Hold still…")); }
-      if (lm) {
-        // to canvas coords (mirrored)
-        const pts = lm.map((p) => ({ x: W - ((p.x * vw - sx) / cw) * W, y: p.y * H }));
-        const glow = 0.55 + 0.2 * Math.sin(now / 300);
-        g.strokeStyle = `rgba(255,170,205,${(doneAt ? 0.7 : glow).toFixed(2)})`; g.lineWidth = 1.1;
-        g.beginPath();
-        for (const c of tess) { const a = pts[c.start], b = pts[c.end]; if (a && b) { g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); } }
-        g.stroke();
-        g.fillStyle = "rgba(255,255,255,.95)";
-        for (let i = 0; i < pts.length; i += 2) { g.fillRect(pts[i].x - 1.5, pts[i].y - 1.5, 3, 3); }
-        // scanning line sweeping down the face
-        if (!doneAt) {
-        const ys = pts.map((p) => p.y), top = Math.min(...ys), bot = Math.max(...ys), sy = top + ((now / 1400) % 1) * (bot - top);
-        const grad = g.createLinearGradient(0, sy - 18, 0, sy + 2);
-        grad.addColorStop(0, "rgba(255,120,180,0)"); grad.addColorStop(1, "rgba(255,160,210,.8)");
-        g.fillStyle = grad; g.fillRect(Math.min(...pts.map((p) => p.x)), sy - 18, Math.max(...pts.map((p) => p.x)) - Math.min(...pts.map((p) => p.x)), 20);
-        }
-        // head direction from the nose relative to the face outline (works without depth hardware)
+      if (inside && lastPlace) { lastPlace = ""; lastHint = ""; if (!base) setMsg(t("Hold still…")); }
+
+      if (lm && !doneAt) {
         const L = lm[234], R = lm[454], N = lm[1], T = lm[10], C = lm[152];
         const dir = { x: (N.x - L.x) / (R.x - L.x) - 0.5, y: (N.y - T.y) / (C.y - T.y) };
         if (!base) {
@@ -137,35 +123,30 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
           else {
             calib.push(dir);
             if (calib.length > 12) {
-              base = { x: calib.reduce((s, d) => s + d.x, 0) / calib.length, y: calib.reduce((s, d) => s + d.y, 0) / calib.length };
+              base = { x: calib.reduce((a, d) => a + d.x, 0) / calib.length, y: calib.reduce((a, d) => a + d.y, 0) / calib.length };
               shots.front = capture(v);
               startedCircle = now;
               setStage("circle");
-              setMsg(t("Now slowly move your head in a circle"));
-              lastGuide = null;
-            } else setMsg(t("Hold still…"));
+              setMsg(t("Move your head slowly to complete the circle."));
+            }
           }
-        } else if (!doneAt && !inside) {
-          startedCircle += dt; // paused: the clock stops while the face is out of the oval
-        } else if (!doneAt) {
-          // Smooth the head direction (removes jitter), mirrored to match the screen.
+        } else if (!inside) {
+          startedCircle += dt; // paused while the face is out of the circle
+        } else {
           sdx += (-(dir.x - base.x) - sdx) * 0.25;
           sdy += ((dir.y - base.y) - sdy) * 0.25;
-          const dx = sdx, dy = sdy;
-          const mag = Math.hypot(dx * 1.6, dy * 2.2);
+          const mag = Math.hypot(sdx * 1.6, sdy * 2.2);
           if (mag > 0.075) {
-            const ang = (Math.atan2(dy, dx) + Math.PI * 2) % (Math.PI * 2);
+            const ang = (Math.atan2(sdy, sdx) + Math.PI * 2) % (Math.PI * 2);
             const i = Math.round((ang / (Math.PI * 2)) * TICKS) % TICKS;
-            for (let k = -1; k <= 1; k++) lit[(i + k + TICKS) % TICKS] = 1;
+            for (let k = -3; k <= 3; k++) lit[(i + k + TICKS) % TICKS] = 1;
           }
-          // Five photos: front (taken), both sides, chin up and chin down.
-          if (dx > 0.14 && !shots.a) shots.a = capture(v);
-          if (dx < -0.14 && !shots.b) shots.b = capture(v);
-          if (dy < -0.07 && Math.abs(dx) < 0.08 && !shots.up) shots.up = capture(v);
-          if (dy > 0.08 && Math.abs(dx) < 0.08 && !shots.down) shots.down = capture(v);
-          const n = lit.reduce((s, x) => s + x, 0);
-          if (n !== lastLit) { lastLit = n; setPct(Math.round((n / TICKS) * 100)); }
-          // Where is the biggest part of the ring still empty? The guide arrow glides there.
+          if (sdx > 0.14 && !shots.a) shots.a = capture(v);
+          if (sdx < -0.14 && !shots.b) shots.b = capture(v);
+          if (sdy < -0.07 && Math.abs(sdx) < 0.08 && !shots.up) shots.up = capture(v);
+          if (sdy > 0.08 && Math.abs(sdx) < 0.08 && !shots.down) shots.down = capture(v);
+          const n = lit.reduce((a, x) => a + x, 0);
+          lastLit = n;
           let best = -1, bestLen = 0;
           for (let i = 0; i < TICKS; i++) {
             if (lit[i]) continue;
@@ -174,56 +155,62 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
             if (len > bestLen) { bestLen = len; best = i + len / 2; }
           }
           if (best >= 0) gapAng = (best / TICKS) * Math.PI * 2;
-          // Calm instructions: change at most every 1.5 s.
-          if (now - hintAt > 1500) {
-            let next: Dir;
-            if (!shots.a && !shots.b) next = "right";
-            else if (!shots.a) next = "right";
-            else if (!shots.b) next = "left";
-            else {
-              const deg = (gapAng * 180) / Math.PI;
-              next = deg < 45 || deg >= 315 ? "right" : deg < 135 ? "down" : deg < 225 ? "left" : "up";
-            }
-            if (next !== lastGuide) {
-              lastGuide = next; hintAt = now;
-              setGuide(next);
-              setMsg(n < 6 ? t("Move your head slowly to complete the circle") : next === "right" ? t("Keep going slowly this way →") : next === "left" ? t("Now slowly the other way ←") : next === "up" ? t("Slowly lift your chin ↑") : t("Slowly lower your chin ↓"));
-            }
+          if (now - hintAt > 1800 && n > TICKS * 0.6) {
+            const deg = (gapAng * 180) / Math.PI;
+            const h = deg < 45 || deg >= 315 ? t("Keep going slowly this way →") : deg < 135 ? t("Slowly lower your chin ↓") : deg < 225 ? t("Now slowly the other way ←") : t("Slowly lift your chin ↑");
+            if (h !== lastHint) { lastHint = h; hintAt = now; setMsg(h); }
           }
-          const enough = n / TICKS >= 0.92 && shots.a && shots.b && shots.up && shots.down;
-          if (enough || now - startedCircle > 45000) { doneAt = now; lit.fill(1); setPct(100); setStage("done"); setGuide(null); setMsg(t("Scan complete")); }
+          const enough = n / TICKS >= 0.94 && shots.a && shots.b && shots.up && shots.down;
+          if (enough || now - startedCircle > 45000) {
+            doneAt = now; lit.fill(1); setStage("done"); setMsg(t("SuperScan complete."));
+            try { navigator.vibrate?.(30); } catch { /* not on iPhone */ }
+          }
         }
       } else if (!doneAt && startedCircle) startedCircle += dt;
-      // Face ID-style ring: a true circle of thin ticks that grow and turn green smoothly.
-      const R = W * 0.4, rcy = H * 0.45;
+
+      // The ring: fine radial ticks just outside the circle. Untouched = short grey; reached = longer green.
+      // Before the circle starts they breathe softly; when done they ripple once.
+      const RR = CR + 22;
       for (let i = 0; i < TICKS; i++) {
-        prog[i] += ((lit[i] ? 1 : 0) - prog[i]) * 0.12;
-        const a = (i / TICKS) * Math.PI * 2, p = prog[i];
-        const x1 = cx + Math.cos(a) * (R + 8), y1 = rcy + Math.sin(a) * (R + 8);
-        const len = 10 + p * 16;
-        const gr = Math.round(255 - p * (255 - 74)), gg = Math.round(255 - p * (255 - 222)), gb = Math.round(255 - p * (255 - 128));
-        g.strokeStyle = `rgba(${gr},${gg},${gb},${(0.35 + p * 0.65).toFixed(2)})`;
-        g.lineWidth = 3; g.lineCap = "round";
-        g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 + Math.cos(a) * len, y1 + Math.sin(a) * len); g.stroke();
+        prog[i] += ((lit[i] ? 1 : 0) - prog[i]) * (reduce ? 1 : 0.14);
+        const a = (i / TICKS) * Math.PI * 2; // index = head direction (0 = turned right)
+        const p = prog[i];
+        const ripple = doneAt && !reduce ? Math.max(0, Math.sin(Math.min(Math.PI, (since / 450 - ((i + TICKS * 0.75) % TICKS) / TICKS) * Math.PI))) * 10 : 0;
+        const idle = !base && !reduce ? 3 * (0.5 + 0.5 * Math.sin(now / 420 + i / 6)) : 0;
+        const len = 14 + p * 18 + ripple + idle;
+        const col = mix(p, [120, 120, 128], GREEN);
+        g.strokeStyle = `rgba(${col},${(0.55 + p * 0.45).toFixed(2)})`;
+        g.lineWidth = 3.2; g.lineCap = "round";
+        g.beginPath(); g.moveTo(cx + Math.cos(a) * RR, cy + Math.sin(a) * RR); g.lineTo(cx + Math.cos(a) * (RR + len), cy + Math.sin(a) * (RR + len)); g.stroke();
       }
-      // Guide arrow glides around the ring to the part still to fill.
-      if (startedCircle && !doneAt && inside && lastLit >= 3) {
+      // A small arrow glides round the ring to the part still to fill.
+      if (startedCircle && !doneAt && inside && lastLit >= 6) {
         let d = gapAng - arrowAng;
         d = Math.atan2(Math.sin(d), Math.cos(d));
         arrowAng += d * 0.06;
-        const ax = cx + Math.cos(arrowAng) * (R + 44), ay = rcy + Math.sin(arrowAng) * (R + 44);
-        const pulse = 0.7 + 0.3 * Math.sin(now / 250);
-        g.save(); g.translate(ax, ay); g.rotate(arrowAng);
-        g.fillStyle = `rgba(255,255,255,${pulse.toFixed(2)})`;
-        g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -11); g.lineTo(-3, 0); g.lineTo(-8, 11); g.closePath(); g.fill();
+        const ax = cx + Math.cos(arrowAng) * (RR + 56), ay = cy + Math.sin(arrowAng) * (RR + 56);
+        g.save(); g.translate(ax, ay); g.rotate(arrowAng + Math.PI / 2);
+        g.fillStyle = `rgba(255,255,255,${(0.6 + 0.35 * Math.sin(now / 250)).toFixed(2)})`;
+        g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-3, 0); g.lineTo(-8, 10); g.closePath(); g.fill();
         g.restore();
       }
-      if (doneAt && now - doneAt > 1100) {
+      // Done: keep a picture of the finished scan, then a green tick draws itself in the empty circle.
+      if (doneAt && since > 380 && !snapshot) snapshot = cv.toDataURL("image/jpeg", 0.85);
+      if (doneAt && since > 700) {
+        const k = reduce ? 1 : ease((since - 700) / 450);
+        const pts: [number, number][] = [[cx - 70, cy + 4], [cx - 18, cy + 56], [cx + 78, cy - 52]];
+        const l1 = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]), l2 = Math.hypot(pts[2][0] - pts[1][0], pts[2][1] - pts[1][1]);
+        const dist = k * (l1 + l2);
+        g.strokeStyle = `rgb(${GREEN.join(",")})`; g.lineWidth = 16; g.lineCap = "round"; g.lineJoin = "round";
+        g.beginPath(); g.moveTo(...pts[0]);
+        if (dist <= l1) g.lineTo(pts[0][0] + (pts[1][0] - pts[0][0]) * (dist / l1), pts[0][1] + (pts[1][1] - pts[0][1]) * (dist / l1));
+        else { g.lineTo(...pts[1]); const q = (dist - l1) / l2; g.lineTo(pts[1][0] + (pts[2][0] - pts[1][0]) * q, pts[1][1] + (pts[2][1] - pts[1][1]) * q); }
+        g.stroke();
+      }
+      if (doneAt && since > 1900) {
         stopped = true;
         cancelAnimationFrame(raf);
-        // Keep the finished 3D scan (face mesh + full green ring) as the result picture.
-        const mesh = canvas.current?.toDataURL("image/jpeg", 0.85);
-        onDone([shots.front, shots.a, shots.b, shots.up, shots.down].filter((s): s is string => !!s), mesh);
+        onDone([shots.front, shots.a, shots.b, shots.up, shots.down].filter((x): x is string => !!x), snapshot || undefined);
       }
     }
     return () => { stopped = true; clearTimeout(timeout); cancelAnimationFrame(raf); stream?.getTracks().forEach((x) => x.stop()); landmarker?.close(); };
@@ -231,10 +218,8 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black p-4" role="dialog" aria-modal="true" aria-label={t("SuperScan")}>
-      <button onClick={onClose} aria-label={t("Close")} className="absolute end-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
-      </button>
+    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black px-6 py-10" role="dialog" aria-modal="true" aria-label={t("SuperScan")}>
+      <button onClick={onClose} className="absolute start-4 top-4 z-10 min-h-[44px] px-2 text-[17px] text-[#0a84ff]">{t("Cancel")}</button>
       <video ref={video} playsInline muted className="hidden" />
       {stage === "error" ? (
         <div className="max-w-sm text-center text-white">
@@ -243,46 +228,18 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         </div>
       ) : (
         <>
-          <div className="relative aspect-[3/4] w-full max-w-sm overflow-hidden rounded-3xl bg-black">
+          <p className="mb-6 min-h-[3.2em] max-w-xs text-center text-[19px] font-semibold leading-snug text-white" aria-live="polite">{stage === "loading" ? t("Starting SuperScan…") : msg}</p>
+          <div className="relative aspect-square w-full max-w-[400px]">
             <canvas ref={canvas} className="h-full w-full" />
-            {stage === "loading" && <p className="absolute inset-0 grid place-items-center text-sm text-white/80">{t("Starting SuperScan…")}</p>}
-            {(stage === "front" || stage === "circle") && <SwivelGuide dir={stage === "circle" ? guide : null} />}
-            {stage === "done" && <span className="absolute inset-0 grid place-items-center"><span className="grid h-20 w-20 place-items-center rounded-full bg-green-500 text-4xl text-white">✓</span></span>}
           </div>
-          <p className="mt-4 min-h-[1.5em] text-center text-lg font-semibold text-white" aria-live="polite">{msg}</p>
-          {stage === "circle" && <p className="text-sm text-white/70">{pct}%</p>}
-          <p className="mt-2 max-w-sm text-center text-xs text-white/60">{t("Face a window, no make-up, hair back. Move slowly, like setting up Face ID. Tracking runs on your phone; only the 5 finished photos are sent to read your skin, then deleted.")}</p>
-          <button onClick={onFallback} className="mt-3 text-xs text-white/60 underline">{t("Use a single camera shot instead")}</button>
+          {stage !== "done" && (
+            <>
+              <p className="mt-6 max-w-xs text-center text-[13px] text-white/55">{t("Face a window, no make-up, hair back. Only the 5 finished photos are sent to read your skin, then deleted.")}</p>
+              <button onClick={onFallback} className="mt-3 text-xs text-white/45 underline">{t("Use a single camera shot instead")}</button>
+            </>
+          )}
         </>
       )}
     </div>
-  );
-}
-
-/** Animated "how to turn your head" guide: a small head that shows the movement, and a pulsing arrow on the side to turn to. */
-function SwivelGuide({ dir }: { dir: Dir | null }) {
-  const anim = dir ? `sy-look-${dir}` : "sy-swivel";
-  const arrow: Record<Dir, string> = { right: "right-2 top-1/2 -translate-y-1/2", left: "left-2 top-1/2 -translate-y-1/2", up: "top-2 left-1/2 -translate-x-1/2", down: "bottom-16 left-1/2 -translate-x-1/2" };
-  const rot: Record<Dir, number> = { right: 0, down: 90, left: 180, up: 270 };
-  return (
-    <>
-      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-2xl bg-black/55 p-2 backdrop-blur" aria-hidden>
-        <svg width="56" height="56" viewBox="0 0 56 56">
-          <ellipse cx="28" cy="29" rx="17" ry="21" fill="none" stroke="white" strokeWidth="2" />
-          <g style={{ animation: `${anim} ${dir ? "1.4s" : "2.6s"} ease-in-out infinite` }}>
-            <circle cx="22" cy="25" r="2" fill="white" />
-            <circle cx="34" cy="25" r="2" fill="white" />
-            <path d="M28 27 L26 33 L29 33" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-            <path d="M23 39 Q28 42 33 39" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-          </g>
-          {!dir && <circle r="2.5" fill="#ff8fb6"><animateMotion dur="2.6s" repeatCount="indefinite" path="M28 4 A24 24 0 1 1 27.9 4" /></circle>}
-        </svg>
-      </div>
-      {false && dir && (
-        <span className={`pointer-events-none absolute ${arrow[dir!]} grid h-14 w-14 place-items-center rounded-full bg-white/90 text-ink shadow-lg`} style={{ animation: "sy-nudge 1s ease-in-out infinite" }} aria-hidden>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ transform: `rotate(${rot[dir!]}deg)` }}><path d="M5 12h13M13 6l6 6-6 6" /></svg>
-        </span>
-      )}
-    </>
   );
 }

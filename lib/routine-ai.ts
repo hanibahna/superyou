@@ -91,3 +91,47 @@ Only set pregnant true if they say they are pregnant or breastfeeding.`;
     budget: (["any", "low", "mid", "high"] as const).find((b) => b === o.budget) ?? "any",
   };
 }
+
+/** SuperScan: Claude reads what the scan saw (zone by zone) against a wide shortlist from the whole visible
+ *  catalog, with each product's key ingredients, and picks the best match per step. Only slugs from the
+ *  shortlist can come back; anything else is dropped and the rules' order stands. */
+export type ScanCand = Cand & { ingredients?: string; about?: string };
+export type ScanSeen = { skinType: string; concerns: string[]; sensitive: boolean; observations: string[]; zones: { zone: string; note: string }[]; redFlags: string[] };
+export async function aiScanPlan(seen: ScanSeen, steps: { id: string; name: string; time: string; cands: ScanCand[] }[]): Promise<(AiPlan & { actives: string[] }) | null> {
+  if (!steps.some((s) => s.cands.length)) return null;
+  const clip = (x = "", n: number) => x.replace(/\s+/g, " ").trim().slice(0, n);
+  const shelf = steps.map((s) => `STEP ${s.id} (${s.name}, ${s.time}):\n${s.cands.map((c) => `- ${c.slug} | ${fullName(c.brand, c.name)} | $${c.price}${c.ingredients ? ` | INCI: ${clip(c.ingredients, 260)}` : ""}${c.about ? ` | ${clip(c.about, 140)}` : ""}`).join("\n") || "- (none in stock)"}`).join("\n\n");
+  const prompt = `You are the skincare advisor of SuperYou, a beauty and parapharmacy shop in Lebanon, working beside our pharmacists. A customer just did a 3D face scan. Build their routine from our catalog.
+
+What the scan saw (cosmetic reading, not a diagnosis):
+- Skin type: ${seen.skinType}${seen.sensitive ? ", shows redness / reacts easily" : ""}
+- Main focus: ${seen.concerns.join(", ") || "general care"}
+- Zones: ${seen.zones.map((z) => `${z.zone}: ${z.note}`).join("; ") || "-"}
+- Observations: ${seen.observations.join("; ") || "-"}
+${seen.redFlags.length ? `- Flagged for a doctor/pharmacist: ${seen.redFlags.join("; ")}. Keep the routine very gentle: no strong acids or retinoids.` : ""}
+
+Shortlist from our full catalog, by step (choose ONLY slugs from these lists). INCI = ingredient list when we have it:
+${shelf}
+
+How to choose:
+- Match the formula to what was seen, zone by zone: e.g. T-zone shine with dry cheeks → light, non-comedogenic textures; visible redness → soothing, fragrance-free (check the INCI for fragrance/parfum, alcohol denat., essential oils); blemishes → salicylic acid, niacinamide, zinc; dark marks → vitamin C, niacinamide, azelaic or tranexamic acid; dehydration → hyaluronic acid, glycerin, ceramides; fine lines → retinoids or peptides at night.
+- Prefer products whose INCI actually contains the active over ones that only say it in the name.
+- For each step pick the single best slug plus up to 2 alternatives at different prices. Skip a step (pick "") if nothing fits or it would overload the skin.
+- Never stack a retinoid and an exfoliating acid on the same night; one strong active at a time for reactive skin.
+- "why": one short sentence linking this product to something the scan saw (e.g. "Niacinamide for the shine on your nose and forehead"). No medical claims.
+- "summary": two short sentences on the routine's logic. "notes": 0 to 3 short practical notes (start actives slowly, patch test, SPF daily). "actives": 2 to 4 ingredient names worth looking for on this skin.
+
+Reply with JSON only: {"summary": "...", "notes": ["..."], "actives": ["..."], "steps": [{"id": "step id", "pick": "slug", "alts": ["slug"], "why": "..."}]}`;
+  const out = json<AiPlan & { actives?: string[] }>(await ask(prompt, 3000));
+  if (!out?.steps) return null;
+  const valid = new Map(steps.map((s) => [s.id, new Set(s.cands.map((c) => c.slug))]));
+  return {
+    summary: String(out.summary ?? "").slice(0, 400),
+    notes: (out.notes ?? []).map(String).slice(0, 3).map((n) => n.slice(0, 200)),
+    actives: (out.actives ?? []).map(String).slice(0, 4).map((n) => n.slice(0, 40)),
+    steps: out.steps.filter((s) => valid.has(s.id)).map((s) => {
+      const ok = valid.get(s.id)!;
+      return { id: s.id, pick: ok.has(s.pick) ? s.pick : "", alts: (s.alts ?? []).filter((x) => ok.has(x) && x !== s.pick).slice(0, 2), why: String(s.why ?? "").slice(0, 220) };
+    }),
+  };
+}

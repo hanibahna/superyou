@@ -13,7 +13,7 @@ import { useShop } from "@/lib/store";
 import { FaceScan3D } from "./FaceScan3D";
 import { PreviousScan, SendRoutine, ShareScan } from "./ScanExtras";
 
-type Step = { id: string; name: string; time: string; tip: string; picks: CardItem[] };
+type Step = { id: string; name: string; time: string; tip: string; picks: CardItem[]; why?: string; skipped?: boolean };
 type Analysis = { skinType?: string; concerns: string[]; sensitive: boolean; observations: string[]; advice: string; zones?: { zone: string; note: string }[]; confidence?: "high" | "medium" | "low"; photoTips?: string; redFlags?: string[] };
 
 /** Opens any photo the phone gives us (iPhone HEIC included), upright, as an image we can draw. */
@@ -113,11 +113,11 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const tx = useT();
   const [preview, setPreview] = useState("");
   const [mesh, setMesh] = useState("");
-  const [nudge, setNudge] = useState(0);
-  const consentRef = useRef<HTMLLabelElement>(null);
+  const [ask, setAsk] = useState(false);
+  const [slow, setSlow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [res, setRes] = useState<{ analysis: Analysis; steps: Step[]; treatments?: ClinicItem[]; clinic?: { partner: string; mock: boolean } } | null>(null);
+  const [res, setRes] = useState<{ ai?: boolean; summary?: string; notes?: string[]; actives?: string[]; analysis: Analysis; steps: Step[]; treatments?: ClinicItem[]; clinic?: { partner: string; mock: boolean } } | null>(null);
   const [consent, setConsent] = useState(false);
   const { addMany, setDrawerOpen } = useShop();
   const [camera, setCamera] = useState(false);
@@ -161,15 +161,18 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
     }
     setWarn("");
     setBusy(true);
-    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data, sides: extra, meta: meta.current ?? undefined }), signal: AbortSignal.timeout(70_000) }).catch(() => null);
+    setSlow(false);
+    const slowT = setTimeout(() => setSlow(true), 12_000); // by then the photos are read and the catalog is being matched
+    const r = await fetch("/api/skin-scan/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: data, sides: extra, meta: meta.current ?? undefined }), signal: AbortSignal.timeout(120_000) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
+    clearTimeout(slowT);
     setBusy(false);
     if (!r) return setErr(tx("No connection, or the scan took too long. Please try again."));
     if (!r.ok) return setErr(d.error === "not_configured" ? tx("SuperScan isn't switched on yet. Use the quiz instead — it takes a minute.") : tx(d.error ?? "Please try again"));
     setRes(d);
   }
 
-  const firstPicks = res?.steps.map((s) => s.picks[0]).filter(Boolean) ?? [];
+  const firstPicks = res?.steps.filter((s) => !s.skipped).map((s) => s.picks[0]).filter(Boolean) ?? [];
   return (
     <div className="container-x max-w-5xl py-10">
       <p className="text-xs font-bold uppercase tracking-[0.3em] text-sale">{tx("New")}</p>
@@ -198,19 +201,13 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
               <p className="self-center text-xs text-muted">{tx("3D scan: front and both sides")}</p>
             </div>
           )}
-          <label ref={consentRef} key={nudge} className={`mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 text-sm transition-colors ${consent ? "border-green-500 bg-green-50" : "consent-pulse border-[#d13f74] bg-[#fdeef3]"} ${nudge ? "consent-shake" : ""}`}>
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-7 w-7 shrink-0 cursor-pointer accent-[#d13f74]" />
-            <span>
-              <b className="block text-base">{consent ? tx("Thank you, you're ready ✓") : tx("Tick to agree, then start")}</b>
-              {tx("I agree that the 5 photos from my SuperScan are sent once to an AI service to read my skin. They aren't stored.")}
-            </span>
-          </label>
-          <button disabled={busy || !ready || !live} onClick={() => (consent ? start() : (setNudge((n) => n + 1), consentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })))} className="scan-glow tap mt-3 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-            {busy ? tx("Reading your skin…") : preview ? tx("Scan again") : tx("Start SuperScan")}
+          <button disabled={busy || !ready || !live} onClick={() => setAsk(true)} className="scan-glow tap mt-4 flex w-full items-center justify-center gap-2 rounded-full font-semibold text-white disabled:opacity-40">
+            <FaceIdGlyph size={20} />
+            {busy ? (slow ? tx("Matching with our full catalog…") : tx("Reading your skin…")) : preview ? tx("Scan again") : tx("Start SuperScan")}
           </button>
+          {ask && <ConsentSheet onClose={() => setAsk(false)} onAgree={() => { setAsk(false); setConsent(true); start(); }} />}
           {!live && <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs">{tx("SuperScan needs a camera. Open this page on your phone, or allow camera access in your browser.")}</p>}
-          {live && !consent && <p className="mt-2 text-center text-xs font-semibold text-brand-700">{tx("Tick the box above to start.")}</p>}
+          {live && !consent && <p className="mt-2 text-center text-xs text-muted">{tx("We ask for your OK before the camera opens.")}</p>}
           {warn && (
             <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
               <p>{warn}</p>
@@ -253,6 +250,19 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
                 )}
                 {res.analysis.advice && <p className="mt-2 text-xs text-muted">{res.analysis.advice}</p>}
               </div>
+              {(res.summary || !!res.actives?.length) && (
+                <div className="mt-4 rounded-2xl bg-[#f6f1f3] p-5">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">{tx("Matched by AI from our full catalog")}</p>
+                  {res.summary && <p className="mt-2 text-sm">{res.summary}</p>}
+                  {!!res.actives?.length && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-muted">{tx("Ingredients to look for")}:</span>
+                      {res.actives.map((x) => <span key={x} className="rounded-full bg-white px-3 py-1 font-semibold">{x}</span>)}
+                    </div>
+                  )}
+                  {!!res.notes?.length && <ul className="mt-3 list-disc space-y-1 ps-5 text-xs text-muted">{res.notes.map((x) => <li key={x}>{x}</li>)}</ul>}
+                </div>
+              )}
               {!!res.analysis.redFlags?.length && (
                 <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm">
                   <p className="font-semibold text-sale">{tx("Please see a doctor or pharmacist first")}</p>
@@ -268,6 +278,8 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
                 {res.steps.map((s, i) => (
                   <div key={s.id}>
                     <p className="font-semibold">{i + 1}. {s.name} <span className="text-xs font-normal uppercase text-muted">{s.time === "both" ? "AM + PM" : s.time.toUpperCase()}</span></p>
+                    {s.why && <p className="text-sm font-medium text-brand-700">{s.why}</p>}
+                    {s.skipped && <p className="text-xs text-muted">{tx("Optional for your skin right now")}</p>}
                     <p className="text-sm text-muted">{s.tip}</p>
                     <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-3">{s.picks.slice(0, 3).map((p) => <ProductCard key={p.id} product={p} />)}</div>
                   </div>
@@ -341,6 +353,45 @@ function ScanPlaceholder({ caption }: { caption: string }) {
         })}
       </svg>
       <p className="absolute inset-x-0 bottom-6 px-6 text-center text-sm font-medium text-white/80">{caption}</p>
+    </div>
+  );
+}
+
+/** The Face ID glyph: corner brackets, two eyes, nose and a smile. `draw` animates the strokes in. */
+function FaceIdGlyph({ size = 64, draw = false, color = "currentColor" }: { size?: number; draw?: boolean; color?: string }) {
+  const d = ["M4 9V6a2 2 0 0 1 2-2h3", "M15 4h3a2 2 0 0 1 2 2v3", "M20 15v3a2 2 0 0 1-2 2h-3", "M9 20H6a2 2 0 0 1-2-2v-3", "M9 9.5v1.2", "M15 9.5v1.2", "M12 9.5v4h-1", "M9 16c1.7 1.3 4.3 1.3 6 0"];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {d.map((p, i) => <path key={p} d={p} pathLength={1} className={draw ? "faceid-draw" : undefined} style={draw ? { animationDelay: `${i * 0.08}s` } : undefined} />)}
+    </svg>
+  );
+}
+
+/** Approval before the camera opens: a sheet the shopper can't miss, styled like the start of Face ID setup. */
+function ConsentSheet({ onAgree, onClose }: { onAgree: () => void; onClose: () => void }) {
+  const tx = useT();
+  const agree = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    agree.current?.focus();
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", esc);
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", esc); document.body.style.overflow = prev; };
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="scan-consent-title" onClick={onClose}>
+      <div className="sheet-up w-full max-w-md rounded-t-[28px] bg-white px-6 pb-8 pt-3 text-center shadow-2xl sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
+        <span className="mx-auto mb-6 block h-1.5 w-10 rounded-full bg-line sm:hidden" aria-hidden />
+        <div className="mx-auto grid h-24 w-24 place-items-center text-[#d13f74]"><FaceIdGlyph size={84} draw /></div>
+        <h2 id="scan-consent-title" className="mt-4 text-2xl font-bold">{tx("How to SuperScan")}</h2>
+        <p className="mx-auto mt-2 max-w-xs text-[15px] text-muted">{tx("Position your face in the circle, then move your head slowly to complete it, just like setting up Face ID.")}</p>
+        <div className="mt-5 rounded-2xl bg-[#f6f1f3] p-4 text-start text-sm">
+          <p className="font-semibold">{tx("Before we open your camera")}</p>
+          <p className="mt-1 text-muted">{tx("I agree that the 5 photos from my SuperScan are sent once to an AI service (Anthropic) to read my skin. They aren't stored or used to identify me. This is cosmetic advice, not a medical diagnosis.")}</p>
+        </div>
+        <button ref={agree} onClick={onAgree} className="tap mt-5 w-full rounded-2xl bg-[#d13f74] text-[17px] font-semibold text-white">{tx("Agree and start scan")}</button>
+        <button onClick={onClose} className="mt-2 min-h-[44px] w-full text-[15px] font-semibold text-[#d13f74]">{tx("Not now")}</button>
+      </div>
     </div>
   );
 }
