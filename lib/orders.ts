@@ -432,6 +432,7 @@ export async function notifyOrderStatus(order: Order) {
     await gs.awardPoints(order).catch((e) => console.error("[club]", e));
     await gs.scheduleAfterDelivery(order).catch((e) => console.error("[remind]", e));
     await gs.awardReferral(order).catch((e) => console.error("[referral]", e));
+    await (await import("@/lib/bf-public")).awardBfStamp(order).catch((e) => console.error("[bf stamp]", e));
   }
 }
 

@@ -9,6 +9,7 @@ import { useShop, type ProductSnap } from "@/lib/store";
 import { Stars } from "./Stars";
 import { HeartIcon } from "./Icons";
 import { ProductImage } from "./ProductImage";
+import { bfConfetti } from "./BlackFriday";
 
 type Card = (AnyProduct | ProductSnap) & { variantCount?: number; priceMax?: number; rating?: number; reviewCount?: number };
 
@@ -57,7 +58,7 @@ export function ProductCard({ product }: { product: Card }) {
               {t("Choose option")}
             </Link>
           ) : (
-            <button onClick={() => add(product)} className="buy tap mt-2 w-full rounded-lg bg-brand-500 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
+            <button onClick={(e) => { add(product); if ("bf" in product && product.bf) bfConfetti(e.clientX, e.clientY); }} className="buy tap mt-2 w-full rounded-lg bg-brand-500 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
               {t("Add to cart")}
             </button>
           )}

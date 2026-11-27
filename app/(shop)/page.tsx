@@ -18,6 +18,8 @@ import { getLang, getT } from "@/lib/i18n-server";
 import { translateDeep } from "@/lib/translate";
 import { getLanding, getSettings, getVideoLibrary } from "@/lib/site-store";
 import { memo } from "@/lib/memo";
+import { BfDoors } from "@/components/BlackFriday";
+import { bfPublic } from "@/lib/bf-public";
 
 export async function generateMetadata() {
   return { ...(await canonical("/")) };
@@ -93,6 +95,7 @@ export default async function HomePage() {
   }
   const jumpCats = ["skincare", "makeup", "fragrance", "hair", "suncare", "body", "supplements", "baby", "men"];
   const bfCount = cards.filter((c) => c.bf && c.inStock).length;
+  const bf = await bfPublic();
   const jumps = [
     ...(bfCount ? [{ label: t("Black Friday"), href: "/shop/?bf=1", hot: true }] : []),
     { label: t("Offers"), href: "/shop/?sale=1", hot: !bfCount },
@@ -108,6 +111,7 @@ export default async function HomePage() {
         if (!wrapped) return null;
         const extra = [];
         // Right under the first big banner: the promise, then one-tap jumps to the main aisles.
+        if (n === firstHero && bf.fx.daily && (bf.phase === "soon" || bf.phase === "live")) extra.push(<BfDoors key="bfdoors" b={bf} />);
         if (n === firstHero) extra.push(<PromiseStrip key="promise" t={t} freeOver={settings.delivery.freeThreshold} />, <QuickJump key="jump" t={t} links={jumps} />, ...(scanOn ? [<ScanBanner key="scan" t={t} />] : []));
         // Halfway down, an invitation to ask a pharmacist.
         if (n === bandAfter) extra.push(<PharmacistBand key="band" t={t} whatsapp={settings.store.whatsapp} scan={scanOn} />);

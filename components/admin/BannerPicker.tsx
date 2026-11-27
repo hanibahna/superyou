@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { Candidate } from "@/lib/black-friday";
+import type { BfFx, Candidate } from "@/lib/black-friday";
 
 type Item = Partial<Candidate> & { slug: string; pct: number };
-type Init = { items: Item[]; startsAt: string; endsAt: string; enabled: boolean; headline: boolean };
+type Init = { items: Item[]; startsAt: string; endsAt: string; enabled: boolean; headline: boolean; fx?: BfFx };
 
 const local = (iso: string) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: "Asia/Beirut" }).slice(0, 16).replace(" ", "T") : "");
 const toIso = (v: string) => (v ? new Date(`${v}:00+02:00`).toISOString() : "");
@@ -31,6 +31,7 @@ export function BannerPicker({ initial }: { initial: Init }) {
   const [end, setEnd] = useState(local(initial.endsAt) || "2026-12-01T23:59");
   const [enabled, setEnabled] = useState(initial.enabled);
   const [headline, setHeadline] = useState(initial.headline);
+  const [fx, setFx] = useState<BfFx>({ strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100, ...initial.fx });
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -43,7 +44,7 @@ export function BannerPicker({ initial }: { initial: Init }) {
   const move = (i: number, by: number) => { const n = [...items]; const [x] = n.splice(i, 1); n.splice(Math.max(0, Math.min(n.length, i + by)), 0, x); setItems(n); };
   const save = async () => {
     setBusy(true); setMsg("");
-    const r = await fetch("/api/admin/black-friday/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ banner: { items: items.map(({ slug, pct }) => ({ slug, pct })), startsAt: toIso(start), endsAt: toIso(end), enabled, headline } }) });
+    const r = await fetch("/api/admin/black-friday/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ banner: { items: items.map(({ slug, pct }) => ({ slug, pct })), startsAt: toIso(start), endsAt: toIso(end), enabled, headline, fx } }) });
     const j = await r.json().catch(() => ({}));
     setBusy(false);
     setMsg(r.ok ? `Saved: ${j.items} products in the banner, ${j.discounts} with a discount${headline ? `; headline now "${j.headline ? `Up to ${j.headline}% off` : "Our Black Friday picks"}"` : ""}.` : j.error ?? "Could not save");
@@ -65,6 +66,21 @@ export function BannerPicker({ initial }: { initial: Init }) {
         <button disabled={busy} onClick={save} className="rounded-lg bg-brand-500 px-5 py-2 font-semibold text-white">Save banner</button>
       </div>
       {msg && <p className="text-sm">{msg}</p>}
+
+      <div className="rounded-xl bg-gray-50 p-4">
+        <h2 className="font-semibold">Animations & games (follow the dates above)</h2>
+        <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+          <label className="flex items-start gap-2"><input type="checkbox" checked={fx.strip} onChange={(e) => setFx({ ...fx, strip: e.target.checked })} /> <span><b>Countdown strip</b> on every page: "Starts in", then "Day 2/5 · Ends in", a progress line, "Last day" pulsing and "Final hours" in red.</span></label>
+          <label className="flex items-start gap-2"><input type="checkbox" checked={fx.daily} onChange={(e) => setFx({ ...fx, daily: e.target.checked })} /> <span><b>A door a day</b> on the homepage: one gift box per Black Friday day. Each day opens the next product from your list above (in that order); later doors wiggle with a countdown.</span></label>
+          <label className="flex items-start gap-2"><input type="checkbox" checked={fx.confetti} onChange={(e) => setFx({ ...fx, confetti: e.target.checked })} /> <span><b>Confetti</b> when a shopper adds a Black Friday product to the cart.</span></label>
+          <label className="flex items-start gap-2"><input type="checkbox" checked={fx.stamps} onChange={(e) => setFx({ ...fx, stamps: e.target.checked })} /> <span><b>Stamp card</b> (costs Club points): a delivered order placed on a Black Friday day earns that day's stamp; all days stamped earns a bonus.</span></label>
+          {fx.stamps && <div className="flex flex-wrap gap-3 sm:col-span-2">
+            <label>Points per stamp <input type="number" min={0} value={fx.stampPoints} onChange={(e) => setFx({ ...fx, stampPoints: Math.max(0, Number(e.target.value) || 0) })} className="ml-1 w-20 rounded border border-line px-2 py-1 text-right" /></label>
+            <label>Bonus for all days <input type="number" min={0} value={fx.stampBonus} onChange={(e) => setFx({ ...fx, stampBonus: Math.max(0, Number(e.target.value) || 0) })} className="ml-1 w-20 rounded border border-line px-2 py-1 text-right" /></label>
+          </div>}
+        </div>
+        <p className="mt-2 text-xs text-muted">Everything appears only between the start and end dates, and only when at least one product or brand has a Black Friday discount. Press Save banner after changing.</p>
+      </div>
 
       <div>
         <h2 className="font-semibold">In the banner ({items.length}){below ? <span className="text-sale"> · {below} below cost</span> : null}</h2>

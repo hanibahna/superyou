@@ -13,6 +13,7 @@ import { getSettings } from "@/lib/site-store";
 import { translateDeep } from "@/lib/translate";
 import { ShopProvider } from "@/lib/store";
 import { ScrollCue } from "@/components/ScrollCue";
+import { BfStrip } from "@/components/BlackFriday";
 import { headers } from "next/headers";
 
 // Catalog lives in the database, so pages render on request and always show current data.
@@ -41,6 +42,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   return (
     <ShopNavProvider nav={menus}>
     <ShopProvider>
+      <BfStrip />
       <AnnouncementBar />
       <Header taxonomy={taxonomy} />
       <main className="min-h-[60vh]">{children}</main>
