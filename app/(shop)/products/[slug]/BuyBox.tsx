@@ -1,5 +1,6 @@
 "use client";
 
+import { honest } from "@/lib/claims";
 import { ShareButton } from "@/components/ShareButton";
 import { SubscribeChoice } from "@/components/SubscribePlan";
 import type { Every } from "@/lib/every";
@@ -189,7 +190,7 @@ export function BuyBox({
           </p>
         )}
         <ul className="pdp-trust mt-4 space-y-2 rounded-xl bg-[#f7f8f7] p-4 text-sm">
-          {growth.trust.lines.map((l) => <li key={l}>✓ {l}</li>)}
+          {growth.trust.lines.map((l) => <li key={l}>✓ {honest(l)}</li>)}
           {freeOver && <li>✓ {t("Free delivery on orders over")} {freeOver}</li>}
           <li>✓ {t("Pay cash on delivery, by card or with Whish")}</li>
         </ul>

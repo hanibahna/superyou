@@ -1,5 +1,6 @@
 "use client";
 
+import { honest } from "@/lib/claims";
 import { AppLinks } from "@/components/AppLinks";
 
 import Link from "next/link";
@@ -12,7 +13,7 @@ import { ChatIcon, GiftIcon, ShieldIcon, TruckIcon } from "./Icons";
 export function TrustStrip() {
   const { trust } = useSettings();
   const icons = [<ShieldIcon key="s" />, <TruckIcon key="t" />, <GiftIcon key="g" />, <ChatIcon key="c" />];
-  const items = trust.filter((t) => t.title).map((t, n) => ({ ...t, icon: icons[n % icons.length] }));
+  const items = trust.filter((t) => t.title).map((t, n) => ({ ...t, title: honest(t.title), text: honest(t.text), icon: icons[n % icons.length] }));
   if (!items.length) return null;
   return (
     <section className="trust-strip border-y border-line bg-brand-50">

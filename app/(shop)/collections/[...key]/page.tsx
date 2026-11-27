@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ key: stri
   const title = c?.title ?? key.split("/").pop()!.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   return {
     title: `${title} in Lebanon`,
-    description: (c?.description || `Shop ${title} at SuperYou: authentic products from a licensed Lebanese pharmacy, pharmacist advice on WhatsApp and delivery across Lebanon.`).slice(0, 160),
+    description: (c?.description || `Shop ${title} at SuperYou: sealed, genuine brand products, pharmacist advice on WhatsApp and delivery across Lebanon.`).slice(0, 160),
     ...(await canonical(`/collections/${key}/`)),
   };
 }

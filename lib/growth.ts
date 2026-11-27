@@ -301,7 +301,7 @@ export const defaultGrowth: Growth = {
   priceMatch: defaultPriceMatch,
   prime: defaultPrime,
   trust: {
-    lines: ["100% authentic — supplied by a licensed Lebanese pharmacy", "Advice from qualified pharmacists, free on WhatsApp", "Easy returns on unopened items within 7 days"],
+    lines: ["100% authentic: sealed, genuine brand products", "Advice from qualified pharmacists, free on WhatsApp", "Easy returns on unopened items within 7 days"],
     returnsSummary: "Unopened items can be returned within 7 days. Opened skincare can't be returned for hygiene reasons unless faulty.",
   },
 };

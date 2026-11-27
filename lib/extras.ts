@@ -35,7 +35,7 @@ export const defaultExtras: Extras = {
   youtube: { enabled: true, key: "", pins: {} },
   sections: {
     _all: sec("Not sure what to choose?", "Ask our pharmacist on a free video call, or let our AI advisor suggest products for you.", "Book a free video call", "/services/?book=video-consult", "/brand/home/png/hero-pharmacist.png", "#ffd6e3",
-      ["Every product we sell is original, from official distributors.", "Pay cash on delivery anywhere in Lebanon.", "Patch-test new skincare for 24 hours before full use.", "Not sure about an ingredient? Ask our pharmacist on WhatsApp."], ["Routine finder", "/routine/"]),
+      ["Every product we sell is sealed and genuine.", "Pay cash on delivery anywhere in Lebanon.", "Patch-test new skincare for 24 hours before full use.", "Not sure about an ingredient? Ask our pharmacist on WhatsApp."], ["Routine finder", "/routine/"]),
     skincare: sec("Your routine, in 60 seconds", "Answer a few questions and get a morning and night routine from products in stock.", "Find my routine", "/routine/", art("skincare"), "#ffd6e3",
       ["Cleanse, treat, moisturise, protect: four steps cover most skin.", "Introduce one new active at a time and give it 4 weeks.", "Patch-test new products behind the ear for 24 hours.", "Retinol at night, vitamin C in the morning, sunscreen always."], ["SuperScan", "/skin-scan/"]),
     suncare: sec("Sun protection, sorted", "Pick your skin and your day and we'll match the right SPF.", "Find my sunscreen", "/finder/sun/", art("sun"), "#fff3b8",

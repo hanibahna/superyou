@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const path = brand && filters === 1 ? `/shop/?brand=${encodeURIComponent(brand)}` : cat && filters === 1 ? `/shop/?category=${cat.slug}` : concern && filters === 1 ? `/shop/?concern=${concern.slug}` : "/shop/";
   return {
     title: q.q ? `Search: ${q.q}` : `${name} in Lebanon`,
-    description: (cat?.description || `Shop ${name} at SuperYou: authentic products from a licensed Lebanese pharmacy, pharmacist advice on WhatsApp and delivery across Lebanon.`).slice(0, 160),
+    description: (cat?.description || `Shop ${name} at SuperYou: sealed, genuine brand products, pharmacist advice on WhatsApp and delivery across Lebanon.`).slice(0, 160),
     ...(await canonical(path)),
     ...(q.q || filters > 1 ? { robots: { index: false, follow: true } } : {}),
   };

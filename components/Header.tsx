@@ -1,5 +1,6 @@
 "use client";
 
+import { honest } from "@/lib/claims";
 import { ScanIcon } from "./ScanIcon";
 import { createPortal } from "react-dom";
 
@@ -30,9 +31,9 @@ export function AnnouncementBar() {
           </span>
         ) : <span className="hidden sm:block" />}
         {a.link ? (
-          <Link href={a.link} className="mx-auto truncate font-medium underline-offset-2 hover:underline sm:mx-0">{a.text}</Link>
+          <Link href={a.link} className="mx-auto truncate font-medium underline-offset-2 hover:underline sm:mx-0">{honest(a.text)}</Link>
         ) : (
-          <p className="mx-auto truncate font-medium sm:mx-0">{a.text}</p>
+          <p className="mx-auto truncate font-medium sm:mx-0">{honest(a.text)}</p>
         )}
         <div className="hidden gap-3 opacity-90 sm:flex">
           {club.enabled && <Link href="/rewards/" className="font-semibold">{club.name} &amp; rewards</Link>}

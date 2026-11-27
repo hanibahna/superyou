@@ -42,7 +42,7 @@ export async function GET() {
     // Size/shade group: an opaque code (the raw group key can carry the supplier's prefix).
     const grp = p.group ? `g${createHash("sha1").update(p.group).digest("hex").slice(0, 12)}` : "";
     const title = `${p.brand} ${p.name}${p.size && !p.name.includes(p.size) ? ` ${p.size}` : ""}`.slice(0, 150);
-    const desc = `${p.brand} ${p.name}${p.size ? `, ${p.size}` : ""}. 100% original from official distributors in Lebanon. Delivered across Lebanon, pay when it arrives.`;
+    const desc = `${p.brand} ${p.name}${p.size ? `, ${p.size}` : ""}. Sealed, genuine brand product. Delivered across Lebanon, pay when it arrives.`;
     // Was-price only when it's a real reduction (sale or SuperPrice).
     const was = p.compareAt && p.compareAt > p.price + 0.01 ? p.compareAt : p.matchWas && p.matchWas > p.price + 0.01 ? p.matchWas : 0;
     rows.push([

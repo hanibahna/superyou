@@ -62,7 +62,7 @@ export const defaultSettings: Settings = {
   },
   seo: { title: "", description: "" },
   trust: [
-    { title: "100% authentic", text: "Sourced from official distributors" },
+    { title: "100% authentic", text: "Sealed, genuine brand products" },
     { title: "Fast delivery", text: "All over Lebanon · free over $100" },
     { title: "Rewards", text: "Earn points on every order" },
     { title: "Pharmacist advice", text: "Ask us on WhatsApp" },

@@ -25,7 +25,7 @@ export async function llmsText(full: boolean) {
   out.push(`# ${s.store.name}`, "");
   out.push(`> ${s.store.name} (${base.replace(/^https?:\/\//, "")}) is an online beauty, parapharmacy and supplements shop for Lebanon: about ${live.length.toLocaleString("en")} original products in stock from ${brands.length} brands, pharmacist advice on WhatsApp, cash on delivery and delivery across Lebanon in 1–3 working days.`, "");
   out.push("Key facts:");
-  out.push(`- Every product is original, sourced from official distributors.`);
+  out.push(`- Every product is sealed and genuine.`);
   out.push(`- Prices in US dollars. Delivery ${money(d.fee)}${d.freeThreshold ? `, free over ${money(d.freeThreshold)}` : ""}. Pay ${pay}.`);
   out.push(`- Unopened products can be returned within 7 days of delivery; wrong or damaged items are replaced or refunded.`);
   out.push(`- Free advice from a pharmacist on WhatsApp (${s.store.phone}) and free video consultations.`);
