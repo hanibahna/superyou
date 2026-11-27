@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { BfLine } from "@/lib/black-friday";
 
 type State = { startsAt: string; endsAt: string; enabled: boolean; pct: Record<string, number> };
-type Banner = { headline: string; onSaleNow: number; rows: { banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[] };
+type Banner = { headline: string; onSaleNow: number; rows: { pageWorks?: boolean; problem?: string; alternative?: string; banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[] };
 
 const local = (iso: string) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: "Asia/Beirut" }).slice(0, 16).replace(" ", "T") : "");
 const toIso = (v: string) => (v ? new Date(`${v}:00+02:00`).toISOString() : "");
@@ -52,7 +52,7 @@ export function BlackFridayEditor({ state, lines, banner }: { state: State; line
             <tbody>{banner.rows.map((b, i) => (
               <tr key={i} className="border-t border-line align-top">
                 <td className="py-1 pr-2 text-xs text-muted">{b.banner}</td>
-                <td className="pr-2">{b.brand} · {b.name}</td>
+                <td className="pr-2">{b.brand} · {b.name}{b.problem ? <span className="block text-xs text-sale">Link broken: {b.problem}{b.alternative ? ` · live alternative ${b.alternative}` : " · no live alternative"}</span> : null}</td>
                 <td className={`pr-2 ${b.neovitale ? "" : "font-semibold text-amber-700"}`}>{b.source}</td>
                 <td className="pr-2 text-right">{b.was ? `$${b.was}` : "—"}</td>
                 <td className="pr-2 text-right">${b.now}</td>

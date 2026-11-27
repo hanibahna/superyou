@@ -57,7 +57,10 @@ export async function bfLines(): Promise<BfLine[]> {
 export async function bannerReport() {
   const [landing, idx, live, promos] = await Promise.all([getLanding(), getIndex(), liveProducts(), getPromotions()]);
   const auto = promos.discounts.filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
-  const rows: { banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[] = [];
+  const words = (t: string) => t.toLowerCase().normalize("NFD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length > 2);
+  const why = (p?: ProductLite) => !p ? "product deleted" : p.status !== "active" ? "product hidden (draft)" : !live.byId.has(p.id) ? (live.list.some((x) => x.slug === p.slug) ? "" : "hidden from customers (its catalog or brand is hidden, or a duplicate)") : "";
+  const altFor = (p: ProductLite) => { const w = words(p.name).slice(0, 4); return live.list.find((x) => x.inStock && x.brand.toLowerCase() === p.brand.toLowerCase() && w.every((k) => words(x.name).includes(k)) && (!p.variant || !x.variant || words(x.variant).join("") === words(p.variant).join(""))); };
+  const rows: { pageWorks?: boolean; problem?: string; alternative?: string; banner: string; name: string; brand: string; source: string; neovitale: boolean; regular: number; was?: number; now: number; offPct: number; basis: string; cost?: number; marginNowPct: number | null }[] = [];
   for (const s of landing.sections) {
     if (s.type !== "bfhero" || !s.enabled) continue;
     // The picture tiles (each links to a product) and the sliding product row.
@@ -74,7 +77,10 @@ export async function bannerReport() {
         : raw?.compareAt && raw.compareAt > raw.price ? `Sale price copied from ${srcName(raw.source)} at import (their crossed-out price $${raw.compareAt})`
         : "No discount";
       const cost = raw?.cost;
-      rows.push({ banner: tiles.includes(c as ProductLite) ? "Picture tile" : "Product slider", name: `${c.name}${c.variant ? ` · ${c.variant}` : ""}`, brand: c.brand, source: srcName(raw?.source), neovitale: raw?.source === "neovitale.com",
+      const isTile = tiles.includes(c as ProductLite);
+      const problem = isTile ? why(raw) : "";
+      const alt = problem && raw ? altFor(raw) : undefined;
+      rows.push({ pageWorks: isTile ? !problem : undefined, problem: problem || undefined, alternative: alt ? `/products/${alt.slug}/ (${srcName(alt.source)}, $${alt.price})` : undefined, banner: tiles.includes(c as ProductLite) ? "Picture tile" : "Product slider", name: `${c.name}${c.variant ? ` · ${c.variant}` : ""}`, brand: c.brand, source: srcName(raw?.source), neovitale: raw?.source === "neovitale.com",
         regular: r2(raw?.price ?? lp.price), was: was ? r2(was) : undefined, now: r2(lp.price), offPct: was ? Math.round((1 - lp.price / was) * 100) : 0, basis,
         cost: cost ? r2(cost) : undefined, marginNowPct: cost ? pct((lp.price - cost) / lp.price) : null });
     }
