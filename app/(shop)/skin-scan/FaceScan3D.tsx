@@ -34,6 +34,8 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
     let inS = 0, inside = false, lastFrame = 0, placeAt = 0, lastPlace = "";
     let base: { x: number; y: number } | null = null, calib: { x: number; y: number }[] = [];
     let startedCircle = 0, doneAt = 0, lastLit = 0, lastHint = "", snapshot = "";
+    let tess: { start: number; end: number }[] = [];
+    let lastPts: { x: number; y: number }[] = [];
 
     // Square crop from the middle of the camera, un-mirrored (the skin reading needs the real face).
     const capture = (v: HTMLVideoElement) => {
@@ -58,6 +60,7 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         const files = await mp.FilesetResolver.forVisionTasks(WASM);
         const make = (delegate: "GPU" | "CPU") => mp.FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: "VIDEO", numFaces: 1 });
         landmarker = (await make("GPU").catch(() => make("CPU"))) as unknown as typeof landmarker;
+        tess = mp.FaceLandmarker.FACE_LANDMARKS_TESSELATION;
       } catch { return fail(t("The 3D scan couldn't start on this device.")); }
       if (stopped) return;
       clearTimeout(timeout);
@@ -115,6 +118,31 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
       }
       if (inside && lastPlace) { lastPlace = ""; lastHint = ""; if (!base) setMsg(t("Hold still…")); }
 
+      // The 3D face mesh: the matrix of lines and points that follows the face, plus a scan line
+      // sweeping down it. Drawn inside the circle only, and gone once the scan is complete.
+      // keep the last mesh for a moment after the scan completes, so the result picture shows it
+      const meshPts = lm && !doneAt ? lm.map((q) => ({ x: W - ((q.x * vw - sx) / s) * W, y: ((q.y * vh - sy) / s) * W })) : doneAt && since < 450 ? lastPts : null;
+      if (meshPts?.length) {
+        const pts = meshPts; if (lm) lastPts = pts;
+        g.save();
+        g.beginPath(); g.arc(cx, cy, CR, 0, Math.PI * 2); g.clip();
+        const glow = reduce ? 0.6 : 0.5 + 0.2 * Math.sin(now / 300);
+        g.strokeStyle = `rgba(255,170,205,${glow.toFixed(2)})`; g.lineWidth = 1.1;
+        g.beginPath();
+        for (const c of tess) { const a = pts[c.start], b = pts[c.end]; if (a && b) { g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); } }
+        g.stroke();
+        g.fillStyle = "rgba(255,255,255,.92)";
+        for (let k = 0; k < pts.length; k += 2) g.fillRect(pts[k].x - 1.6, pts[k].y - 1.6, 3.2, 3.2);
+        if (!reduce && !doneAt) {
+          let top = Infinity, bot = -Infinity, left = Infinity, right = -Infinity;
+          for (const q of pts) { if (q.y < top) top = q.y; if (q.y > bot) bot = q.y; if (q.x < left) left = q.x; if (q.x > right) right = q.x; }
+          const yy = top + ((now / 1400) % 1) * (bot - top);
+          const grad = g.createLinearGradient(0, yy - 22, 0, yy + 2);
+          grad.addColorStop(0, "rgba(255,120,180,0)"); grad.addColorStop(1, "rgba(255,160,210,.75)");
+          g.fillStyle = grad; g.fillRect(left, yy - 22, right - left, 24);
+        }
+        g.restore();
+      }
       if (lm && !doneAt) {
         const L = lm[234], R = lm[454], N = lm[1], T = lm[10], C = lm[152];
         const dir = { x: (N.x - L.x) / (R.x - L.x) - 0.5, y: (N.y - T.y) / (C.y - T.y) };
