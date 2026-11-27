@@ -683,3 +683,6 @@ html[data-bf-strip] .offer-tab { display: none !important; }
 .glass-bar .tab-item:active { transform: scale(.94); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass-bar { background: rgb(255 255 255 / .96); } .glass-bar.is-dark { background: rgb(28 24 27 / .95); } }
 @media (prefers-reduced-motion: reduce) { .glass-bar, .glass-bar .tab-item { transition: none; } }
+
+/* Phones: the Filters / Sort bar runs to the page margins whatever the screen's gutter. */
+@media (max-width: 1023px) { .filter-bar { margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); width: auto; } }
