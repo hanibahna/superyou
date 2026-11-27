@@ -138,14 +138,14 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
   );
 
   return (
-    <div className="container-x py-8">
+    <div className="container-x py-5 md:py-8">
       <nav className="mb-2 text-xs text-muted">
         <Link href="/" className="hover:underline">Home</Link> / <span>{fullTitle}</span>
       </nav>
       {/* Phones: the section banner waits until after the first 6 products, so products show on the first screen. */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold">{fullTitle}<ShareMenu align="start" size={34} text={`🛍️ ${fullTitle} · SuperYou (${total.toLocaleString("en-US")} products)\n${typeof window !== "undefined" ? window.location.href.split("#")[0] : ""}`} /></h1>
+          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold md:text-3xl">{fullTitle}<ShareMenu align="start" size={34} text={`🛍️ ${fullTitle} · SuperYou (${total.toLocaleString("en-US")} products)\n${typeof window !== "undefined" ? window.location.href.split("#")[0] : ""}`} /></h1>
           {(intro || (category?.description && !query.q)) && <p className="mt-1 max-w-2xl whitespace-pre-line text-sm text-muted">{intro || category?.description}</p>}
           <p className="mt-1 text-sm text-muted">{total.toLocaleString("en-US")} products{pending ? " · updating…" : ""}</p>
         </div>

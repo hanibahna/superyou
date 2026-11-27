@@ -574,3 +574,23 @@ html[data-bf-strip] .offer-tab { display: none !important; }
 .bf-strip:focus-visible, .bf-hero :focus-visible, .bf-strip :focus-visible { outline-color: #fff; }
 .bf-hero.bf-live .bf-sparkles { display: none; }
 @media (prefers-reduced-motion: reduce) { .sp-sticker { animation: none !important; } }
+
+/* ══ Phones: tighter, even margins ══
+   16 px page edges (more on notched phones in landscape), 10 px between cards, lighter card padding,
+   sections closer together, and sideways rows that run to the screen edge so the next item peeks in. */
+@media (max-width: 767px) {
+  .container-x { padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
+  .hsec { padding-block: calc(1.5rem * var(--space-scale)); }
+  main h2.text-2xl, .hsec h2 { font-size: 1.45rem; line-height: 1.15; }
+  [data-preset] .hsec h2, [data-preset] main h2.text-2xl { font-size: 1.6rem; line-height: 1.05; }
+  .bleed { margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; }
+  .pgrid { gap: 10px !important; }
+  .pcard { padding: 8px; border-radius: 14px; }
+  [data-preset="pop"] .pcard { padding: 8px; border-radius: 20px; }
+  [data-preset="pop"] .pcard > a:first-of-type { border-radius: 14px; }
+  .pcard > div.mt-3 { margin-top: 8px; }
+  .pcard .pname, [data-preset="pop"] .pcard .pname { font-size: 14px; }
+  .pcard > button:first-child { padding: 7px; top: 6px; inset-inline-end: 6px; }
+  .pcard .buy, .pcard .buy-alt { border-radius: 9999px; font-size: 14px; }
+  main nav.text-xs:first-child { margin-bottom: 12px; }
+}

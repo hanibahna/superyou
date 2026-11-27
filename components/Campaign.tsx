@@ -192,7 +192,7 @@ function Scroller({ children, label }: { children: React.ReactNode; label: strin
   const by = (d: number) => ref.current?.scrollBy({ left: d * ref.current.clientWidth * 0.8, behavior: "smooth" });
   return (
     <div className="relative">
-      <div ref={ref} className="no-scrollbar flex snap-x gap-4 overflow-x-auto pb-1" aria-label={label}>{children}</div>
+      <div ref={ref} className="bleed no-scrollbar flex snap-x gap-3 overflow-x-auto pb-1 md:gap-4" aria-label={label}>{children}</div>
       <button onClick={() => by(-1)} aria-label={tx("Previous")} className="absolute -left-4 top-1/3 hidden h-10 w-10 place-items-center rounded-full bg-white shadow-md hover:bg-brand-50 md:grid"><ChevronLeft /></button>
       <button onClick={() => by(1)} aria-label={tx("Next")} className="absolute -right-4 top-1/3 hidden h-10 w-10 place-items-center rounded-full bg-white shadow-md hover:bg-brand-50 md:grid"><ChevronRight /></button>
     </div>
