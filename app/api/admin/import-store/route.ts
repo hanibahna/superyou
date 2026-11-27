@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { adminGuard } from "@/lib/admin-auth";
 import { getIndex } from "@/lib/catalog";
+import { getMargins } from "@/lib/margins";
 import { upsertProducts } from "@/lib/catalog-admin";
 import { fetchSourcePage, mapSourceProduct, normaliseSourceUrl, type SourceProduct } from "@/lib/import/shopify-source";
 import { getSourcing } from "@/lib/site-store";
@@ -28,6 +29,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
+  await getMargins(); // NeoVitale rates edited in Admin → Margins
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   const o = parsed.data;

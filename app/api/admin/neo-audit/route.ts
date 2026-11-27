@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { getIndex } from "@/lib/catalog";
+import { getMargins } from "@/lib/margins";
 import { discountFor } from "@/lib/costs/neovitale";
 import { fetchSourcePage } from "@/lib/import/shopify-source";
 import { db } from "@/lib/db-core";
@@ -80,6 +81,7 @@ async function liveNeo(fresh: boolean): Promise<Live> {
 export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
+  await getMargins(); // NeoVitale rates edited in Admin → Margins
   // Product data for the given NeoVitale handles, read one product page at a time and shaped like
   // the catalog feed, so Import can add them with { products } (used when the feed is rate-limited).
   const want = req.nextUrl.searchParams.get("fetch");

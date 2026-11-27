@@ -530,7 +530,7 @@ export function salePrice<T extends ScopedItem & { price: number; compareAt?: nu
   return { price: +best.toFixed(2), compareAt: Math.max(p.compareAt ?? 0, p.price), rule };
 }
 
-export type QuoteLine = ScopedItem & { productId: string; name: string; price: number; basePrice: number; qty: number; superPrice?: boolean };
+export type QuoteLine = ScopedItem & { productId: string; name: string; price: number; basePrice: number; qty: number; superPrice?: boolean; floor?: number };
 
 export type Quote = {
   subtotal: number; // after automatic sale prices
@@ -569,7 +569,12 @@ export function quote(lines: QuoteLine[], promos: Promotions, settings: Settings
       if (d.code) couponError = "This code doesn't apply to the items in your cart";
       continue;
     }
-    const amount = d.type === "percent" ? (spend * d.value) / 100 : Math.min(spend, d.value * eligible.reduce((s, l) => s + l.qty, 0));
+    // Each item's share stops at its minimum-margin price (Admin → Margins).
+    const amount = eligible.reduce((s, l) => {
+      const off = d.type === "percent" ? (l.price * d.value) / 100 : Math.min(l.price, d.value);
+      const room = l.floor !== undefined ? Math.max(0, l.price - l.floor) : l.price;
+      return s + Math.min(off, room) * l.qty;
+    }, 0);
     if (amount > 0) discounts.push({ name: d.name, code: d.code || undefined, amount: +amount.toFixed(2) });
   }
   const discountTotal = +Math.min(subtotal, discounts.reduce((s, d) => s + d.amount, 0)).toFixed(2);

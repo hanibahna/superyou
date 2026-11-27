@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { getIndex, getProductsDetailed, saveProducts } from "@/lib/catalog";
+import { getMargins } from "@/lib/margins";
 import { discountFor } from "@/lib/costs/neovitale";
 import { db } from "@/lib/db-core";
 
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
   const page = JSON.parse((await db.cmd<string | null>(["GET", "neo-audit:verified"])) ?? "{}") as Record<string, [number, number, number]>;
   if (!Object.keys(feed).length) return NextResponse.json({ error: "Run /api/admin/neo-audit first to read NeoVitale's prices." }, { status: 409 });
   const idx = await getIndex();
+  await getMargins(); // loads NeoVitale rates edited in Admin → Margins
   const neo = idx.all.filter((p) => p.source === "neovitale.com");
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const plan = new Map<string, { price: number; cost?: number }>();

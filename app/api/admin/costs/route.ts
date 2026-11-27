@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
 import { getIndex, getProductsDetailed, saveProducts } from "@/lib/catalog";
+import { getMargins } from "@/lib/margins";
 import { discountFor, NEOVITALE_DISCOUNTS } from "@/lib/costs/neovitale";
 
 export const maxDuration = 300;
@@ -10,6 +11,7 @@ export const maxDuration = 300;
 export async function GET(req: NextRequest) {
   const denied = await adminGuard();
   if (denied) return denied;
+  await getMargins(); // NeoVitale rates edited in Admin → Margins
   const apply = req.nextUrl.searchParams.has("apply");
   const idx = await getIndex();
   const neo = idx.all.filter((p) => p.source === "neovitale.com");

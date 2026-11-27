@@ -43,11 +43,27 @@ export const NEOVITALE_DISCOUNTS: [string, number | null][] = [
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9&]+/g, " ").trim();
 
+// Rates edited in Admin → Margins replace or add to the price list above (loaded by the callers).
+let overrides: [string, number | null][] = [];
+let rows: [string, number | null][] = NEOVITALE_DISCOUNTS;
+export function setNeoOverrides(o: Record<string, number | null>) {
+  overrides = Object.entries(o).map(([k, v]) => [k, v] as [string, number | null]);
+  const keys = new Set(overrides.map(([k]) => norm(k)));
+  rows = [...NEOVITALE_DISCOUNTS.filter(([k]) => !keys.has(norm(k))), ...overrides];
+}
+/** Where a brand's rate comes from: the supplier's price list, an edit in the admin, or nowhere yet. */
+export function rateSource(brand: string): "edited" | "price list" | "missing" {
+  const b = norm(brand);
+  if (overrides.some(([k]) => norm(k) === b)) return "edited";
+  return discountFor(brand, "") === undefined ? "missing" : "price list";
+}
+export const normBrand = norm;
+
 /** The discount for one product: a row naming its brand, or brand + words found in its name (the most specific wins). */
 export function discountFor(brand: string, name: string, hit?: Set<string>): number | null | undefined {
   const b = norm(brand), n = ` ${norm(name)} `;
   let best: { len: number; pct: number | null; key: string } | undefined;
-  for (const [key, pct] of NEOVITALE_DISCOUNTS) {
+  for (const [key, pct] of rows) {
     const k = norm(key);
     let ok = false;
     if (k === b) ok = true;

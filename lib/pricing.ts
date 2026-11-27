@@ -11,6 +11,7 @@ import type { ProductLite } from "@/lib/data/catalog";
 import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
 import { getPromotions, getRoutine, getSettings, getSourcing, getVisibility } from "@/lib/site-store";
 import { priceMatches } from "@/lib/price-match";
+import { floorPrice, getMargins } from "@/lib/margins";
 import { shipInfo } from "@/lib/sourcing";
 import { collectionsFor } from "@/lib/import/collection-map";
 import { bucketKey, nameTokens, sameNames, stepOf, type Growth } from "@/lib/growth";
@@ -59,11 +60,11 @@ function mergeDuplicates(list: ProductLite[], prefer: Growth["dedupe"]["prefer"]
 /** Active products with automatic sale prices applied. Cached until the catalog or promotions change. */
 const SUPPLIER_LABELS = new Set(["neovitale", "skin society", "nexuscare"]);
 export async function liveProducts() {
-  const [idx, promos, vis, growth, ratings, sourcing, pm] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing(), priceMatches()]);
+  const [idx, promos, vis, growth, ratings, sourcing, pm, margins] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing(), priceMatches(), getMargins()]);
   const pmOn = growth.priceMatch.enabled;
   const auto = promos.discounts.filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
   // Re-evaluate at least every minute so scheduled sales start and stop on time.
-  const key = `${idx.ver}|pm${pmOn ? pm.ver : 'off'}${growth.priceMatch.badge ? 'b' : ''}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${JSON.stringify(sourcing)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
+  const key = `${idx.ver}|pm${pmOn ? pm.ver : 'off'}${growth.priceMatch.badge ? 'b' : ''}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${JSON.stringify(sourcing)}|${JSON.stringify(margins)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
   if (g.__live?.key === key) return g.__live;
   const hiddenSrc = new Set(vis.hiddenSources.map((x) => x.toLowerCase()));
   const hiddenBrand = new Set(vis.hiddenBrands.map((x) => x.toLowerCase()));
@@ -75,14 +76,18 @@ export async function liveProducts() {
     // Imported catalogs join the same menu collections as local stock (Make Up › Eyes › Mascara…).
     const cols = ship.origin === "international" && !p.collections?.length ? collectionsFor(p.name) : undefined;
     const q: ProductLite = { ...p, ...(r ? { rating: r.avg, reviewCount: r.count } : {}), ...(cols?.length ? { collections: cols } : {}), origin: ship.origin, shipFrom: ship.country, daysMin: ship.daysMin, daysMax: ship.daysMax };
-    const s = auto.length ? salePrice(q, auto) : null;
+    let s = auto.length ? salePrice(q, auto) : null;
+    // Minimum margin (Admin → Margins): a sale stops at cost + the floor; no sale at all when the floor is above our price.
+    const floor = floorPrice(q, margins);
+    if (s?.rule && floor !== undefined && s.price < floor) s = floor < q.price - 0.005 ? { ...s, price: floor } : null;
     const sold = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
     // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
     const m = pmOn ? pm.map.get(p.id) : undefined;
     // Shops we buy from are never named to customers (also for checks stored before this rule).
     const ok = (s: string, show: boolean) => show && !SUPPLIER_LABELS.has(s.toLowerCase());
     const named = (all?: [string, number, boolean][]) => all?.map(([s, t, show]) => [ok(s, show) ? s : "", t] as [string, number]);
-    if (m && m.p < sold.price - 0.005) return { ...sold, price: m.p, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: ok(m.s, m.show) ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
+    const mp = m ? Math.max(m.p, floor ?? 0) : 0;
+    if (m && mp < sold.price - 0.005) return { ...sold, price: mp, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: ok(m.s, m.show) ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
     // Already the best price: say which shop we compared with (shown as "price compared").
     const c = pmOn && growth.priceMatch.badge ? pm.cmp.get(p.id) : undefined;
     // A shop is cheaper and we didn't go below it: no "best price" claim on this product.
@@ -110,7 +115,7 @@ export async function appOrdered(phone: string) {
 export type QuoteInput = { items: { productId: string; qty: number; every?: Every }[]; code?: string; zone?: string; giftCard?: string; subscriptionId?: string; noSuperPrice?: boolean; phone?: string; prime?: "trial" | "join"; channel?: "app" };
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
-  const [live, basePromos, settings, idx, growth, routine] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine()]);
+  const [live, basePromos, settings, idx, growth, routine, margins] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine(), getMargins()]);
   const promos: Promotions = { discounts: [...basePromos.discounts], gifts: [...basePromos.gifts] };
   // App welcome: X% off the customer's first order placed in the app, applied automatically (no code).
   // Known by phone; items already on sale and SuperPrice items are not discounted again.
@@ -144,7 +149,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     const p = live0 && spOff ? { ...live0, price: live0.matchWas!, match: undefined, matchWas: undefined, matchVs: undefined } : live0;
     const base = idx.byId.get(productId);
     return p && base
-      ? { productId, superPrice: !!p.matchWas, spLimit: spOff && !input.noSuperPrice && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt }
+      ? { productId, superPrice: !!p.matchWas, spLimit: spOff && !input.noSuperPrice && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt, floor: floorPrice(base, margins) }
       : null;
   });
   const ok = lines.filter((l): l is NonNullable<typeof l> => !!l && l.available);

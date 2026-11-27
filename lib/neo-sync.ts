@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db-core";
 import { getIndex, getProductsDetailed, saveProducts } from "@/lib/catalog";
 import { upsertProducts } from "@/lib/catalog-admin";
+import { getMargins } from "@/lib/margins";
 import { discountFor } from "@/lib/costs/neovitale";
 import { fetchSourcePage, mapSourceProduct, type SourceProduct } from "@/lib/import/shopify-source";
 
@@ -60,6 +61,7 @@ export async function stepSync(): Promise<{ more: boolean }> {
   const run = await load();
   if (!run || run.done) return { more: false };
   const idx = await getIndex();
+  await getMargins(); // loads NeoVitale rates edited in Admin → Margins
   // Duplicates hidden by /api/admin/neo-dupes (a cheaper copy is sold instead): left as they are.
   const dupes = new Set((await db.cmd<string[] | null>(["SMEMBERS", "neo:dupes"]).catch(() => null)) ?? []);
   const { brandName } = await import("@/lib/brand-names");
