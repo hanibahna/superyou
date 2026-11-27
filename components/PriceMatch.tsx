@@ -351,7 +351,7 @@ export function SuperPriceTag({ was, price }: { was: number; price: number }) {
 /** The Add to cart button itself announces SuperPrice: its label rolls between "Add to cart" and
  *  "SuperPrice guaranteed" (and turns rose for that moment), then back. No sticker on top of it.
  *  Stops rolling while touched, hovered or focused; still for visitors who reduce motion. */
-export function SuperPriceButton({ label, onClick, className = "", show = true }: { label: string; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void; className?: string; show?: boolean }) {
+export function SuperPriceButton({ label, onClick, className = "", show = true, short = false }: { label: string; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void; className?: string; show?: boolean; short?: boolean }) {
   const t = useT();
   const [sp, setSp] = useState(false);
   const [hold, setHold] = useState(false);
@@ -370,9 +370,10 @@ export function SuperPriceButton({ label, onClick, className = "", show = true }
     >
       <span aria-hidden className={`block transition-all duration-500 ${sp ? "-translate-y-[150%] opacity-0" : "translate-y-0 opacity-100"}`}>{label}</span>
       {show && (
-        <span aria-hidden className={`absolute inset-0 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all duration-500 ${sp ? "translate-y-0 opacity-100" : "translate-y-[150%] opacity-0"}`}>
-          <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[11px] font-black text-[#9b2c50]">S</span>
-          <span className="text-[15px] font-bold">SuperPrice {t("guaranteed")}</span>
+        <span aria-hidden className={`absolute inset-0 flex items-center justify-center gap-1.5 whitespace-nowrap px-3 transition-all duration-500 ${sp ? "translate-y-0 opacity-100" : "translate-y-[150%] opacity-0"}`}>
+          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[11px] font-black text-[#9b2c50]">S</span>
+          {/* Narrow buttons (the floating bar on phones) say less, so nothing is cut off. */}
+          <span className={`truncate font-bold ${short ? "text-[14px]" : "text-[15px]"}`}>{short ? <>SuperPrice <span aria-hidden>✓</span></> : <>SuperPrice {t("guaranteed")}</>}</span>
         </span>
       )}
     </button>

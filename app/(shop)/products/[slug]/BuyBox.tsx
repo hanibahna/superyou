@@ -201,7 +201,7 @@ export function BuyBox({
               <p className="truncate text-xs text-muted">{v.brand}</p>
               <p className={`font-bold ${pct ? "text-sale" : ""}`}>{v.price > 0 ? money(v.price) : t("Sold out")}</p>
             </div>
-            <SuperPriceButton show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to bag")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap min-w-[11.5rem] rounded-full bg-ink px-6 font-semibold text-white" />
+            <SuperPriceButton short show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to bag")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap min-w-[10.5rem] shrink-0 rounded-full bg-ink px-6 font-semibold text-white" />
           </div>
         )}
         </div>
