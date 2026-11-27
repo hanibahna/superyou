@@ -14,7 +14,7 @@ import { siteUrl } from "@/lib/site-url";
 // 4. Delivered: the courier takes a photo of the parcel with the customer (on the page, or sends it on WhatsApp with
 //    the order number) → order set to Delivered, photo kept, payment to the supplier becomes due; we're told.
 
-const SECRET = process.env.FULFIL_SECRET || process.env.CRON_SECRET || process.env.ADMIN_PASSWORD || "superyou-fulfil";
+const SECRET = process.env.FULFIL_SECRET || process.env.ADMIN_PASSWORD || process.env.CRON_SECRET || "superyou-fulfil";
 export type Role = "s" | "c"; // supplier, courier
 export const tokenFor = (id: string, role: Role) => createHmac("sha256", SECRET).update(`${id}|${role}`).digest("base64url").slice(0, 20);
 /** Purchase order number the supplier sees (never the customer's details). */
