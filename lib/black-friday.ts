@@ -5,6 +5,9 @@ import { liveProducts } from "@/lib/pricing";
 import { cardsFor } from "@/lib/listing";
 import { isLive, type Discount } from "@/lib/site";
 import type { ProductLite } from "@/lib/data/catalog";
+import { db } from "@/lib/db-core";
+import { saveLanding } from "@/lib/site-store";
+import type { Tile } from "@/lib/site";
 
 // Black Friday by product line (= brand). Each line's discount is stored as an automatic,
 // brand-scoped discount with an id starting "bf-", so the shop, cart and checkout price it
@@ -102,4 +105,79 @@ export async function saveBf(input: { startsAt: string; endsAt: string; enabled:
   }));
   await savePromotions({ ...promos, discounts: [...keep, ...lines] });
   return lines.length;
+}
+
+// ── The homepage Black Friday banner: hand-picked products, each with its own discount ──
+
+export const BFI = "bfi-";
+export type BannerItem = { slug: string; pct: number };
+type Banner = { items: BannerItem[]; startsAt: string; endsAt: string; enabled: boolean; headline: boolean };
+const BANNER = "bf:banner";
+
+export type Candidate = { slug: string; brand: string; name: string; image?: string; price: number; cost?: number; maxMarginPct: number | null; inStock: boolean; variants: number };
+
+/** One product (all its sizes/shades) as the admin sees it: our regular price and the best margin we have on it. */
+function candidateOf(slug: string, rawVariants: ProductLite[]): Candidate | null {
+  const vs = rawVariants.filter((v) => v.price > 0);
+  if (!vs.length) return null;
+  const pick = vs.find((v) => v.inStock) ?? vs[0];
+  const margins = vs.filter((v) => v.cost && v.cost > 0 && v.cost < v.price).map((v) => (v.price - v.cost!) / v.price);
+  return { slug, brand: pick.brand, name: pick.name, image: pick.image, price: r2(pick.price), cost: pick.cost && pick.cost < pick.price ? r2(pick.cost) : undefined,
+    maxMarginPct: margins.length ? pct(Math.max(...margins)) : null, inStock: vs.some((v) => v.inStock), variants: vs.length };
+}
+
+export async function getBanner(): Promise<Banner> {
+  const raw = await db.cmd<string | null>(["GET", BANNER]).catch(() => null);
+  if (raw) return JSON.parse(raw) as Banner;
+  // First time: start from the banner's current picture tiles that customers can actually buy.
+  const [landing, live, state] = await Promise.all([getLanding(), liveProducts(), bfState()]);
+  const sec = landing.sections.find((s) => s.type === "bfhero");
+  const slugs = sec && sec.type === "bfhero" ? sec.images.map((t) => /\/products\/([^/?#]+)/.exec(t.href ?? "")?.[1]).filter((x): x is string => !!x).map((x) => decodeURIComponent(x)) : [];
+  return { items: slugs.filter((s) => live.list.some((p) => p.slug === s)).map((slug) => ({ slug, pct: 0 })), startsAt: state.startsAt || "", endsAt: state.endsAt || "", enabled: true, headline: true };
+}
+
+export async function bannerItems(b: Banner) {
+  const idx = await getIndex();
+  return b.items.map((it) => ({ ...it, ...candidateOf(it.slug, idx.all.filter((p) => p.slug === it.slug)) })).filter((x) => x.price);
+}
+
+/** Products customers can buy, matching a search, with their margin, for picking banner items. */
+export async function searchCandidates(q: string): Promise<Candidate[]> {
+  const words = q.toLowerCase().normalize("NFD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const [idx, live] = await Promise.all([getIndex(), liveProducts()]);
+  const slugs: string[] = [];
+  for (const p of live.list) {
+    if (slugs.length >= 40) break;
+    const hay = `${p.brand} ${p.name}`.toLowerCase().normalize("NFD").replace(/[^a-z0-9 ]+/g, " ");
+    if (!slugs.includes(p.slug) && words.every((w) => hay.includes(w))) slugs.push(p.slug);
+  }
+  const liveIds = new Set(live.list.map((p) => p.id));
+  return slugs.map((s) => candidateOf(s, idx.all.filter((p) => p.slug === s && liveIds.has(p.id)))).filter((c): c is Candidate => !!c).sort((a, b) => Number(b.inStock) - Number(a.inStock));
+}
+
+/** Save the banner: per-item automatic discounts, the banner's picture tiles and product row, and (optionally) a headline that matches the biggest discount. */
+export async function saveBanner(b: Banner) {
+  const [idx, promos, landing, lines] = await Promise.all([getIndex(), getPromotions(), getLanding(), bfState()]);
+  const items = b.items.filter((it) => idx.all.some((p) => p.slug === it.slug));
+  const discounts: Discount[] = items.filter((it) => it.pct > 0 && it.pct < 100).map((it) => {
+    const vs = idx.all.filter((p) => p.slug === it.slug);
+    return { id: `${BFI}${it.slug}`.slice(0, 80), name: `Black Friday: ${it.pct}% off ${vs[0].brand} ${vs[0].name}`.slice(0, 120), enabled: b.enabled, type: "percent", value: it.pct,
+      scope: { kind: "skus", values: vs.map((v) => v.sku) }, exclude: { kind: "skus", values: [] }, code: "", minSubtotal: 0, startsAt: b.startsAt, endsAt: b.endsAt, stack: false, usageLimit: 0, used: 0 };
+  });
+  await savePromotions({ ...promos, discounts: [...promos.discounts.filter((d) => !d.id.startsWith(BFI)), ...discounts] });
+  const tiles: Tile[] = items.slice(0, 6).map((it) => {
+    const p = idx.all.find((x) => x.slug === it.slug)!;
+    return { image: p.image ?? "", title: p.brand, text: p.name, cta: "Shop now", href: `/products/${it.slug}/`, bg: "#f5f0eb", badge: it.pct > 0 ? `-${it.pct}%` : "" };
+  });
+  const top = Math.max(0, ...(b.enabled ? items.map((i) => i.pct) : []), ...(lines.enabled ? Object.values(lines.pct) : []));
+  const sections = landing.sections.map((s) => s.type !== "bfhero" ? s : {
+    ...s, images: tiles,
+    slider: { enabled: items.length >= 4, source: { kind: "skus" as const, value: items.map((i) => i.slug).join(",") }, limit: Math.max(3, Math.min(24, items.length)), interval: s.slider?.interval ?? 3.5 },
+    ...(b.headline ? { title: top > 0 ? `Up to *${top}%* off` : "Our Black Friday picks" } : {}),
+    ...(b.endsAt ? { endsAt: b.endsAt } : {}),
+  });
+  await saveLanding({ ...landing, sections });
+  await db.cmd(["SET", BANNER, JSON.stringify({ ...b, items })]);
+  return { items: items.length, discounts: discounts.length, headline: top };
 }

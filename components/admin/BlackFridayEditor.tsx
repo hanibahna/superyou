@@ -39,7 +39,7 @@ export function BlackFridayEditor({ state, lines, banner }: { state: State; line
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Black Friday</h1>
+        <h2 className="text-xl font-semibold">Discount by product line</h2>
         <p className="text-sm text-muted">Set a discount per product line (brand). It shows as a sale price across the shop, cart and app between the dates below. Margin = (price − cost) ÷ price, on products with a known cost.</p>
       </div>
 
