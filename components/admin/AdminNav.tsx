@@ -62,6 +62,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Team",
     links: [
       { href: "/admin/staff/", label: "Staff accounts" },
+      { href: "/admin/security/", label: "My sign-in security" },
       { href: "/admin/activity/", label: "Activity log" },
       { href: "/admin/help/", label: "Help & guides" },
     ],
