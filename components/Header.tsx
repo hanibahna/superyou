@@ -99,7 +99,7 @@ export function Header({ taxonomy: { categories: all, concerns } }: { taxonomy: 
             <HeartIcon />
             {wishlist.length > 0 && <Badge n={wishlist.length} />}
           </Link>
-          <button onClick={() => setDrawerOpen(true)} aria-label={tx("Cart")} className="hdr-bag relative grid h-11 w-11 place-items-center hover:text-brand-600">
+          <button onClick={() => setDrawerOpen(true)} aria-label={tx("Bag")} className="hdr-bag relative grid h-11 w-11 place-items-center hover:text-brand-600">
             <BagIcon data-bag />
             {count > 0 && <Badge n={count} />}
           </button>

@@ -60,7 +60,7 @@ export function ProductCard({ product }: { product: Card }) {
             </Link>
           ) : (
             <button onClick={(e) => { add(product); if ("bf" in product && product.bf) bfConfetti(e.clientX, e.clientY); }} className="buy tap mt-2 w-full rounded-lg bg-brand-500 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
-              {t("Add to cart")}
+              {t("Add to bag")}
             </button>
           )}
         </div>

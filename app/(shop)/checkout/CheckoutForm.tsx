@@ -56,7 +56,7 @@ export function CheckoutForm({ methods }: { methods: Method[] }) {
   if (!detailed.length)
     return (
       <div className="container-x py-24 text-center">
-        <h1 className="text-3xl font-semibold">Your cart is empty</h1>
+        <h1 className="text-3xl font-semibold">Your bag is empty</h1>
         <Link href="/shop/" className="mt-6 inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white">Continue shopping</Link>
       </div>
     );

@@ -27,7 +27,7 @@ export function CartDrawer() {
       <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
       <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-line p-5">
-          <h2 className="text-lg font-semibold">{tx("Your cart")}</h2>
+          <h2 className="text-lg font-semibold">{tx("Your bag")}</h2>
           <button onClick={() => setDrawerOpen(false)} aria-label="Close cart">
             <CloseIcon />
           </button>
@@ -39,7 +39,7 @@ export function CartDrawer() {
 
         <div className="flex-1 overflow-y-auto p-5">
           {detailed.length === 0 ? (
-            <p className="py-16 text-center text-muted">Your cart is empty.</p>
+            <p className="py-16 text-center text-muted">Your bag is empty.</p>
           ) : (
             <ul className="space-y-4">
               {detailed.map(({ product, qty, lineTotal, every, start, forMonths }) => (

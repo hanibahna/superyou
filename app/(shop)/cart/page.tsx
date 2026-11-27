@@ -44,7 +44,7 @@ export default function CartPage() {
   if (!detailed.length)
     return (
       <div className="container-x py-24 text-center">
-        <h1 className="text-3xl font-semibold">Your cart is empty</h1>
+        <h1 className="text-3xl font-semibold">Your bag is empty</h1>
         <Link href="/shop/" className="mt-6 inline-block rounded-lg bg-brand-500 px-6 py-3 font-semibold text-white">{tx("Start shopping")}</Link>
         <div className="mt-10 text-start"><RecentlyViewed /></div>
         <EmptyBagPicks />
@@ -54,7 +54,7 @@ export default function CartPage() {
   return (
     <div className="container-x grid gap-10 py-10 lg:grid-cols-[1fr_360px]">
       <div>
-        <h1 className="mb-4 text-3xl font-semibold">{tx("Cart")}</h1>
+        <h1 className="mb-4 text-3xl font-semibold">{tx("Your bag")}</h1>
         <div className="mb-6"><FreeDeliveryBar /></div>
         <ul className="divide-y divide-line border-y border-line">
           {detailed.map(({ product, qty, lineTotal, every, start, forMonths }) => (

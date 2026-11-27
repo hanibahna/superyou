@@ -29,7 +29,7 @@ const ar: Record<string, string> = {
   "Free delivery on orders over": "توصيل مجاني للطلبات فوق", "Pay cash on delivery, by card or with Whish": "ادفع نقداً عند الاستلام، بالبطاقة أو عبر Whish",
   "Watch & learn": "شاهد وتعلّم", Videos: "فيديوهات",
   // cart & checkout
-  "Your cart": "سلتك", Cart: "السلة", "Your cart is empty": "سلتك فارغة", "Your cart is empty.": "سلتك فارغة.", "Start shopping": "ابدأ التسوق",
+  "Your cart": "سلتك", "Your bag": "سلتك", "Your bag is empty": "سلتك فارغة", "Your bag is empty.": "سلتك فارغة.", Cart: "السلة", "Your cart is empty": "سلتك فارغة", "Your cart is empty.": "سلتك فارغة.", "Start shopping": "ابدأ التسوق",
   Checkout: "إتمام الشراء", "Order summary": "ملخص الطلب", Subtotal: "المجموع", Delivery: "التوصيل", Total: "المجموع الكلي", Free: "مجاني",
   Remove: "إزالة", Apply: "تطبيق", "Discount code": "رمز الخصم", "View cart": "عرض السلة",
   "away from free delivery": "متبقٍ للتوصيل المجاني", "You've unlocked free delivery": "حصلت على توصيل مجاني", "You're": "متبقٍ",

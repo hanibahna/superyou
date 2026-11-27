@@ -159,7 +159,7 @@ export function BuyBox({
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
               <span className="relative flex flex-1">
-                <SuperPriceButton show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to cart")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600" />
+                <SuperPriceButton show={!!sp && !v.pmLose} label={plan ? t("Subscribe") : t("Add to bag")} onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600" />
               </span>
             </>
           ) : (

@@ -209,7 +209,7 @@ export function ThemeEditor({ initial }: { initial: ThemeInput }) {
                     <p className="mt-1 text-xs">
                       <b className={x.was ? "text-sale" : ""}>{x.pr}</b> {x.was && <s className="text-muted">{x.was}</s>}
                     </p>
-                    <span className="mt-2 block rounded-md bg-brand-500 py-1.5 text-center text-[11px] font-semibold text-white">Add to cart</span>
+                    <span className="mt-2 block rounded-md bg-brand-500 py-1.5 text-center text-[11px] font-semibold text-white">Add to bag</span>
                   </div>
                 ))}
               </div>
