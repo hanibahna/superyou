@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
 const schema = z.object({ startsAt: z.string().max(40), endsAt: z.string().max(40), enabled: z.boolean(), pct: z.record(z.string().max(120), z.number().min(0).max(90)) });
 
-const bannerSchema = z.object({ banner: z.object({ items: z.array(z.object({ slug: z.string().max(300), pct: z.number().min(0).max(90) })).max(24), startsAt: z.string().max(40), endsAt: z.string().max(40), enabled: z.boolean(), headline: z.boolean(), fx: z.object({ strip: z.boolean(), daily: z.boolean(), confetti: z.boolean(), stamps: z.boolean(), stampPoints: z.number().int().min(0).max(1000), stampBonus: z.number().int().min(0).max(5000) }).optional() }) });
+const bannerSchema = z.object({ banner: z.object({ items: z.array(z.object({ slug: z.string().max(300), pct: z.number().min(0).max(90) })).max(24), startsAt: z.string().max(40), endsAt: z.string().max(40), enabled: z.boolean(), headline: z.boolean(), fx: z.object({ strip: z.boolean(), daily: z.boolean(), confetti: z.boolean(), stamps: z.boolean(), stampPoints: z.number().int().min(0).max(1000), stampBonus: z.number().int().min(0).max(5000), byCategory: z.boolean().optional() }).optional() }) });
 
 export async function POST(req: NextRequest) {
   const denied = await adminGuard();

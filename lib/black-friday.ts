@@ -112,8 +112,8 @@ export async function saveBf(input: { startsAt: string; endsAt: string; enabled:
 export const BFI = "bfi-";
 export type BannerItem = { slug: string; pct: number };
 /** Animations and games tied to the Black Friday dates. Stamps cost money (Club points), so they start off. */
-export type BfFx = { strip: boolean; daily: boolean; confetti: boolean; stamps: boolean; stampPoints: number; stampBonus: number };
-export const defaultFx: BfFx = { strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100 };
+export type BfFx = { strip: boolean; daily: boolean; confetti: boolean; stamps: boolean; stampPoints: number; stampBonus: number; byCategory?: boolean };
+export const defaultFx: BfFx = { strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100, byCategory: true };
 export type Banner = { items: BannerItem[]; startsAt: string; endsAt: string; enabled: boolean; headline: boolean; fx?: BfFx };
 const BANNER = "bf:banner";
 

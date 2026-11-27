@@ -37,7 +37,7 @@ export async function testOn() {
     const room = Math.floor(((raw.price - floorPrice(raw, m)!) / raw.price) * 100);
     return { slug: p.slug, pct: Math.max(5, Math.min(30, 5 + Math.floor(Math.random() * Math.max(1, room - 4)))) };
   });
-  const b: Banner = { items, startsAt: new Date().toISOString(), endsAt: TEST_END, enabled: true, headline: true, fx: { strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100 } };
+  const b: Banner = { items, startsAt: new Date().toISOString(), endsAt: TEST_END, enabled: true, headline: true, fx: { strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100, byCategory: true } };
   await saveBanner(b);
   await db.cmd(["SET", FLAG, JSON.stringify({ on: true, at: new Date().toISOString(), items: items.length })]);
   return testStatus();

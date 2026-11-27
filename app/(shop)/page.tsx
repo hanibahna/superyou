@@ -115,7 +115,7 @@ export default async function HomePage() {
   }
   const jumpCats = ["skincare", "makeup", "fragrance", "hair", "suncare", "body", "supplements", "baby", "men"];
   const bfCount = cards.filter((c) => c.bf && c.inStock).length;
-  const bf = await bfPublic();
+  const bf = await bfPublic(Date.now(), (await (await import("next/headers")).cookies()).get("bfcat")?.value ?? "");
   const jumps = [
     ...(bfCount ? [{ label: t("Black Friday"), href: "/shop/?bf=1", hot: true }] : []),
     { label: t("Offers"), href: "/shop/?sale=1", hot: !bfCount },

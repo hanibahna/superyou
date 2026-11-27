@@ -139,8 +139,14 @@ export function BfDoors({ b }: { b: BfPublic }) {
   }, [now, b, router]);
   if (!b.fx.daily || !b.doors.length || (b.phase !== "soon" && b.phase !== "live")) return null;
   const today = b.doors.find((d) => d.today);
+  // Remembered for the whole Black Friday (cookie, so the homepage opens on their category straight away).
+  const pickCat = (slug: string) => {
+    document.cookie = `bfcat=${encodeURIComponent(slug)}; path=/; max-age=${60 * 60 * 24 * 21}; samesite=lax`;
+    try { localStorage.setItem("bfcat", slug); } catch { /* private mode */ }
+    router.refresh();
+  };
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8">
+    <section className="container-x max-w-6xl py-8">
       <style>{KEYFRAMES}</style>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -150,6 +156,22 @@ export function BfDoors({ b }: { b: BfPublic }) {
         {b.nextUnlock && <p className="text-sm">{t("Next door opens in")} <b><Clock to={b.nextUnlock} /></b></p>}
         {b.phase === "soon" && <p className="text-sm">{t("Door 1 opens in")} <b><Clock to={b.startsAt} /></b></p>}
       </div>
+      {!!b.cats?.length && (
+        <div className="mb-4">
+          <p className="mb-2 text-sm font-semibold">{b.cat ? t("Your daily deals are from") : t("Pick what you love, and each door opens your best deal in it")}</p>
+          <div className="bleed no-scrollbar flex gap-2 overflow-x-auto pb-1 md:mx-0 md:flex-wrap md:px-0">
+            {[{ slug: "", name: t("Our picks"), count: 0 }, ...b.cats].map((c) => {
+              const on = (b.cat ?? "") === c.slug;
+              return (
+                <button key={c.slug || "all"} aria-pressed={on} onClick={() => pickCat(c.slug)}
+                  className={`tap shrink-0 rounded-full border px-4 text-sm font-semibold transition ${on ? "border-black bg-black text-white" : "border-line bg-white hover:border-black"}`}>
+                  {c.name}{c.count ? <span className={`ms-1.5 text-xs ${on ? "text-white/70" : "text-muted"}`}>{c.count}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {b.doors.map((d) => d.open && d.deal ? (
           <Link key={d.day} href={`/products/${d.deal.slug}/`} className={`bf-anim group relative flex flex-col rounded-2xl border bg-white p-3 transition hover:shadow-lg ${d.today ? "border-black ring-2 ring-black sm:col-span-2 lg:col-span-2" : "border-line"}`} style={{ animation: "bf-pop .6s ease-out both" }}>

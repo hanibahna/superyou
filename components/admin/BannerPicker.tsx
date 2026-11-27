@@ -31,7 +31,7 @@ export function BannerPicker({ initial }: { initial: Init }) {
   const [end, setEnd] = useState(local(initial.endsAt) || "2026-12-01T23:59");
   const [enabled, setEnabled] = useState(initial.enabled);
   const [headline, setHeadline] = useState(initial.headline);
-  const [fx, setFx] = useState<BfFx>({ strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100, ...initial.fx });
+  const [fx, setFx] = useState<BfFx>({ strip: true, daily: true, confetti: true, stamps: false, stampPoints: 20, stampBonus: 100, byCategory: true, ...initial.fx });
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -72,6 +72,7 @@ export function BannerPicker({ initial }: { initial: Init }) {
         <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
           <label className="flex items-start gap-2"><input type="checkbox" checked={fx.strip} onChange={(e) => setFx({ ...fx, strip: e.target.checked })} /> <span><b>Countdown strip</b> on every page: "Starts in", then "Day 2/5 · Ends in", a progress line, "Last day" pulsing and "Final hours" in red.</span></label>
           <label className="flex items-start gap-2"><input type="checkbox" checked={fx.daily} onChange={(e) => setFx({ ...fx, daily: e.target.checked })} /> <span><b>A door a day</b> on the homepage: one gift box per Black Friday day. Each day opens the next product from your list above (in that order); later doors wiggle with a countdown.</span></label>
+          <label className="flex items-start gap-2"><input type="checkbox" checked={fx.byCategory !== false} onChange={(e) => setFx({ ...fx, byCategory: e.target.checked })} /> <span><b>Deals by the shopper's category</b>: shoppers pick what they love (Skincare, Makeup, Fragrance…) and each day's door opens their best Black Friday deal in that category, from every product on a Black Friday discount. Works in test mode too.</span></label>
           <label className="flex items-start gap-2"><input type="checkbox" checked={fx.confetti} onChange={(e) => setFx({ ...fx, confetti: e.target.checked })} /> <span><b>Confetti</b> when a shopper adds a Black Friday product to the cart.</span></label>
           <label className="flex items-start gap-2"><input type="checkbox" checked={fx.stamps} onChange={(e) => setFx({ ...fx, stamps: e.target.checked })} /> <span><b>Stamp card</b> (costs Club points): a delivered order placed on a Black Friday day earns that day's stamp; all days stamped earns a bonus.</span></label>
           {fx.stamps && <div className="flex flex-wrap gap-3 sm:col-span-2">
