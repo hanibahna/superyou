@@ -31,9 +31,10 @@ export async function bfState() {
 
 /** Margin per line at our regular price (before any sale), and after the Black Friday discount set for it. */
 export async function bfLines(): Promise<BfLine[]> {
-  const [idx, state] = await Promise.all([getIndex(), bfState()]);
+  const [idx, state, live] = await Promise.all([getIndex(), bfState(), liveProducts()]);
+  // Only what customers can buy (hidden catalogs, hidden brands and merged duplicates left out), at our regular price.
   const by = new Map<string, ProductLite[]>();
-  for (const p of idx.all) if (p.status === "active" && p.price > 0 && p.brand) (by.get(p.brand) ?? by.set(p.brand, []).get(p.brand)!).push(p);
+  for (const lp of live.list) { const p = idx.byId.get(lp.id); if (p && p.price > 0 && p.brand) (by.get(p.brand) ?? by.set(p.brand, []).get(p.brand)!).push(p); }
   const out: BfLine[] = [];
   for (const [brand, ps] of by) {
     const d = state.pct[brand.toLowerCase()] ?? 0;
@@ -41,7 +42,8 @@ export async function bfLines(): Promise<BfLine[]> {
     let regular = 0, cost = 0, withCost = 0, below = 0;
     for (const p of ps) {
       sources[srcName(p.source)] = (sources[srcName(p.source)] ?? 0) + 1;
-      if (typeof p.cost === "number" && p.cost > 0) {
+      // A cost equal to or above the price is a placeholder, not a real purchase price.
+      if (typeof p.cost === "number" && p.cost > 0 && p.cost < p.price) {
         withCost++; regular += p.price; cost += p.cost;
         if (p.price * (1 - d / 100) < p.cost - 0.005) below++;
       }
