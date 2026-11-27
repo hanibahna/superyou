@@ -68,6 +68,8 @@ export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredient
   image?: string; imageCount: number; rating?: number; reviewCount?: number;
   /** Filled in live from Admin → Sourcing: local stock or international drop shipping, and delivery time. */
   origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;
+  /** On a Black Friday discount (Admin → Black Friday): shows the sticker and the Black Friday filter. */
+  bf?: boolean;
   /** Price guarantee: matched a lower competitor price. The shop's name, or "" when it is not shown. */
   match?: string;
   /** SuperPrice: our price before it, and the competitor's price. */

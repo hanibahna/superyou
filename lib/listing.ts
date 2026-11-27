@@ -44,6 +44,7 @@ export type ShopQuery = {
   origin?: "local" | "international";
   for?: "men" | "women";
   sale?: boolean;
+  bf?: boolean;
   min?: number;
   max?: number;
   sort?: "featured" | "price-asc" | "price-desc" | "discount" | "new";
@@ -81,6 +82,7 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
   if (q.min !== undefined) list = list.filter((p) => p.price >= q.min!);
   if (q.max !== undefined) list = list.filter((p) => p.price <= q.max!);
   if (q.sale) list = list.filter((p) => (p.compareAt ?? 0) > p.price);
+  if (q.bf) list = list.filter((p) => p.bf);
 
   // Facets are counted on the search result before the facet's own filter is applied,
   // so customers can see how many items each choice would give.

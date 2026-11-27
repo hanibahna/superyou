@@ -176,6 +176,8 @@ export async function saveBanner(b: Banner) {
     slider: { enabled: items.length >= 4, source: { kind: "skus" as const, value: items.map((i) => i.slug).join(",") }, limit: Math.max(3, Math.min(24, items.length)), interval: s.slider?.interval ?? 3.5 },
     ...(b.headline ? { title: top > 0 ? `Up to *${top}%* off` : "Our Black Friday picks" } : {}),
     ...(b.endsAt ? { endsAt: b.endsAt } : {}),
+    // The banner's button opens every product on a Black Friday discount (banner picks and brand discounts).
+    ...((b.enabled && items.some((i) => i.pct > 0)) || lines.enabled ? { cta: "Shop Black Friday", href: "/shop/?bf=1" } : {}),
   });
   await saveLanding({ ...landing, sections });
   await db.cmd(["SET", BANNER, JSON.stringify({ ...b, items })]);

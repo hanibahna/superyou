@@ -31,6 +31,7 @@ export function ProductCard({ product }: { product: Card }) {
       >
         <HeartIcon filled={wished} width={18} height={18} />
       </button>
+      {"bf" in product && product.bf && <span className="pointer-events-none absolute start-2 top-2 z-10 rounded-full bg-black px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">{tx("Black Friday")}</span>}
       <Link href={href} className="block overflow-hidden rounded-lg">
         <ProductImage product={product} width={480} className="pimg aspect-square w-full transition duration-300 group-hover:scale-105" />
       </Link>

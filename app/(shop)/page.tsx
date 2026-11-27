@@ -92,8 +92,10 @@ export default async function HomePage() {
     seenTitles.add(k);
   }
   const jumpCats = ["skincare", "makeup", "fragrance", "hair", "suncare", "body", "supplements", "baby", "men"];
+  const bfCount = cards.filter((c) => c.bf && c.inStock).length;
   const jumps = [
-    { label: t("Offers"), href: "/shop/?sale=1", hot: true },
+    ...(bfCount ? [{ label: t("Black Friday"), href: "/shop/?bf=1", hot: true }] : []),
+    { label: t("Offers"), href: "/shop/?sale=1", hot: !bfCount },
     ...jumpCats.map((slug) => tax.categories.find((c) => c.slug === slug)).filter((c) => c && (catCount[c.slug] ?? 0) > 0).map((c) => ({ label: c!.name, href: `/shop/?category=${c!.slug}` })),
     { label: t("Brands A–Z"), href: "/brands/" },
   ];

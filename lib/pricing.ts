@@ -80,7 +80,7 @@ export async function liveProducts() {
     // Minimum margin (Admin → Margins): a sale stops at cost + the floor; no sale at all when the floor is above our price.
     const floor = floorPrice(q, margins);
     if (s?.rule && floor !== undefined && s.price < floor) s = floor < q.price - 0.005 ? { ...s, price: floor } : null;
-    const sold = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt } : q;
+    const sold: ProductLite = s?.rule ? { ...q, price: s.price, compareAt: s.compareAt, ...(s.rule.id.startsWith("bf") ? { bf: true } : {}) } : q;
     // Price guarantee: a competitor sells it for less → match it (never below cost + margin).
     const m = pmOn ? pm.map.get(p.id) : undefined;
     // Shops we buy from are never named to customers (also for checks stored before this rule).
