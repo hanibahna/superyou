@@ -402,7 +402,11 @@ button:active, a.tap:active, .buy:active { transform: scale(.97); }
 [data-preset="pop"] .ftitle { color: var(--color-ink); text-transform: none; letter-spacing: 0; font-size: 15px; font-family: var(--font-heading); }
 [data-preset="pop"] .summary-box { background: var(--pop-card); border: 0; border-radius: 28px; }
 [data-preset="pop"] .trust-strip { background: var(--pop-pink); border: 0; }
-[data-preset="pop"] .site-footer { border-radius: 36px 36px 0 0; }
+[data-preset="pop"] .site-footer { border-radius: 36px 36px 0 0; position: relative; z-index: 1; box-shadow: 0 -14px 30px -18px rgb(46 34 41 / .35); }
+/* The pink runs on behind the footer's rounded top, so the black sits on pink, never on white. */
+[data-preset="pop"] .trust-strip { padding-bottom: 36px; margin-bottom: -36px; }
+[data-preset="pop"] .trust-strip + .site-footer, [data-preset="pop"] .trust-strip ~ footer { margin-top: 0; }
+@media (max-width: 767px) { [data-preset="pop"] .site-footer { border-radius: 28px 28px 0 0; } [data-preset="pop"] .trust-strip { padding-bottom: 28px; margin-bottom: -28px; } }
 
 /* Atelier */
 [data-preset="atelier"] .pdp-main { border: 0; border-radius: 220px 220px 24px 24px; background-color: #f4ecef; }
