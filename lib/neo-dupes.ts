@@ -5,8 +5,8 @@ import type { ProductLite } from "@/lib/data/catalog";
 
 // NeoVitale items that duplicate another item in our catalog (same barcode, or same brand + name +
 // size) where the other copy has a lower base price. The NeoVitale copy is hidden (draft, not
-// deleted); ids go in "neo:dupes" so the 3-day sync leaves them alone. Only hidden when the cheaper
-// copy is live and in stock, or the NeoVitale copy is sold out anyway. Runs after every sync too.
+// deleted); ids go in "neo:dupes" so the 3-day sync leaves them alone. Always hidden, even when the
+// cheaper copy is sold out (those are listed so they can be restocked). Runs after every sync too.
 const NEO = "neovitale.com";
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const base = (p: ProductLite) => r2(p.compareAt && p.compareAt > p.price ? p.compareAt : p.price);
@@ -43,8 +43,9 @@ export async function findDupes(apply: boolean) {
     for (const neo of group.filter((p) => p.source === NEO)) {
       const cheaper = group.filter((o) => o.id !== neo.id && base(o) < base(neo) - 0.005 && !hide.has(o.id)).sort((a, b) => Number(live(b)) - Number(live(a)) || base(a) - base(b))[0];
       if (!cheaper || hide.has(neo.id)) continue;
-      if (live(cheaper) || !neo.inStock) hide.set(neo.id, { neo, other: cheaper, how });
-      else keptBecauseOtherNotLive.push(`${label(neo)} $${base(neo)} — cheaper copy is sold out: ${label(cheaper)} $${base(cheaper)}`);
+      // Rule (owner, 27 Nov): the more expensive NeoVitale copy is always hidden, even when the cheaper copy is sold out.
+      hide.set(neo.id, { neo, other: cheaper, how });
+      if (!live(cheaper) && neo.inStock) keptBecauseOtherNotLive.push(`${label(neo)} $${base(neo)} — cheaper copy is sold out: ${label(cheaper)} $${base(cheaper)}`);
     }
   };
   for (const g of byBarcode.values()) consider(g, "barcode");

@@ -181,7 +181,7 @@ export function reportText(r: Run) {
     section("Now sold out", r.nowSoldOut),
     section("No longer listed by NeoVitale (marked sold out)", r.gone),
     section("Duplicates hidden (we already sell the same item for less)", r.dupesHidden ?? []),
-    section("Duplicates kept live (the cheaper copy is sold out)", r.dupesKept ?? []),
+    section("Of those, the cheaper copy is sold out (nothing live for these until it's back)", r.dupesKept ?? []),
   ].join("\n");
 }
 
