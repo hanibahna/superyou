@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [{
+      // Social post images: readable by Facebook / Instagram composers when uploading.
+      source: "/fb/:path*",
+      headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+    }, {
       source: "/:path*",
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
