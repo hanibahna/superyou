@@ -183,7 +183,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
           {(intro || (category?.description && !query.q)) && <p className="mt-1 max-w-2xl whitespace-pre-line text-sm text-muted">{intro || category?.description}</p>}
           <p className="mt-1 text-sm text-muted">{total.toLocaleString("en-US")} products{pending ? " · updating…" : ""}</p>
         </div>
-        <div className="filter-bar sticky top-14 z-20 flex items-center gap-2 bg-white/90 py-2 backdrop-blur-xl lg:static lg:bg-transparent lg:p-0">
+        <div className="filter-bar sticky top-14 z-20 md:top-[72px] flex items-center gap-2 bg-white/90 py-2 backdrop-blur-xl lg:static lg:bg-transparent lg:p-0">
           <button onClick={() => setFiltersOpen(true)} className="tap flex flex-1 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-semibold lg:hidden">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
             {tx("Filters")}{activeCount ? <span className="rounded-full bg-ink px-1.5 text-xs text-white">{activeCount}</span> : null}
