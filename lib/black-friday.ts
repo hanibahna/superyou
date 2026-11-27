@@ -158,7 +158,7 @@ export async function searchCandidates(q: string): Promise<Candidate[]> {
 
 /** Save the banner: per-item automatic discounts, the banner's picture tiles and product row, and (optionally) a headline that matches the biggest discount. */
 export async function saveBanner(b: Banner) {
-  const [idx, promos, landing, lines] = await Promise.all([getIndex(), getPromotions(), getLanding(), bfState()]);
+  const [idx, promos, landing, lines, settings] = await Promise.all([getIndex(), getPromotions(), getLanding(), bfState(), (await import("@/lib/site-store")).getSettings()]);
   const items = b.items.filter((it) => idx.all.some((p) => p.slug === it.slug));
   const discounts: Discount[] = items.filter((it) => it.pct > 0 && it.pct < 100).map((it) => {
     const vs = idx.all.filter((p) => p.slug === it.slug);
@@ -174,7 +174,16 @@ export async function saveBanner(b: Banner) {
   const sections = landing.sections.map((s) => s.type !== "bfhero" ? s : {
     ...s, images: tiles,
     slider: { enabled: items.length >= 4, source: { kind: "skus" as const, value: items.map((i) => i.slug).join(",") }, limit: Math.max(3, Math.min(24, items.length)), interval: s.slider?.interval ?? 3.5 },
-    ...(b.headline ? { title: top > 0 ? `Up to *${top}%* off` : "Our Black Friday picks" } : {}),
+    // Headline, ticker and text say only what is true: the real biggest discount, the real free-delivery threshold, the real end date.
+    ...(b.headline ? (() => {
+      const offer = top > 0 ? `Up to ${top}% off` : "Our Black Friday picks";
+      const ends = b.endsAt ? new Date(b.endsAt).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Beirut" }) : "";
+      return {
+        title: top > 0 ? `Up to *${top}%* off` : "Our Black Friday picks",
+        badge: [s.eyebrow, offer, `Free delivery over $${settings.delivery.freeThreshold}`, "Book a free skin diagnosis"].filter(Boolean).join(" · "),
+        text: `Skin care, make up, fragrance and pharmacy favourites${top > 0 ? " with Black Friday discounts" : ""}.${ends ? ` Ends ${ends}.` : ""}`,
+      };
+    })() : {}),
     ...(b.endsAt ? { endsAt: b.endsAt } : {}),
     // The banner's button opens every product on a Black Friday discount (banner picks and brand discounts).
     ...((b.enabled && items.some((i) => i.pct > 0)) || lines.enabled ? { cta: "Shop Black Friday", href: "/shop/?bf=1" } : {}),
