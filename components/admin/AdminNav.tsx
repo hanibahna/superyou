@@ -35,6 +35,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/marketing/", label: "Campaigns & ads" },
       { href: "/admin/growth/", label: "Growth & loyalty" },
       { href: "/admin/promotions/", label: "Discounts & free gifts" },
+      { href: "/admin/black-friday/", label: "Black Friday" },
       { href: "/admin/reviews/", label: "Reviews" },
       { href: "/admin/club/", label: "Club members & codes" },
       { href: "/admin/whatsapp/", label: "WhatsApp" },
