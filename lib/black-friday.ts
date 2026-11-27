@@ -186,7 +186,7 @@ export async function saveBanner(b: Banner) {
     })() : {}),
     ...(b.endsAt ? { endsAt: b.endsAt } : {}),
     // The banner's button opens every product on a Black Friday discount (banner picks and brand discounts).
-    ...((b.enabled && items.some((i) => i.pct > 0)) || lines.enabled ? { cta: "Shop Black Friday", href: "/shop/?bf=1" } : {}),
+    ...((b.enabled && items.some((i) => i.pct > 0)) || lines.enabled ? { cta: "Shop Black Friday", href: "/shop/?bf=1" } : s.href === "/shop/?bf=1" ? { cta: "Shop now", href: "/shop/" } : {}),
   });
   await saveLanding({ ...landing, sections });
   await db.cmd(["SET", BANNER, JSON.stringify({ ...b, items })]);
