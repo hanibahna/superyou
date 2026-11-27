@@ -142,6 +142,9 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   if (growth.samples.enabled && growth.samples.skus.length)
     promos.gifts.push({ id: "samples", name: growth.samples.title, enabled: true, minSubtotal: Math.max(0.01, growth.samples.minSubtotal), scope: { kind: "all", values: [] }, choices: growth.samples.skus, pick: growth.samples.pick, startsAt: "", endsAt: "", showProgress: growth.samples.minSubtotal > 0 });
   const pmCfg = growth.priceMatch;
+  // A % off some lines, each line's share stopping at its minimum-margin price (Admin → Margins).
+  const capped = (ls: { price: number; qty: number; floor?: number }[], pct: number) =>
+    ls.reduce((a, l) => a + Math.min((l.price * pct) / 100, l.floor !== undefined ? Math.max(0, l.price - l.floor) : l.price) * l.qty, 0);
   const lines = input.items.map(({ productId, qty }) => {
     const live0 = live.byId.get(productId);
     // SuperPrice: limited units per item, and off when the customer already used it today.
@@ -195,8 +198,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   if (growth.subscribe.enabled && input.subscriptionId) {
     const sp = await (await import("@/lib/subscriptions")).subscriptionPricing(input.subscriptionId);
     if (sp) {
-      const spend = ok.reduce((a, l) => a + l.price * l.qty, 0);
-      const amount = +Math.min(q.subtotal - q.discountTotal, (spend * sp.pct) / 100).toFixed(2);
+      const amount = +Math.min(q.subtotal - q.discountTotal, capped(ok, sp.pct)).toFixed(2);
       if (sp.pct > 0 && amount > 0) {
         q.discounts.push({ name: `Subscribe & save (−${sp.pct}%)`, amount });
         q.discountTotal = +(q.discountTotal + amount).toFixed(2);
@@ -217,8 +219,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   if (growth.subscribe.enabled && !input.subscriptionId && subPromoLive(growth) && input.items.some((i) => i.every)) {
     const pr = growth.subscribe.promo!;
     const subIds = new Set(input.items.filter((i) => i.every).map((i) => i.productId));
-    const spend = ok.filter((l) => subIds.has(l.productId) && !l.superPrice).reduce((a, l) => a + l.price * l.qty, 0);
-    const amount = +Math.min(q.subtotal - q.discountTotal, (spend * (pr.firstPct ?? 0)) / 100).toFixed(2);
+    const amount = +Math.min(q.subtotal - q.discountTotal, capped(ok.filter((l) => subIds.has(l.productId) && !l.superPrice), pr.firstPct ?? 0)).toFixed(2);
     if (amount > 0) {
       q.discounts.push({ name: `Subscribe & save: ${pr.firstPct}% off today`, amount });
       q.discountTotal = +(q.discountTotal + amount).toFixed(2);
@@ -248,7 +249,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
       if (units < minQ && used === 0) continue;
       if (units <= 0) { bulkInfo.set(l.productId, { units: 0, pct: 0, saving: 0, left: 0 }); continue; }
       const cost = idx.byId.get(l.productId)?.cost ?? 0;
-      const floor = cost > 0 ? cost * (1 + growth.priceMatch.marginPct / 100) : 0;
+      const floor = Math.max(cost > 0 ? cost * (1 + growth.priceMatch.marginPct / 100) : 0, l.floor ?? 0);
       const pct = floor > 0 ? Math.max(0, Math.min(pct0, (1 - floor / l.price) * 100)) : pct0;
       const saving = +((l.price * units * pct) / 100).toFixed(2);
       if (saving <= 0) continue;
