@@ -183,16 +183,19 @@ export function FaceScan3D({ onDone, onFallback, onClose }: { onDone: (shots: st
         g.lineWidth = 3.2; g.lineCap = "round";
         g.beginPath(); g.moveTo(cx + Math.cos(a) * RR, cy + Math.sin(a) * RR); g.lineTo(cx + Math.cos(a) * (RR + len), cy + Math.sin(a) * (RR + len)); g.stroke();
       }
-      // A small arrow glides round the ring to the part still to fill.
+      // Face ID-style curved arrow: rides just outside the ring and points the way to the part still to fill.
       if (startedCircle && !doneAt && inside && lastLit >= 6) {
         let d = gapAng - arrowAng;
         d = Math.atan2(Math.sin(d), Math.cos(d));
         arrowAng += d * 0.06;
-        const ax = cx + Math.cos(arrowAng) * (RR + 56), ay = cy + Math.sin(arrowAng) * (RR + 56);
-        g.save(); g.translate(ax, ay); g.rotate(arrowAng + Math.PI / 2);
-        g.fillStyle = `rgba(255,255,255,${(0.6 + 0.35 * Math.sin(now / 250)).toFixed(2)})`;
-        g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -10); g.lineTo(-3, 0); g.lineTo(-8, 10); g.closePath(); g.fill();
-        g.restore();
+        const dir = d >= 0 ? 1 : -1; // clockwise or back
+        const AR = RR + 60, tail = arrowAng - dir * 0.6;
+        const a = 0.6 + 0.35 * Math.sin(now / 260);
+        g.strokeStyle = `rgba(255,255,255,${a.toFixed(2)})`; g.lineWidth = 7; g.lineCap = "round"; g.lineJoin = "round";
+        g.beginPath(); g.arc(cx, cy, AR, Math.min(tail, arrowAng), Math.max(tail, arrowAng)); g.stroke();
+        const tx = cx + Math.cos(arrowAng + dir * 0.13) * AR, ty = cy + Math.sin(arrowAng + dir * 0.13) * AR;
+        const bx = (k: number) => cx + Math.cos(arrowAng - dir * 0.02) * (AR + k), by = (k: number) => cy + Math.sin(arrowAng - dir * 0.02) * (AR + k);
+        g.beginPath(); g.moveTo(bx(-16), by(-16)); g.lineTo(tx, ty); g.lineTo(bx(16), by(16)); g.stroke();
       }
       // Done: keep a picture of the finished scan, then a green tick draws itself in the empty circle.
       if (doneAt && since > 380 && !snapshot) snapshot = cv.toDataURL("image/jpeg", 0.85);

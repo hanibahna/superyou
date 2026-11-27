@@ -18,7 +18,7 @@ const KEY = "sy-advisor";
 export function Advisor({ cfg }: { cfg: Cfg }) {
   const { store } = useSettings();
   // Pages with a sticky buy bar keep the button higher; elsewhere it takes the spot the WhatsApp button had.
-  const raised = /^\/(products|cart|checkout|pay)\//.test(usePathname() ?? "");
+  const raised = /^\/(products|cart|checkout|pay|skin-scan)\//.test(usePathname() ?? ""); // phones: hidden on these pages
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<M[]>([]);
   const [text, setText] = useState("");

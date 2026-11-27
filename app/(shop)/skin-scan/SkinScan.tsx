@@ -114,6 +114,11 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const [preview, setPreview] = useState("");
   const [mesh, setMesh] = useState("");
   const [ask, setAsk] = useState(false);
+  const [info, setInfo] = useState(false);
+  // First visit on a phone: show the description once as a pop-up.
+  useEffect(() => {
+    try { if (!localStorage.getItem("sy:scan-intro") && window.matchMedia("(max-width: 767px)").matches) setInfo(true); } catch { /* private mode */ }
+  }, []);
   const [slow, setSlow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -174,16 +179,23 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
 
   const firstPicks = res?.steps.filter((s) => !s.skipped).map((s) => s.picks[0]).filter(Boolean) ?? [];
   return (
-    <div className="container-x max-w-5xl py-10">
-      <p className="text-xs font-bold uppercase tracking-[0.3em] text-sale">{tx("New")}</p>
-      <h1 className="mt-1 text-4xl font-black">SuperScan</h1>
-      <p className="mt-1 text-lg font-semibold text-brand-700">{tx("3D AI skin scan")}</p>
-      <p className="mt-3 max-w-2xl text-muted">{intro}</p>
+    <div className="container-x max-w-5xl py-4 md:py-10">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-sale">{tx("New")} · {tx("3D AI skin scan")}</p>
+          <h1 className="mt-0.5 text-3xl font-black md:text-4xl">SuperScan</h1>
+        </div>
+        <button onClick={() => setInfo(true)} className="tap shrink-0 rounded-full border border-line px-4 text-sm font-semibold md:hidden">{tx("How it works")}</button>
+      </div>
+      {/* Desktop has room for the description; phones get it as a pop-up they dismiss once. */}
+      <p className="mt-3 hidden max-w-2xl text-muted md:block">{intro}</p>
+      {info && <IntroSheet text={intro} onClose={() => { setInfo(false); try { localStorage.setItem("sy:scan-intro", "1"); } catch { /* private mode */ } }} />}
       {!ready && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{tx("The AI scan isn't connected yet.")} <Link href="/routine/" className="font-semibold underline">Take the 1-minute routine quiz</Link> instead.</p>}
 
-      <div className="mt-8 grid gap-8 md:grid-cols-[320px_1fr]">
+      <div className="mt-4 grid gap-8 md:mt-8 md:grid-cols-[320px_1fr]">
         <div>
-          <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-2xl bg-[#111]">
+          {/* Sized to the screen: on a phone the preview, the button and the agreement note all fit without scrolling. */}
+          <div className="mx-auto grid aspect-square place-items-center overflow-hidden rounded-[28px] bg-[#111] md:w-full" style={{ width: "min(100%, 46dvh)" }}>
             {mesh ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={mesh} alt={tx("Your 3D SuperScan")} className="h-full w-full object-cover" />
@@ -313,46 +325,59 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   );
 }
 
-/** Before the scan: a Face ID-style animation (a 3D face mesh turning inside a ring that fills green, over and over). */
+/** Before the scan: the Face ID setup animation. A head in a circle looks round while a curved arrow
+ *  sweeps the ring clockwise and the ticks behind it turn green; when the circle is full, a green tick,
+ *  then it starts again. */
 function ScanPlaceholder({ caption }: { caption: string }) {
-  const ticks = 72;
-  // Simple 3D-looking face mesh: contour rings and meridians of a head, drawn as an ellipsoid.
-  const rings = [-0.75, -0.45, -0.15, 0.15, 0.45, 0.75];
-  const meridians = [-0.8, -0.5, -0.2, 0.1, 0.4, 0.7];
+  const T = 90, P = 4200, HOLD = 1300;
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setT(P * 0.6); return; }
+    let raf = 0, last = 0;
+    const t0 = performance.now();
+    const loop = (now: number) => {
+      raf = requestAnimationFrame(loop);
+      if (now - last < 33) return; // ~30 fps is plenty
+      last = now;
+      setT((now - t0) % (P + HOLD));
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const p = Math.min(1, t / P), done = t >= P;
+  const ang = -Math.PI / 2 + p * Math.PI * 2; // starts at the top, goes clockwise
+  const cx = 150, cy = 150, R = 92, RR = R + 14;
+  const look = done ? { x: 0, y: 0 } : { x: Math.cos(ang) * 9, y: Math.sin(ang) * 9 };
+  // curved arrow riding just outside the ring, ending at the sweep point
+  const AR = RR + 30, a0 = ang - 0.55;
+  const arc = `M ${cx + Math.cos(a0) * AR} ${cy + Math.sin(a0) * AR} A ${AR} ${AR} 0 0 1 ${cx + Math.cos(ang) * AR} ${cy + Math.sin(ang) * AR}`;
+  const tip = { x: cx + Math.cos(ang + 0.12) * AR, y: cy + Math.sin(ang + 0.12) * AR };
+  const back = (k: number) => ({ x: cx + Math.cos(ang - 0.02) * (AR + k), y: cy + Math.sin(ang - 0.02) * (AR + k) });
   return (
-    <div className="relative h-full w-full">
-      <svg viewBox="0 0 300 400" className="absolute inset-0 h-full w-full" aria-hidden>
-        <defs>
-          <radialGradient id="sp-glow" cx="50%" cy="45%" r="55%"><stop offset="0%" stopColor="#3a1f2c" /><stop offset="100%" stopColor="#111" /></radialGradient>
-        </defs>
-        <rect width="300" height="400" fill="url(#sp-glow)" />
-        <g style={{ transformOrigin: "150px 180px", animation: "sy-head 6s ease-in-out infinite" }}>
-          <ellipse cx="150" cy="180" rx="62" ry="80" fill="none" stroke="#ffb3cf" strokeOpacity=".9" strokeWidth="1.4" />
-          {rings.map((r) => (
-            <ellipse key={r} cx="150" cy={180 + r * 80} rx={62 * Math.sqrt(1 - r * r)} ry={9 * Math.sqrt(1 - r * r)} fill="none" stroke="#ffb3cf" strokeOpacity=".45" strokeWidth="1" />
-          ))}
-          <g style={{ animation: "sy-meridians 6s ease-in-out infinite" }}>
-            {meridians.map((m) => (
-              <ellipse key={m} cx={150 + m * 62} cy="180" rx={Math.max(2, 62 * Math.sqrt(1 - m * m) * 0.35)} ry="80" fill="none" stroke="#ffb3cf" strokeOpacity=".4" strokeWidth="1" />
-            ))}
-          </g>
-          {/* eyes, nose, mouth */}
-          <g style={{ animation: "sy-features 6s ease-in-out infinite" }} fill="#fff">
-            <circle cx="128" cy="168" r="3" /><circle cx="172" cy="168" r="3" />
-            <path d="M150 176 l-6 18 h9" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-            <path d="M134 214 q16 10 32 0" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-          </g>
-        </g>
-        {Array.from({ length: ticks }, (_, i) => {
-          const a = (i / ticks) * Math.PI * 2 - Math.PI / 2;
-          const r1 = 112, r2 = 128;
-          return (
-            <line key={i} x1={150 + Math.cos(a) * r1} y1={180 + Math.sin(a) * r1} x2={150 + Math.cos(a) * r2} y2={180 + Math.sin(a) * r2}
-              stroke="#fff" strokeWidth="3" strokeLinecap="round" style={{ animation: "sy-tick 6s linear infinite", animationDelay: `${(i / ticks) * 4.2}s` }} />
-          );
+    <div className="relative grid h-full w-full place-items-center">
+      <svg viewBox="0 0 300 300" className="h-full w-full" aria-hidden>
+        {Array.from({ length: T }, (_, i) => {
+          const a = -Math.PI / 2 + (i / T) * Math.PI * 2;
+          const lit = done || i / T <= p;
+          const len = lit ? 16 : 10;
+          return <line key={i} x1={cx + Math.cos(a) * RR} y1={cy + Math.sin(a) * RR} x2={cx + Math.cos(a) * (RR + len)} y2={cy + Math.sin(a) * (RR + len)} stroke={lit ? "#34c759" : "rgba(255,255,255,.28)"} strokeWidth="2.6" strokeLinecap="round" />;
         })}
+        <circle cx={cx} cy={cy} r={R} fill="#1c1a1d" />
+        {!done && (
+          <g transform={`translate(${look.x} ${look.y})`} fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity=".92">
+            <ellipse cx={cx} cy={cy + 2} rx="44" ry="56" strokeOpacity=".35" />
+            <path d={`M${cx - 18} ${cy - 14}v7 M${cx + 18} ${cy - 14}v7 M${cx} ${cy - 12}v20h-6 M${cx - 18} ${cy + 24}c10 8 26 8 36 0`} />
+          </g>
+        )}
+        {done && <path d={`M${cx - 34} ${cy + 2} l22 22 l46 -48`} fill="none" stroke="#34c759" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />}
+        {!done && p > 0.02 && (
+          <g fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+            <path d={arc} />
+            <path d={`M ${back(-9).x} ${back(-9).y} L ${tip.x} ${tip.y} L ${back(9).x} ${back(9).y}`} />
+          </g>
+        )}
       </svg>
-      <p className="absolute inset-x-0 bottom-6 px-6 text-center text-sm font-medium text-white/80">{caption}</p>
+      <p className="absolute inset-x-0 bottom-3 px-6 text-center text-[13px] font-medium text-white/75">{caption}</p>
     </div>
   );
 }
@@ -391,6 +416,26 @@ function ConsentSheet({ onAgree, onClose }: { onAgree: () => void; onClose: () =
         </div>
         <button ref={agree} onClick={onAgree} className="tap mt-5 w-full rounded-2xl bg-[#d13f74] text-[17px] font-semibold text-white">{tx("Agree and start scan")}</button>
         <button onClick={onClose} className="mt-2 min-h-[44px] w-full text-[15px] font-semibold text-[#d13f74]">{tx("Not now")}</button>
+      </div>
+    </div>
+  );
+}
+
+/** Phones: the SuperScan description as a pop-up with Dismiss, shown once (and again from "How it works"). */
+function IntroSheet({ text, onClose }: { text: string; onClose: () => void }) {
+  const tx = useT();
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/45 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="scan-intro-title" onClick={onClose}>
+      <div className="sheet-up w-full max-w-md rounded-t-[28px] bg-white px-6 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3" onClick={(e) => e.stopPropagation()}>
+        <span className="mx-auto mb-5 block h-1.5 w-10 rounded-full bg-line" aria-hidden />
+        <div className="flex items-center gap-3 text-[#d13f74]"><FaceIdGlyph size={40} draw /><h2 id="scan-intro-title" className="text-xl font-bold text-ink">{tx("How SuperScan works")}</h2></div>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted">{text}</p>
+        <button onClick={onClose} autoFocus className="tap mt-5 w-full rounded-2xl bg-ink text-[17px] font-semibold text-white">{tx("Dismiss")}</button>
       </div>
     </div>
   );

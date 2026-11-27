@@ -632,3 +632,28 @@ html[data-bf-strip] .offer-tab { display: none !important; }
   .pgrid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
   .tap, .pcard .buy, .pcard .buy-alt { min-height: 44px; }
 }
+
+/* ══ Phones: the homepage banner as a card with white margins, sized to fit the first screen ══ */
+@media (max-width: 767px) {
+  /* compact header: 56 px row, smaller bag button, search pill a touch shorter */
+  .site-header .hdr-row { height: 56px; }
+  .site-header .hdr-bag { height: 40px; width: 40px; }
+  .site-header .hdr-search label, main > div > form label { min-height: 44px; }
+  /* banner: inset card, rounded on all corners, never wider than the page margins */
+  .bf-hero, [data-preset] .bf-hero, [data-preset] .bf-hero:not(.has-video), [data-preset] .bf-hero.has-video {
+    margin: 10px var(--gutter) 0 !important; border-radius: 24px !important; overflow: hidden;
+  }
+  .bf-hero .container-x { padding-inline: 18px !important; padding-top: 1.25rem !important; padding-bottom: 1.1rem !important; gap: 1rem !important; }
+  .bf-hero .bf-title { font-size: clamp(2rem, 9.5vw, 2.6rem) !important; margin-top: .25rem !important; }
+  .bf-hero .bf-text { font-size: .95rem; margin-top: .4rem; }
+  .bf-hero .bf-day { margin-top: .6rem; }
+  .bf-hero .bf-cta1, .bf-hero .bf-cta2 { padding-block: .8rem !important; }
+  /* the promise row below already says this: keep the banner short */
+  .bf-hero .bf-trust, .bf-hero .bf-ticker { display: none !important; }
+  /* product slider: one row of smaller cards that run inside the card's edges */
+  .bf-hero .hero-marquee { margin-inline: -18px !important; }
+  .bf-hero .hero-track + .hero-track { display: none; }
+  .bf-hero .hero-marquee .group { width: 7.25rem; }
+}
+/* Shorter phones (SE, mini, or a browser with big toolbars): drop the slider so headline and buttons fit the first screen. */
+@media (max-width: 767px) and (max-height: 760px) { .bf-hero .hero-marquee { display: none; } }
