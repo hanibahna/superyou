@@ -17,8 +17,10 @@ export function BfTestAi({ test }: { test: { on: boolean; at?: string; items?: n
   const [msg, setMsg] = useState("");
   const post = (body: object) => fetch("/api/admin/black-friday/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
 
+  const [ask1, setAsk1] = useState(false);
   const toggle = async () => {
-    if (!test.on && !confirm("Turn on Black Friday test mode? 8 random products get random discounts (always above your minimum margin) until 30 November 23:59, with the strip, doors and confetti. Your current setup is saved and comes back when you turn it off.")) return;
+    if (!test.on && !ask1) { setAsk1(true); return; }
+    setAsk1(false);
     setBusy(true);
     await post({ action: test.on ? "test-off" : "test-on" });
     setBusy(false);
@@ -65,8 +67,9 @@ export function BfTestAi({ test }: { test: { on: boolean; at?: string; items?: n
             <p className="text-sm text-muted">{test.on ? `On since ${new Date(test.at!).toLocaleString("en-GB", { timeZone: "Asia/Beirut" })}: ${test.items} random products discounted until 30 Nov 23:59. Turn it off to get your own setup back and configure it by hand.` : "One click: random products and discounts (above your minimum margin), the countdown strip, a door a day and confetti, until 30 November. Your own setup is kept and restored when you switch it off."}</p>
           </div>
           <button disabled={busy} onClick={toggle} className={`rounded-full px-6 py-3 font-bold text-white ${test.on ? "bg-sale" : "bg-black"}`} style={test.on ? { animation: "bfblink 1s ease-in-out infinite" } : undefined}>
-            {test.on ? "● TEST MODE ON · turn off" : "Start random test"}
+            {busy ? (test.on ? "Turning off…" : "Turning on…") : test.on ? "● TEST MODE ON · turn off" : ask1 ? "Yes, start the test" : "Start random test"}
           </button>
+          {ask1 && !busy && <button onClick={() => setAsk1(false)} className="text-sm underline">Cancel</button>}
         </div>
       </section>
 
