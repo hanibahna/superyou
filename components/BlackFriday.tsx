@@ -34,17 +34,25 @@ function Clock({ to }: { to: string }) {
   return <span className="font-mono tabular-nums">{l.d > 0 ? `${l.d}d ` : ""}{pad(l.h)}:{pad(l.m)}:{pad(l.s)}</span>;
 }
 
+// One fetch of the Black Friday state per page, shared by the strip, product page and cart.
+let bfCache: Promise<BfPublic | null> | null = null;
+export function useBf() {
+  const [b, setB] = useState<BfPublic | null>(null);
+  useEffect(() => {
+    bfCache ??= fetch("/api/bf/").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    bfCache.then((j) => {
+      setB(j);
+      if (j?.phase === "live" && j.fx.confetti) document.documentElement.dataset.bfConfetti = "1";
+    });
+  }, []);
+  return b;
+}
+
 /** Sticky bar on every page while Black Friday is coming or on. */
 export function BfStrip() {
   const t = useT();
-  const [b, setB] = useState<BfPublic | null>(null);
+  const b = useBf();
   const now = useNow();
-  useEffect(() => {
-    fetch("/api/bf/").then((r) => (r.ok ? r.json() : null)).then((j: BfPublic | null) => {
-      setB(j);
-      if (j?.phase === "live" && j.fx.confetti) document.documentElement.dataset.bfConfetti = "1";
-    }).catch(() => {});
-  }, []);
   if (!b || !b.fx.strip || (b.phase !== "soon" && b.phase !== "live")) return null;
   const s = Date.parse(b.startsAt), e = Date.parse(b.endsAt);
   const progress = b.phase === "live" ? Math.min(100, ((now - s) / (e - s)) * 100) : 0;
@@ -132,4 +140,42 @@ export function bfConfetti(x: number, y: number) {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2400);
   }
+}
+
+
+/** Product page: Black Friday ribbon with the discount, a countdown to the end of the price, and today's-door / stamp hints. */
+export function BfProductTag({ slug, price, was }: { slug: string; price: number; was?: number }) {
+  const t = useT();
+  const b = useBf();
+  if (!b || b.phase !== "live") return null;
+  const pct = was && was > price ? Math.round((1 - price / was) * 100) : 0;
+  const isToday = b.deal?.slug === slug;
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl bg-black p-3 text-white">
+      <style>{KEYFRAMES}</style>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="bf-anim rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest" style={{ background: "linear-gradient(100deg,#f43f5e,#fde68a,#d946ef,#f43f5e)", backgroundSize: "300% 100%", animation: "bf-shine 3s linear infinite", color: "#000" }}>{t("Black Friday")}{pct ? ` −${pct}%` : ""}</span>
+        {isToday && <span className="bf-anim rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-black" style={{ animation: "bf-pulse 1.2s ease-in-out infinite" }}>🎁 {t("Today's door deal")}</span>}
+        <span className="ms-auto text-xs">{t("Price ends in")} <b><Clock to={b.endsAt} /></b></span>
+      </div>
+      {b.fx.stamps && <p className="mt-2 text-xs text-white/75">✦ {t("Order today to collect your day")} {b.day} {t("stamp")} (+{b.fx.stampPoints} {t("Club points")}).</p>}
+    </div>
+  );
+}
+
+/** Cart: what Black Friday is saving the shopper, with the clock still running. */
+export function BfCartBar({ saving }: { saving: number }) {
+  const t = useT();
+  const b = useBf();
+  if (!b || b.phase !== "live") return null;
+  return (
+    <div className="relative overflow-hidden bg-black px-5 py-3 text-sm text-white">
+      <style>{KEYFRAMES}</style>
+      <div className="bf-anim pointer-events-none absolute inset-0 opacity-30" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)", backgroundSize: "200% 100%", animation: "bf-shine 3s linear infinite" }} />
+      <div className="relative flex flex-wrap items-center justify-between gap-2">
+        <span>{saving > 0 ? <>🎉 {t("Black Friday is saving you")} <b>{money(saving)}</b></> : <>🎁 {t("Black Friday is on")}: <a href="/shop/?bf=1" className="underline">{t("see the deals")}</a></>}</span>
+        <span className="text-xs">{t("Ends in")} <b><Clock to={b.endsAt} /></b></span>
+      </div>
+    </div>
+  );
 }

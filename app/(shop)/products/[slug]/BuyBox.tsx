@@ -10,6 +10,7 @@ import { Qty } from "@/components/CartDrawer";
 import { HeartIcon } from "@/components/Icons";
 import { ProductImage } from "@/components/ProductImage";
 import { cleanName, shortName, fullName, discountPct, type ProductLite } from "@/lib/data/catalog";
+import { BfProductTag, bfConfetti } from "@/components/BlackFriday";
 import { money } from "@/lib/format";
 import { imgUrl } from "@/lib/img";
 import { PharmacistButton, TrackView } from "@/components/Growth";
@@ -108,6 +109,7 @@ export function BuyBox({
           {pct && !v.matchWas && <span className="text-lg text-muted line-through">{money(v.compareAt!)}</span>}
           {pct && !v.matchWas && <span className="rounded bg-sale/10 px-2 py-0.5 text-sm font-semibold text-sale">Save {money(v.compareAt! - v.price)}</span>}
         </div>
+        {v.bf && <BfProductTag slug={v.slug} price={v.price} was={v.compareAt} />}
         {growth.club?.enabled && growth.game?.enabled && growth.club.pointsPerDollar > 0 && v.price >= 1 && (
           <p className="mt-1.5 text-xs text-muted">✦ {t("Earn")} <b className="text-ink">{Math.floor(v.price * growth.club.pointsPerDollar)} {growth.club.name || "Club"} {t("points")}</b>{growth.game.badges.enabled && growth.game.badges.points.review ? <> · {t("review it after delivery for")} +{growth.club.bonus.review || growth.game.badges.points.review}</> : null}</p>
         )}
@@ -145,7 +147,7 @@ export function BuyBox({
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
               <span className="relative flex flex-1">
-                <button onClick={() => add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined)} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
+                <button onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap flex-1 rounded-lg bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600">{plan ? t("Subscribe") : t("Add to cart")}</button>
                 {sp && <SuperPriceSticker p={v} />}
               </span>
             </>
@@ -182,7 +184,7 @@ export function BuyBox({
               <p className="truncate text-xs text-muted">{v.brand}</p>
               <p className={`font-bold ${pct ? "text-sale" : ""}`}>{v.price > 0 ? money(v.price) : t("Sold out")}</p>
             </div>
-            <button onClick={() => add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined)} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
+            <button onClick={(e) => { add(v, qty, plan || null, plan ? start : undefined, plan ? forMonths : undefined); if (v.bf) bfConfetti(e.clientX, e.clientY); }} className="tap rounded-full bg-ink px-6 font-semibold text-white">{plan ? t("Subscribe") : t("Add to bag")}</button>
           </div>
         )}
         </div>

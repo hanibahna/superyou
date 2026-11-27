@@ -1,4 +1,5 @@
 "use client";
+import { BfCartBar } from "./BlackFriday";
 
 import { cleanName } from "@/lib/data/catalog";
 import { LinePlan } from "./SubscribePlan";
@@ -32,6 +33,7 @@ export function CartDrawer() {
           </button>
         </div>
 
+        <BfCartBar saving={detailed.reduce((sum, l) => sum + (l.product.compareAt && l.product.compareAt > l.product.price ? (l.product.compareAt - l.product.price) * l.qty : 0), 0)} />
         <RewardLadder />
         {just && <SuperPriceReveal key={lastAdded!.at} p={{ ...just.product }} />}
 
