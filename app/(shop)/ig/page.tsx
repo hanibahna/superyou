@@ -34,7 +34,7 @@ export default async function InstagramLinks() {
   const inStock = (l: typeof best) => l.filter((p) => p.inStock && p.price > 0);
   const bestSellers = inStock(best).slice(0, 8);
   const newIn = inStock(fresh).filter((p) => !bestSellers.some((b) => b.slug === p.slug)).slice(0, 8);
-  // Each Instagram post, with where it leads.
+  // Each Instagram post, with where it leads (posts with price comparisons left out: prices change).
   const feed: [number, string, string][] = [
     [9, "/skin-scan/", "SuperScan 3D skin scan"],
     [7, "/shop/?category=suncare", "Sunscreens"],
@@ -42,8 +42,6 @@ export default async function InstagramLinks() {
     [5, "/shop/?category=suncare", "Subscribe and save on sunscreen"],
     [4, "/shop/?brand=SkinCeuticals", "SkinCeuticals"],
     [3, "/shop/?concern=acne", "Breakout routine"],
-    [1, "/shop/", "Shop SuperYou"],
-    [8, "/shop/", "Shop all"],
   ];
   const sections = shopNav(s, nav, tax, false).menu.filter((m) => m.href && m.href !== "#" && !m.href.startsWith("/brands")).slice(0, 8);
   return (
