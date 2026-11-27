@@ -86,7 +86,7 @@ Reply with JSON only, no prose: {"note": "one short sentence on what you set and
     note: j.note ?? "",
     startsAt: j.startsAt || undefined, endsAt: j.endsAt || undefined,
     brands: (j.brands ?? []).filter((b) => byBrand.has(String(b.brand).toLowerCase())).map((b) => { const l = byBrand.get(String(b.brand).toLowerCase())!; return { brand: l.brand, pct: clamp(b.pct), marginPct: l.marginPct }; }),
-    products: await Promise.all((j.products ?? []).slice(0, 10).map(async (p) => ({ query: String(p.query), pct: clamp(p.pct), matches: (await searchCandidates(String(p.query))).filter((c) => c.inStock).slice(0, 8).map((c) => ({ slug: c.slug, brand: c.brand, name: c.name, price: c.price, maxMarginPct: c.maxMarginPct })) }))),
+    products: await Promise.all((j.products ?? []).slice(0, 10).map(async (p) => ({ query: String(p.query), pct: clamp(p.pct), matches: (await searchCandidates(String(p.query))).filter((c) => c.inStock).slice(0, 20).map((c) => ({ slug: c.slug, brand: c.brand, name: c.name, price: c.price, maxMarginPct: c.maxMarginPct })) }))),
   };
 }
 export { bfState, saveBf };
