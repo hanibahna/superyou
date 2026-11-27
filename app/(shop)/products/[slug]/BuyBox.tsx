@@ -122,7 +122,7 @@ export function BuyBox({
         </div>
         {v.bf && <BfProductTag slug={v.slug} price={v.price} was={v.compareAt} />}
         {growth.club?.enabled && growth.game?.enabled && growth.club.pointsPerDollar > 0 && v.price >= 1 && (
-          <p className="mt-1.5 text-xs text-muted">✦ {t("Earn")} <b className="text-ink">{Math.floor(v.price * growth.club.pointsPerDollar)} {growth.club.name || "Club"} {t("points")}</b>{growth.game.badges.enabled && growth.game.badges.points.review ? <> · {t("review it after delivery for")} +{growth.club.bonus.review || growth.game.badges.points.review}</> : null}</p>
+          <p className="mt-3 text-xs text-muted">✦ {t("Earn")} <b className="text-ink">{Math.floor(v.price * growth.club.pointsPerDollar)} {growth.club.name || "Club"} {t("points")}</b>{growth.game.badges.enabled && growth.game.badges.points.review ? <> · {t("review it after delivery for")} +{growth.club.bonus.review || growth.game.badges.points.review}</> : null}</p>
         )}
 
         {variants.length > 1 && (
@@ -154,7 +154,7 @@ export function BuyBox({
         {/* Subscribe & save and Bulk buy sit behind one "Save more" choice, so price → delivery → Add to bag stays clear.
             It opens by itself once the shopper has picked a plan or more than one. */}
         {v.inStock && (subOk || !v.matchWas) && (
-          <details className="save-more group rounded-2xl border border-line" open={!!plan || qty > 1}>
+          <details className="save-more group mt-4 rounded-2xl border border-line" open={!!plan || qty > 1}>
             <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold">
               <span>{tx("Save more")} <span className="font-normal text-muted">· {[subOk && tx("subscribe"), !v.matchWas && tx("buy 2 or more")].filter(Boolean).join(` ${tx("or")} `)}</span></span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition group-open:rotate-180"><path d="M6 9l6 6 6-6" /></svg>
@@ -165,7 +165,7 @@ export function BuyBox({
             </div>
           </details>
         )}
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-5 flex items-center gap-2.5 sm:gap-3">
           {v.inStock ? (
             <>
               <Qty qty={qty} onChange={(n) => setQty(Math.max(1, n))} />
@@ -176,35 +176,32 @@ export function BuyBox({
           ) : (
             <StockAlert productId={v.id} />
           )}
-          <button onClick={() => toggleWish(v)} aria-label={tx("Wishlist")} className={`rounded-lg border border-line p-3 ${wished ? "text-sale" : "text-muted hover:text-ink"}`}>
+          <button onClick={() => toggleWish(v)} aria-label={tx("Wishlist")} className={`grid h-12 w-12 shrink-0 place-items-center rounded-full border border-line ${wished ? "text-sale" : "text-muted hover:text-ink"}`}>
             <HeartIcon filled={wished} />
           </button>
           <ShareButton compact title={`${fullName(v.brand, v.name)}`} text={`${fullName(v.brand, v.name)} at SuperYou`} />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
           <ShipBadge p={v} size="md" />
           <PriceMatchBadge p={v} size="md" />
           {v.inStock && <p className="text-sm">🚚 {t("Order now, delivered by")} <b>{by}</b></p>}
         </div>
         {/* Reassurance where the decision is made. */}
-        <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted">
-          <span>✓ {t("Sealed, genuine product")}</span>
-          <span>✓ {t("Pay cash on delivery")}</span>
-          <span>✓ {t("Unopened returns within 7 days")}</span>
-        </p>
-        <SuperPriceCard key={v.id} p={v} className="mt-3" />
+        <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 text-[13px] text-muted sm:grid-cols-2">
+          <li>✓ {t("Sealed, genuine product")}</li>
+          <li>✓ {t("Pay cash on delivery, by card or Whish")}</li>
+          {freeOver && <li>✓ {t("Free delivery over")} {freeOver}</li>}
+          <li>✓ {t("Unopened returns within 7 days")}</li>
+          <li>✓ {t("Free pharmacist advice on WhatsApp")}</li>
+        </ul>
+        {growth.trust.returnsSummary && <p className="mt-2 text-xs text-muted">{growth.trust.returnsSummary}</p>}
+        <SuperPriceCard key={v.id} p={v} className="mt-5" />
         {v.origin === "international" && (
           <p className="mt-2 rounded-lg border border-[#c7d2fe] bg-[#eef2ff] p-3 text-xs leading-relaxed text-[#312e81]">
             {t("Imported for you from")} {v.shipFrom || t("abroad")}. {t("The price already includes international shipping, customs duty and VAT, with nothing more to pay at the door. Original product, ordered from an authorised supplier when you place your order.")}
           </p>
         )}
-        <ul className="pdp-trust mt-4 space-y-2 rounded-xl bg-[#f7f8f7] p-4 text-sm">
-          {growth.trust.lines.map((l) => <li key={l}>✓ {honest(l)}</li>)}
-          {freeOver && <li>✓ {t("Free delivery on orders over")} {freeOver}</li>}
-          <li>✓ {t("Pay cash on delivery, by card or with Whish")}</li>
-        </ul>
-        {growth.trust.returnsSummary && <p className="mt-2 text-xs text-muted">{growth.trust.returnsSummary}</p>}
         {/* Sticky buy bar on phones */}
         {v.inStock && !mainOnScreen && (
           <div className="sheet-up fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-[22px] border border-line bg-white/90 px-3 py-2 shadow-lg backdrop-blur-xl md:hidden">
