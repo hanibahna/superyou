@@ -325,6 +325,21 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   );
 }
 
+// A face-shaped mesh for the preview: points on an oval face (wider at the cheeks, narrower at the chin),
+// joined to their near neighbours, plus eyes, nose and mouth points.
+const MESH = (() => {
+  const pts: [number, number][] = [];
+  for (let r = -6; r <= 6; r++) {
+    const y = r / 6, w = Math.sqrt(Math.max(0, 1 - y * y)) * (y > 0.2 ? 1 - (y - 0.2) * 0.45 : 1);
+    const n = Math.max(2, Math.round(9 * w));
+    for (let c = 0; c <= n; c++) pts.push([(c / n - 0.5) * 2 * w * 44, y * 56]);
+  }
+  for (const f of [[-17, -12], [-12, -12], [-22, -12], [17, -12], [12, -12], [22, -12], [0, 2], [-5, 8], [5, 8], [-12, 24], [0, 27], [12, 24]] as [number, number][]) pts.push(f);
+  const lines: [number, number][] = [];
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) { const dx = pts[i][0] - pts[j][0], dy = pts[i][1] - pts[j][1]; if (dx * dx + dy * dy < 12.5 * 12.5) lines.push([i, j]); }
+  return { pts, lines };
+})();
+
 /** Before the scan: the Face ID setup animation. A head in a circle looks round while a curved arrow
  *  sweeps the ring clockwise and the ticks behind it turn green; when the circle is full, a green tick,
  *  then it starts again. */
@@ -364,9 +379,11 @@ function ScanPlaceholder({ caption }: { caption: string }) {
         })}
         <circle cx={cx} cy={cy} r={R} fill="#1c1a1d" />
         {!done && (
-          <g transform={`translate(${look.x} ${look.y})`} fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity=".92">
-            <ellipse cx={cx} cy={cy + 2} rx="44" ry="56" strokeOpacity=".35" />
-            <path d={`M${cx - 18} ${cy - 14}v7 M${cx + 18} ${cy - 14}v7 M${cx} ${cy - 12}v20h-6 M${cx - 18} ${cy + 24}c10 8 26 8 36 0`} />
+          <g transform={`translate(${look.x} ${look.y})`}>
+            {/* 3D face mesh: lines and points over the face, plus a scan line sweeping down it */}
+            <g stroke="#ffaacd" strokeOpacity=".5" strokeWidth=".8">{MESH.lines.map(([a, b], k) => <line key={k} x1={cx + MESH.pts[a][0]} y1={cy + MESH.pts[a][1]} x2={cx + MESH.pts[b][0]} y2={cy + MESH.pts[b][1]} />)}</g>
+            <g fill="#fff">{MESH.pts.map(([x, y], k) => <rect key={k} x={cx + x - 1.2} y={cy + y - 1.2} width="2.4" height="2.4" />)}</g>
+            <rect x={cx - 46} y={cy - 58 + ((t / 1400) % 1) * 116} width="92" height="4" rx="2" fill="#ff9fcb" opacity=".55" />
           </g>
         )}
         {done && <path d={`M${cx - 34} ${cy + 2} l22 22 l46 -48`} fill="none" stroke="#34c759" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />}
