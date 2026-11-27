@@ -689,3 +689,6 @@ html[data-bf-strip] .offer-tab { display: none !important; }
 
 /* Add to cart rolling to "SuperPrice guaranteed": rose for that moment, whatever the look. */
 button.sp-roll.is-sp, [data-preset] button.sp-roll.is-sp { background-color: #9b2c50 !important; }
+
+/* Safety net: nothing may make a page wider than the phone (one too-wide row would shift the whole page sideways). */
+@media (max-width: 1023px) { html, body { overflow-x: clip; } main { max-width: 100vw; } }

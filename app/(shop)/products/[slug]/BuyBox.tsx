@@ -77,8 +77,8 @@ export function BuyBox({
   return (
     // Phones: photos, then name, price and Add to bag, then pharmacist, how-to and videos.
     // Desktop: photos and extras on the left, the buy column on the right.
-    <div className="grid gap-6 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-10 md:gap-y-0">
-      <div className="relative order-1 md:col-start-1 md:row-start-1">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:grid-rows-[auto_1fr] md:gap-x-10 md:gap-y-0">
+      <div className="relative order-1 min-w-0 md:col-start-1 md:row-start-1">
         <TrackView product={snap(variants.find((x) => x.inStock) ?? v)} />
         <ProductImage product={{ ...v, image: shown }} width={1000} className="pdp-main aspect-square w-full rounded-2xl border border-line" />
         {gallery.length > 1 && (
