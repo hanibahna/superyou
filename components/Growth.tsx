@@ -109,28 +109,62 @@ export function MobileTabBar() {
   const t = useT();
   const path = usePathname();
   const [search, setSearch] = useState(false);
+  const [small, setSmall] = useState(false); // shrinks while scrolling down, grows back on the way up
+  const [dark, setDark] = useState(false); // glass tint follows what is behind it
+  const bar = useRef<HTMLElement>(null);
   const scanOn = !!useGrowth().skinScan?.enabled;
+  useEffect(() => {
+    let lastY = scrollY, raf = 0;
+    // What colour is the page right behind the bar? Walk up from the element under it to the first solid background.
+    const tone = () => {
+      const el = bar.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).filter((x) => !el.contains(x));
+      let n: Element | null = stack[0] ?? null, rgb: number[] | null = null;
+      while (n && !rgb) {
+        const c = getComputedStyle(n).backgroundColor.match(/[\d.]+/g)?.map(Number);
+        if (c && (c.length < 4 || c[3] > 0.5) && !(c[0] === 0 && c[1] === 0 && c[2] === 0 && c[3] === 0)) rgb = c;
+        n = n.parentElement;
+      }
+      const [R, G, B] = rgb ?? [255, 255, 255];
+      setDark(0.2126 * R + 0.7152 * G + 0.0722 * B < 110);
+    };
+    const on = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const y = scrollY, nearEnd = innerHeight + y >= document.documentElement.scrollHeight - 40;
+        if (Math.abs(y - lastY) > 6) { setSmall(y > lastY && y > 120 && !nearEnd); lastY = y; }
+        tone();
+      });
+    };
+    tone();
+    addEventListener("scroll", on, { passive: true });
+    addEventListener("resize", on);
+    return () => { removeEventListener("scroll", on); removeEventListener("resize", on); cancelAnimationFrame(raf); };
+  }, [path]);
   if (path.startsWith("/checkout")) return null;
-  const item = "flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium";
-  const on = (p: string) => (p === "/" ? path === "/" : path.startsWith(p)) ? "text-ink" : "text-muted";
+  const item = `tab-item relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[22px] font-medium transition-all duration-300 ${small ? "h-[46px] text-[0px]" : "h-[56px] text-[11px]"}`;
+  const on = (p: string) => (p === "/" ? path === "/" : path.startsWith(p)) ? `is-on ${dark ? "text-white" : "text-ink"}` : dark ? "text-white/70" : "text-ink/60";
+  const ic = small ? 22 : 21;
   return (
     <>
-      <nav className="tabbar fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-left)] pe-[env(safe-area-inset-right)] backdrop-blur md:hidden" aria-label={tx("Shortcuts")}>
-        <Link href="/" className={`${item} ${on("/")}`}><HomeIcon width={22} height={22} />{t("Home")}</Link>
-        <Link href="/shop/" className={`${item} ${on("/shop")}`}><GridIcon width={22} height={22} />{t("Shop")}</Link>
+      <nav ref={bar} className={`tabbar glass-bar fixed z-40 md:hidden ${dark ? "is-dark" : ""} ${small ? "is-small" : ""}`} aria-label={tx("Shortcuts")}>
+        <Link href="/" className={`${item} ${on("/")}`}><HomeIcon width={ic} height={ic} />{t("Home")}</Link>
+        <Link href="/shop/" className={`${item} ${on("/shop")}`}><GridIcon width={ic} height={ic} />{t("Shop")}</Link>
         {scanOn && (
-          <Link href="/skin-scan/" className={`${item} relative -mt-5 text-ink`} aria-label={t("SuperScan")}>
-            <span className="scan-glow grid h-14 w-14 place-items-center rounded-full text-white shadow-lg ring-4 ring-white"><ScanIcon size={26} /></span>
+          <Link href="/skin-scan/" className={`${item} ${dark ? "text-white" : "text-ink"}`} aria-label={t("SuperScan")}>
+            <span className={`scan-glow grid place-items-center rounded-full text-white shadow-md transition-all duration-300 ${small ? "h-9 w-9" : "h-10 w-10"}`}><ScanIcon size={small ? 18 : 20} /></span>
             <span className="font-semibold">{t("SuperScan")}</span>
           </Link>
         )}
         {/* The search bar is always at the top on phones: with SuperScan on, its tab gives way so SuperScan sits in the middle. */}
-        {!scanOn && <button onClick={() => setSearch(true)} className={`${item} text-muted`}><SearchIcon width={22} height={22} />{t("Search")}</button>}
-        <button onClick={() => setDrawerOpen(true)} className={`${item} relative text-muted`}>
-          <BagIcon data-bag width={22} height={22} />{t("Bag")}
+        {!scanOn && <button onClick={() => setSearch(true)} className={`${item} ${dark ? "text-white/70" : "text-ink/60"}`}><SearchIcon width={ic} height={ic} />{t("Search")}</button>}
+        <button onClick={() => setDrawerOpen(true)} className={`${item} ${dark ? "text-white/70" : "text-ink/60"}`}>
+          <BagIcon data-bag width={ic} height={ic} />{t("Bag")}
           {count > 0 && <span className="absolute top-1.5 grid h-4 min-w-4 translate-x-3 place-items-center rounded-full bg-sale px-1 text-[11px] font-bold text-white">{count}</span>}
         </button>
-        <Link href="/account/" className={`${item} ${on("/account")}`}><UserIcon width={22} height={22} />{t("Account")}</Link>
+        <Link href="/account/" className={`${item} ${on("/account")}`}><UserIcon width={ic} height={ic} />{t("Account")}</Link>
       </nav>
       {search && (
         <div className="fixed inset-0 z-50 bg-white p-4 md:hidden">

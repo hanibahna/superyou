@@ -149,7 +149,7 @@ h1, h2, h3, .font-heading { font-family: var(--font-heading); }
   .tap, .pcard .buy, .pcard .buy-alt { min-height: 44px; }
   footer li > a { display: inline-block; padding-block: 8px; }
   label:has(> input[type="checkbox"]) { min-height: 40px; display: flex; align-items: center; }
-  body:has(.tabbar) { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  body:has(.tabbar) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 
 /* ── Arabic (right-to-left) ── */
@@ -661,3 +661,25 @@ html[data-bf-strip] .offer-tab { display: none !important; }
 }
 /* Shorter phones (SE, mini, or a browser with big toolbars): drop the slider so headline and buttons fit the first screen. */
 @media (max-width: 767px) and (max-height: 760px) { .bf-hero .hero-marquee { display: none; } }
+
+/* ══ Phones: floating glass tab bar (like the YouTube iOS app) ══
+   Off the screen edges, see-through with blur so the page shows behind it, light or dark glass to match
+   what is under it, and smaller while scrolling down. */
+.glass-bar {
+  left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 2px; padding: 4px;
+  border-radius: 30px;
+  background: rgb(255 255 255 / .62);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / .7);
+  box-shadow: 0 10px 30px -8px rgb(20 12 16 / .28), inset 0 1px 0 rgb(255 255 255 / .8);
+  transition: background-color .35s ease, border-color .35s ease, transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease;
+}
+.glass-bar.is-dark { background: rgb(28 24 27 / .55); border-color: rgb(255 255 255 / .14); box-shadow: 0 10px 30px -8px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .12); }
+.glass-bar.is-small { transform: translateY(2px) scale(.96); border-radius: 26px; }
+.glass-bar .tab-item.is-on { background: rgb(46 34 41 / .08); }
+.glass-bar.is-dark .tab-item.is-on { background: rgb(255 255 255 / .14); }
+.glass-bar .tab-item:active { transform: scale(.94); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass-bar { background: rgb(255 255 255 / .96); } .glass-bar.is-dark { background: rgb(28 24 27 / .95); } }
+@media (prefers-reduced-motion: reduce) { .glass-bar, .glass-bar .tab-item { transition: none; } }

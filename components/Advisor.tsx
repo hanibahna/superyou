@@ -67,7 +67,7 @@ export function Advisor({ cfg }: { cfg: Cfg }) {
       <button
         onClick={() => setOpen(true)}
         aria-label={`Ask ${cfg.name}`}
-        className={`fixed ${raised ? "bottom-[calc(8.5rem+env(safe-area-inset-bottom))]" : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))]"} end-3 z-40 ${raised ? "hidden md:flex" : "flex"} h-12 min-w-12 items-center justify-center gap-2 rounded-full bg-ink px-3 font-semibold md:px-4 text-white shadow-lg transition hover:scale-105 md:bottom-5 md:end-24 md:h-14 md:px-5 ${open ? "hidden" : ""}`}
+        className={`fixed ${raised ? "bottom-[calc(9.5rem+env(safe-area-inset-bottom))]" : "bottom-[calc(5.75rem+env(safe-area-inset-bottom))]"} end-3 z-40 ${raised ? "hidden md:flex" : "flex"} h-12 min-w-12 items-center justify-center gap-2 rounded-full bg-ink px-3 font-semibold md:px-4 text-white shadow-lg transition hover:scale-105 md:bottom-5 md:end-24 md:h-14 md:px-5 ${open ? "hidden" : ""}`}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
         <span className="hidden text-sm md:inline">Ask AI</span>
