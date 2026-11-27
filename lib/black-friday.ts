@@ -192,6 +192,12 @@ export async function saveBanner(b: Banner) {
     ...((b.enabled && items.some((i) => i.pct > 0)) || lines.enabled ? { cta: "Shop Black Friday", href: "/shop/?bf=1" } : s.href === "/shop/?bf=1" ? { cta: "Shop now", href: "/shop/" } : {}),
   });
   await saveLanding({ ...landing, sections });
+  // The announcement bar at the top of every page says the same true number.
+  if (b.headline && /up to\s*\d+\s*%\s*off/i.test(settings.announcement.text)) {
+    const { saveSettings } = await import("@/lib/site-store");
+    const text = top > 0 ? settings.announcement.text.replace(/up to\s*\d+\s*%\s*off/gi, `Up to ${top}% off`) : settings.announcement.text.replace(/\s*·?\s*up to\s*\d+\s*%\s*off\s*·?/gi, " · ").replace(/^\s*·\s*|\s*·\s*$/g, "").trim();
+    await saveSettings({ ...settings, announcement: { ...settings.announcement, text } });
+  }
   await db.cmd(["SET", BANNER, JSON.stringify({ ...b, items })]);
   return { items: items.length, discounts: discounts.length, headline: top };
 }
