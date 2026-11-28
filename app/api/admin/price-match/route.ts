@@ -67,7 +67,9 @@ export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
   // A run that stopped half-way (state still there) is continued instead of restarted.
   const { running } = await (await import("@/lib/price-match")).getReport();
-  const body = (await req.json().catch(() => ({}))) as { resume?: boolean; sync?: boolean; decide?: { key: string; ok: boolean } };
+  const body = (await req.json().catch(() => ({}))) as { resume?: boolean; sync?: boolean; decide?: { key: string; ok: boolean }; emailReport?: boolean };
+  // Email the full price comparison (every product, every shop, NeoVitale included) to the owners.
+  if (body.emailReport) return NextResponse.json(await (await import("@/lib/price-report")).emailComparison());
   // Confirm or reject a suggested match (used from the next price check).
   if (body.decide?.key && /^[^|]+\|[a-z0-9.-]+\|\d+$/i.test(body.decide.key)) {
     await (await import("@/lib/price-match")).decide(body.decide.key, !!body.decide.ok);

@@ -126,7 +126,10 @@ function MatchQuality() {
   const pct = (n: number) => (cov?.products ? Math.round((n / cov.products) * 100) : 0);
   return (
     <div className="space-y-4 border-t border-line pt-4">
-      <p className="font-semibold">Matching quality</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold">Matching quality</p>
+        <EmailReport />
+      </div>
       {cov && (
         <>
           <div className="grid gap-3 sm:grid-cols-4">
@@ -192,5 +195,20 @@ function Stat({ n, label }: { n: number; label: string }) {
       <p className="text-2xl font-bold">{n.toLocaleString()}</p>
       <p className="text-xs text-muted">{label}</p>
     </div>
+  );
+}
+
+function EmailReport() {
+  const [st, setSt] = useState("");
+  const go = async () => {
+    setSt("Building…");
+    const r = await fetch("/api/admin/price-match/", { method: "POST", body: JSON.stringify({ emailReport: true }) }).then((x) => x.json()).catch(() => null);
+    setSt(r?.sent?.some(Boolean) ? `Sent: ${r.summary.withData.toLocaleString()} products compared` : "Couldn't send. Check the email settings.");
+  };
+  return (
+    <span className="flex items-center gap-2">
+      {st && <span className="text-xs text-muted">{st}</span>}
+      <button type="button" onClick={go} className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold">Email me the full comparison</button>
+    </span>
   );
 }
