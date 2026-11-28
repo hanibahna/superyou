@@ -19,6 +19,7 @@ const schema = z.object({
   floorPct: z.number().min(0).max(90),
   brandFloors: z.record(z.string().max(120), z.number().min(0).max(90)),
   neoRates: z.record(z.string().max(120), z.number().min(0).max(90).nullable()),
+  subPct: z.record(z.string().max(120), z.number().min(0).max(50)).default({}),
 });
 
 export async function POST(req: NextRequest) {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Check the percentages (0–90%)." }, { status: 400 });
   const before = await getMargins();
-  const next = { floorPct: parsed.data.floorPct, brandFloors: Object.fromEntries(Object.entries(parsed.data.brandFloors).map(([k, v]) => [k.toLowerCase(), v])), neoRates: parsed.data.neoRates };
+  const next = { floorPct: parsed.data.floorPct, brandFloors: Object.fromEntries(Object.entries(parsed.data.brandFloors).map(([k, v]) => [k.toLowerCase(), v])), neoRates: parsed.data.neoRates, subPct: Object.fromEntries(Object.entries(parsed.data.subPct).map(([k, v]) => [k.toLowerCase(), v])) };
   await saveMargins(next);
   // Brands whose NeoVitale rate changed: recompute their cost (cost = our regular price × (1 − rate)).
   const changed = new Set([...Object.keys(before.neoRates), ...Object.keys(next.neoRates)].filter((k) => before.neoRates[k] !== next.neoRates[k]).map(normBrand));
@@ -45,6 +46,6 @@ export async function POST(req: NextRequest) {
     }
   }
   const me = await currentAdmin();
-  await audit(me?.name ?? "admin", `Margins: floor ${next.floorPct}%, ${Object.keys(next.brandFloors).length} brand floors, ${Object.keys(next.neoRates).length} NeoVitale rates edited`).catch(() => {});
+  await audit(me?.name ?? "admin", `Margins: floor ${next.floorPct}%, ${Object.keys(next.brandFloors).length} brand floors, ${Object.keys(next.neoRates).length} NeoVitale rates edited, ${Object.keys(next.subPct).length} auto-replenish rates`).catch(() => {});
   return NextResponse.json({ ok: true, costsUpdated });
 }

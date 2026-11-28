@@ -4,8 +4,9 @@ import { setNeoOverrides } from "@/lib/costs/neovitale";
 
 // Admin → Margins: the store-wide minimum margin (no discount may go under it), per-brand floors,
 // and edits to NeoVitale's discount per brand (= our cost). Margin = (price − cost) ÷ price.
-export type Margins = { floorPct: number; brandFloors: Record<string, number>; neoRates: Record<string, number | null> };
-export const defaultMargins: Margins = { floorPct: 10, brandFloors: {}, neoRates: {} };
+// subPct: auto-replenish (Subscribe & save) discount per brand, instead of the store-wide % (0 = none for that brand).
+export type Margins = { floorPct: number; brandFloors: Record<string, number>; neoRates: Record<string, number | null>; subPct: Record<string, number> };
+export const defaultMargins: Margins = { floorPct: 10, brandFloors: {}, neoRates: {}, subPct: {} };
 const KEY = "margins";
 const g = globalThis as unknown as { __margins?: { at: number; v: Margins } };
 

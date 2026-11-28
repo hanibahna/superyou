@@ -160,7 +160,7 @@ export function BuyBox({
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition group-open:rotate-180"><path d="M6 9l6 6 6-6" /></svg>
             </summary>
             <div className="space-y-3 px-3 pb-3">
-              {subOk && <SubscribeChoice price={v.price} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} forMonths={forMonths} onFor={setFor} />}
+              {subOk && <SubscribeChoice price={v.price} brandPct={v.subPct} value={plan} onChange={(e) => { setPlan(e); setStart(undefined); }} life={life} start={start} onStart={setStart} forMonths={forMonths} onFor={setFor} />}
               {!plan && !v.matchWas && <BulkOffer price={v.price} qty={qty} onQty={setQty} />}
             </div>
           </details>

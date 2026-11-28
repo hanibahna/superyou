@@ -102,6 +102,9 @@ export async function liveProducts() {
     if (c) return { ...sold, pmLose: true };
     return sold;
   });
+  // Admin → Margins: a brand's own auto-replenish (Subscribe & save) %.
+  const subBrand = margins.subPct ?? {};
+  if (Object.keys(subBrand).length) list = list.map((p) => { const v = subBrand[p.brand.toLowerCase()]; return v === undefined ? p : { ...p, subPct: v }; });
   let dupOf = new Map<string, string>();
   if (growth.dedupe.enabled) ({ list, dupOf } = mergeDuplicates(list, growth.dedupe.prefer, sourcing.preferLocal));
   g.__live = { key, list, byId: new Map(list.map((p) => [p.id, p])), dupOf };
@@ -159,7 +162,8 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     const live0 = live.byId.get(productId);
     // SuperPrice is off when the customer already used it today, or (subscriptions) when the
     // subscription price is lower anyway.
-    const subBetter = !!input.subscriptionId && !!live0?.matchWas && live0.matchWas * (1 - (subPricing?.pct ?? 0) / 100) < live0.price - 0.005;
+    const linePct = subPricing?.pct ? live0?.subPct ?? subPricing.pct : 0; // earned: the brand's own % if set
+    const subBetter = !!input.subscriptionId && !!live0?.matchWas && live0.matchWas * (1 - linePct / 100) < live0.price - 0.005;
     const spOff = !!live0?.matchWas && (input.noSuperPrice || subBetter);
     let p = live0 && spOff ? { ...live0, price: live0.matchWas!, match: undefined, matchWas: undefined, matchVs: undefined } : live0;
     // Over the unit limit: only the units above it go back to the regular price (blended per unit, rounded down for the customer).
@@ -212,9 +216,12 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   if (growth.subscribe.enabled && input.subscriptionId) {
     const sp = await (await import("@/lib/subscriptions")).subscriptionPricing(input.subscriptionId);
     if (sp) {
-      const amount = +Math.min(q.subtotal - q.discountTotal, capped(ok.filter((l) => !l.superPrice), sp.pct)).toFixed(2);
+      // Each line at its brand's auto-replenish % (Admin → Margins), else the subscription's earned %.
+      const pcts = new Set<number>();
+      const raw = sp.pct > 0 ? ok.filter((l) => !l.superPrice).reduce((a, l) => { const pc = live.byId.get(l.productId)?.subPct ?? sp.pct; if (pc > 0) pcts.add(pc); return a + capped([l], pc); }, 0) : 0;
+      const amount = +Math.min(q.subtotal - q.discountTotal, raw).toFixed(2);
       if (sp.pct > 0 && amount > 0) {
-        q.discounts.push({ name: `Subscribe & save (−${sp.pct}%)`, amount });
+        q.discounts.push({ name: pcts.size === 1 ? `Subscribe & save (−${[...pcts][0]}%)` : "Subscribe & save", amount });
         q.discountTotal = +(q.discountTotal + amount).toFixed(2);
       }
       const rebate = +Math.min(sp.rebate, q.subtotal - q.discountTotal).toFixed(2);

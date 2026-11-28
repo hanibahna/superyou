@@ -74,6 +74,8 @@ export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredient
   match?: string;
   /** SuperPrice: our price before it, and the competitor's price. */
   matchWas?: number;
+  /** Auto-replenish % for this brand when Admin → Margins sets one (else the store-wide %). */
+  subPct?: number;
   matchVs?: number;
   /** Already the best price: the cheapest other shop's price, and its name ("" = not shown). */
   cmpVs?: number;

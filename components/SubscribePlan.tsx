@@ -11,11 +11,11 @@ const weeks = (d: number) => (d < 45 ? `${Math.round(d / 7)} weeks` : `${Math.ro
 
 /** Subscribe & save on the product page: one-time, or "Deliver every 1 / 2 / 3 / 4 / 6 months" with the
  *  product's most common frequency marked, the same discount whichever is picked, and the saving a year. */
-export function SubscribeChoice({ price, value, onChange, life, start, onStart, forMonths, onFor }: { price: number; value: 0 | Every; onChange: (v: 0 | Every) => void; life?: Life; start?: string; onStart?: (d: string) => void; forMonths?: number; onFor?: (n: number) => void }) {
+export function SubscribeChoice({ price, value, onChange, life, start, onStart, forMonths, onFor, brandPct }: { price: number; value: 0 | Every; onChange: (v: 0 | Every) => void; life?: Life; start?: string; onStart?: (d: string) => void; forMonths?: number; onFor?: (n: number) => void; brandPct?: number }) {
   const t = useT();
   const sub = useGrowth().subscribe;
   if (!sub?.enabled) return null;
-  const pct = subPct(sub);
+  const pct = brandPct ?? subPct(sub); // a brand can have its own % (Admin → Margins)
   if (!pct) return null;
   const fast = !!(sub as { promoLive?: boolean }).promoLive;
   const promo = fast ? sub.promo : undefined;
