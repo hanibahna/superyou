@@ -31,7 +31,8 @@ export async function findDupes(apply: boolean) {
   // Only copies customers can actually see count as "the cheaper copy" (a hidden catalog or brand doesn't).
   const hiddenSrc = new Set(vis.hiddenSources.map((x) => x.toLowerCase()));
   const hiddenBrand = new Set(vis.hiddenBrands.map((x) => x.toLowerCase()));
-  const visible = (p: ProductLite) => !hiddenSrc.has((p.source || "manual").toLowerCase()) && !hiddenBrand.has(p.brand.toLowerCase());
+  const hiddenCat = new Set(vis.hiddenCategories);
+  const visible = (p: ProductLite) => !hiddenSrc.has((p.source || "manual").toLowerCase()) && !hiddenBrand.has(p.brand.toLowerCase()) && !hiddenCat.has(p.category);
   // NeoVitale items hidden earlier are re-checked too, so they come back if their cheaper copy is gone or hidden.
   const candidates = idx.all.filter((p) => p.price > 0 && visible(p) && (p.status === "active" || (p.source === NEO && prev.has(p.id))));
   const byBarcode = new Map<string, ProductLite[]>();

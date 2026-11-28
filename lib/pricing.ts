@@ -68,8 +68,9 @@ export async function liveProducts() {
   if (g.__live?.key === key) return g.__live;
   const hiddenSrc = new Set(vis.hiddenSources.map((x) => x.toLowerCase()));
   const hiddenBrand = new Set(vis.hiddenBrands.map((x) => x.toLowerCase()));
+  const hiddenCat = new Set(vis.hiddenCategories);
   // In-clinic treatments (laser hair removal…) can't be bought online; they stay in the admin only.
-  const shown = (p: ProductLite) => p.brand !== "SuperYou Clinic" && !hiddenBrand.has(p.brand.toLowerCase()) && !hiddenSrc.has((p.source || "manual").toLowerCase());
+  const shown = (p: ProductLite) => p.brand !== "SuperYou Clinic" && !hiddenBrand.has(p.brand.toLowerCase()) && !hiddenSrc.has((p.source || "manual").toLowerCase()) && !hiddenCat.has(p.category);
   let list = idx.all.filter((p) => p.status === "active" && shown(p)).map((p) => {
     const r = ratings.get(p.slug);
     const ship = shipInfo(p.source, sourcing);

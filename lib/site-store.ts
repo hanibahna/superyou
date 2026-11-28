@@ -97,8 +97,9 @@ export async function listBookings(limit = 1000): Promise<Booking[]> {
 }
 
 // Catalog visibility: hide whole sources (imported catalogs) or brands from the shop.
-export type Visibility = { hiddenSources: string[]; hiddenBrands: string[] };
-export const getVisibility = () => read<Visibility>("visibility", { hiddenSources: [], hiddenBrands: [] }, (v) => ({ hiddenSources: v.hiddenSources ?? [], hiddenBrands: v.hiddenBrands ?? [] }));
+/** hiddenCategories: whole categories switched off (Fragrance is off until switched back on, 28 Nov 2026). */
+export type Visibility = { hiddenSources: string[]; hiddenBrands: string[]; hiddenCategories: string[] };
+export const getVisibility = () => read<Visibility>("visibility", { hiddenSources: [], hiddenBrands: [], hiddenCategories: ["fragrance"] }, (v) => ({ hiddenSources: v.hiddenSources ?? [], hiddenBrands: v.hiddenBrands ?? [], hiddenCategories: v.hiddenCategories ?? ["fragrance"] }));
 export const saveVisibility = (v: Visibility) => write("visibility", v);
 
 /** For other server modules that keep their own admin document (e.g. lib/growth-store.ts). */

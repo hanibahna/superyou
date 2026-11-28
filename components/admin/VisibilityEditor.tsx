@@ -9,7 +9,7 @@ const label = (s: string) => ({ "neovitale.com": "Neovitale catalog", "skinsocie
 
 type Found = { sku: string; slug: string; name: string; brand: string; variant?: string; price: number; image?: string; inStock: boolean; status?: string; id?: string };
 
-export function VisibilityEditor({ initial, sources, brands }: { initial: Visibility; sources: { name: string; items: number; active: number }[]; brands: { name: string; items: number; sources: string[] }[] }) {
+export function VisibilityEditor({ initial, sources, brands, categories = [] }: { initial: Visibility; sources: { name: string; items: number; active: number }[]; brands: { name: string; items: number; sources: string[] }[]; categories?: { slug: string; name: string; items: number }[] }) {
   const [v, setV] = useState(initial);
   const [q, setQ] = useState("");
   const [only, setOnly] = useState<"all" | "hidden" | string>("all");
@@ -24,6 +24,19 @@ export function VisibilityEditor({ initial, sources, brands }: { initial: Visibi
     <div>
       <Header title="Catalog visibility" sub="Switch whole catalogs, brands or single products on and off. Hidden items disappear from the shop, search, menus and carts but stay in the admin." saver={saver} onSave={() => saver.save(v)} />
       <div className="space-y-5">
+        <Card title="Categories" sub="Switch a whole category off: its products, menu entry and homepage tiles disappear from the shop until you switch it back on.">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+            {categories.map((c) => {
+              const on = !(v.hiddenCategories ?? []).includes(c.slug);
+              return (
+                <div key={c.slug} className={`flex items-center justify-between gap-2 rounded-xl border p-3 ${on ? "border-line" : "border-dashed border-sale/50 bg-red-50/40"}`}>
+                  <div><p className="text-sm font-semibold">{c.name}</p><p className={`text-xs ${on ? "text-muted" : "text-sale"}`}>{c.items.toLocaleString("en-US")} items · {on ? "shown" : "hidden"}</p></div>
+                  <Toggle label="" checked={on} onChange={(x) => (saver.touch(), setV({ ...v, hiddenCategories: x ? (v.hiddenCategories ?? []).filter((s) => s !== c.slug) : [...(v.hiddenCategories ?? []), c.slug] }))} />
+                </div>
+              );
+            })}
+          </div>
+        </Card>
         <Card title="Catalogs">
           <div className="grid gap-3 md:grid-cols-3">
             {sources.map((s) => {
