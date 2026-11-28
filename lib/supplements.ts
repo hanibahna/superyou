@@ -12,8 +12,18 @@ const NUTR = W(String.raw`vitamins?|vitamine?s?|vit\.? ?[abcdek]\d*|minerals?|ma
 const NOT_CAT = new Set(["makeup", "fragrance", "nails", "suncare", "oral-care"]);
 const BRANDS = new Set(["nutreov", "nhco", "solgar", "arkopharma", "bio-strath", "forte pharma", "fortépharma", "vitabiotics", "centrum", "supradyn", "now foods", "nature's bounty", "natures bounty", "holland & barrett", "inneov", "imedeen", "pileje", "pilèje", "biocyte", "dietaroma", "nutergia", "juvamine", "berocca", "redoxon", "vitascience", "sanct bernhard", "orthomol", "swisse", "optimum nutrition"]);
 
+// Creams, serums and shampoos, even from supplement brands, are not taken by mouth.
+const COSMETIC = W(String.raw`creams?|crème|creme|serums?|sérum|lotion|eye care|cleanser|cleansing|face wash|shampoo|shampooing|conditioner|mask|masque|toner|moisturi[sz]er|balm|baume|spf|sunscreen|deodorant|body wash|shower gel|lip|mascara|foundation`);
+const isPill = (n: string) => STRONG.test(n) || WEAK.test(n);
+/** A cosmetic filed as a supplement by its feed: the shelf it belongs on instead. */
+export function cosmeticShelf(p: { name: string; category: string }): string | null {
+  if (p.category !== "supplements" || !COSMETIC.test(p.name) || isPill(p.name)) return null;
+  return /shampoo|conditioner|hair/i.test(p.name) ? "hair" : /body|shower|deodorant/i.test(p.name) ? "body" : "skincare";
+}
+
 /** True when a product belongs in Supplements. */
 export function isSupplement(p: { name: string; brand: string; category: string }): boolean {
+  if (COSMETIC.test(p.name) && !isPill(p.name)) return false;
   if (p.category === "supplements") return true;
   if (NOT_CAT.has(p.category)) return false;
   if (BRANDS.has(p.brand.toLowerCase())) return true;

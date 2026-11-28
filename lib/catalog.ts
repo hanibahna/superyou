@@ -1,6 +1,6 @@
 import "server-only";
 import { isBabyMom } from "@/lib/baby";
-import { isSupplement } from "@/lib/supplements";
+import { cosmeticShelf, isSupplement } from "@/lib/supplements";
 
 // Live catalog, stored in the database and edited from /admin.
 //
@@ -124,6 +124,7 @@ function buildIndex(ver: string, raw: string[]): Index {
   for (const p of parsed) if (TYPOS.test(p.name)) p.name = p.name.replace(TYPOS, (m) => TYPO_FIX[m.toLowerCase()] ?? m);
   canonBrands(parsed);
   // Baby & Mom: baby, kids and pregnancy/nursing products from any feed category are grouped together.
+  for (const p of parsed) { const shelf = cosmeticShelf(p); if (shelf) (p.feedCategory = p.category), (p.category = shelf); }
   // Supplements first: a prenatal or kids' vitamin is shelved with the supplements.
   for (const p of parsed) if (p.category !== "supplements" && isSupplement(p)) (p.feedCategory = p.category), (p.category = "supplements");
   for (const p of parsed) if (p.category !== "baby" && p.category !== "supplements" && isBabyMom(p)) (p.feedCategory = p.category), (p.category = "baby");
