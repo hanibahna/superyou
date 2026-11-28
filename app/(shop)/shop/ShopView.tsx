@@ -1,6 +1,7 @@
 "use client";
 
 import { babyGroup } from "@/lib/baby";
+import { suppGroup } from "@/lib/supplements";
 import { Fragment } from "react";
 
 import { ShareButton } from "@/components/ShareButton";
@@ -102,7 +103,7 @@ export function ShopView({ result, query, videos = [], category, base = "/shop/"
   const title = heading ? heading : query.q
     ? `Results for “${query.q}”`
     : query.category
-      ? (query.category === "baby" && babyGroup(query.sub)?.label) || catName(query.category)
+      ? (query.category === "baby" && babyGroup(query.sub)?.label) || (query.category === "supplements" && suppGroup(query.sub)?.label) || catName(query.category)
       : query.tag
         ? tagLabels[query.tag as Tag] ?? tx("Products")
         : concern.length === 1

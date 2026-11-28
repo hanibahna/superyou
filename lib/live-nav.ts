@@ -7,6 +7,7 @@ import "server-only";
 
 import { getIndex } from "@/lib/catalog";
 import { BABY_GROUPS } from "@/lib/baby";
+import { SUPP_GROUPS } from "@/lib/supplements";
 import { slugify, type ProductLite, type Taxonomy } from "@/lib/data/catalog";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
@@ -24,6 +25,7 @@ type LiveNav = {
   allCats: { slug: string; name: string }[];
   /** Baby & Mom sections that have products, and its biggest brands. */
   babySubs: string[]; babyBrands: string[];
+  suppSubs: string[]; suppBrands: string[];
 };
 const g = globalThis as unknown as { __liveNav?: LiveNav };
 
@@ -71,7 +73,12 @@ export async function liveNav(): Promise<LiveNav> {
   const bc = new Map<string, number>();
   for (const p of baby) bc.set(p.brand, (bc.get(p.brand) ?? 0) + 1);
   const babyBrands = [...bc].filter(([b, n]) => n >= 2 && b !== "SuperYou").sort((a, b) => b[1] - a[1]).slice(0, 8).map(([b]) => b);
-  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats, babySubs, babyBrands };
+  const supp = list.filter((p) => p.category === "supplements");
+  const suppSubs = SUPP_GROUPS.filter((b) => supp.filter((p) => b.re.test(p.name)).length >= 2).map((b) => b.slug);
+  const sc = new Map<string, number>();
+  for (const p of supp) sc.set(p.brand, (sc.get(p.brand) ?? 0) + 1);
+  const suppBrands = [...sc].filter(([b, n]) => n >= 2 && b !== "SuperYou").sort((a, b) => b[1] - a[1]).slice(0, 8).map(([b]) => b);
+  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats, babySubs, babyBrands, suppSubs, suppBrands };
   return g.__liveNav;
 }
 
@@ -227,7 +234,7 @@ export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy, wholesale = fa
   const auto = autoCategories(tax, nav);
   return {
     // Wholesale: always in the menu (after the shop sections), unless the admin menu already has it.
-    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(babyMom(s.menu, nav), nav, auto)),
+    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(supplementsMenu(babyMom(s.menu, nav), nav), nav, auto)),
     footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav, auto) })).filter((c) => c.links.length),
     announcement: liveHrefsDeep(s.announcement, nav),
   };
@@ -265,5 +272,29 @@ export function babyMom(menu: MenuItem[], nav: LiveNav): MenuItem[] {
     const has = (xs: MenuItem[]): boolean => xs.some((x) => /category=body|body-care/i.test(x.href) || has(x.children ?? []));
     out = out.map((x) => (/^skin\s*care$/i.test(x.label) && !has(x.children ?? []) ? { ...x, children: [...(x.children ?? []), { label: "Body & Bath", href: "/shop/?category=body", children: [] }] } : x));
   }
+  return out;
+}
+
+/** "Parapharmacy" in the main menu becomes "Supplements" (sections + top brands), in the same place. */
+export function supplementsMenu(menu: MenuItem[], nav: LiveNav): MenuItem[] {
+  const isPara = (x: MenuItem) => /^\s*parapharmac(y|ie)\s*$/i.test(x.label);
+  const isSupp = (x: MenuItem) => /^\s*(food\s*)?supplements?\s*$/i.test(x.label);
+  const item: MenuItem = {
+    label: "Supplements",
+    href: "/shop/?category=supplements",
+    children: [
+      { label: "Shop by need", href: "#", children: [
+        ...SUPP_GROUPS.filter((b) => nav.suppSubs.includes(b.slug)).map((b) => ({ label: b.label, href: `/shop/?category=supplements&sub=${b.slug}`, children: [] })),
+        { label: "View All", href: "/shop/?category=supplements", children: [] },
+      ] },
+      ...(nav.suppBrands.length ? [{ label: "Top Brands", href: "#", children: nav.suppBrands.map((b) => ({ label: b, href: `/shop/?brand=${encodeURIComponent(b)}&category=supplements`, children: [] })) }] : []),
+    ],
+  };
+  const i = menu.findIndex((x) => isPara(x) || isSupp(x));
+  // Parapharmacy lists (top level and "Parapharmacy Brands" under Brands) go.
+  const strip = (xs: MenuItem[]): MenuItem[] => xs.filter((x) => !isPara(x) && !isSupp(x) && !/^\s*parapharmacy brands\s*$/i.test(x.label)).map((x) => ({ ...x, children: strip(x.children ?? []) }));
+  const out = strip(menu);
+  const at = i >= 0 ? i : out.findIndex((x) => /^\s*brands\s*$/i.test(x.label));
+  out.splice(at >= 0 ? Math.min(at, out.length) : out.length, 0, item);
   return out;
 }
