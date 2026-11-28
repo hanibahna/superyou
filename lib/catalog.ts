@@ -1,4 +1,5 @@
 import "server-only";
+import { isBabyMom } from "@/lib/baby";
 
 // Live catalog, stored in the database and edited from /admin.
 //
@@ -121,6 +122,8 @@ function buildIndex(ver: string, raw: string[]): Index {
   // Spelling slips in the supplier feeds, fixed on the way to the shop.
   for (const p of parsed) if (TYPOS.test(p.name)) p.name = p.name.replace(TYPOS, (m) => TYPO_FIX[m.toLowerCase()] ?? m);
   canonBrands(parsed);
+  // Baby & Mom: baby, kids and pregnancy/nursing products from any feed category are grouped together.
+  for (const p of parsed) if (p.category !== "baby" && isBabyMom(p)) p.category = "baby";
   const all = parsed.sort((a, b) => a.name.localeCompare(b.name) || (a.price - b.price));
   const byId = new Map(all.map((p) => [p.id, p]));
   const bySlug = new Map<string, ProductLite[]>();

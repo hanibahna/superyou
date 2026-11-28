@@ -6,6 +6,7 @@ import "server-only";
 // open an empty page or an empty search disappear, and come back when the catalog is switched on.
 
 import { getIndex } from "@/lib/catalog";
+import { BABY_GROUPS } from "@/lib/baby";
 import { slugify, type ProductLite, type Taxonomy } from "@/lib/data/catalog";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
@@ -21,6 +22,8 @@ type LiveNav = {
   originCats: Map<string, Set<string>>;
   /** Every category, on sale or not, to tell which category a menu section is about. */
   allCats: { slug: string; name: string }[];
+  /** Baby & Mom sections that have products, and its biggest brands. */
+  babySubs: string[]; babyBrands: string[];
 };
 const g = globalThis as unknown as { __liveNav?: LiveNav };
 
@@ -63,7 +66,12 @@ export async function liveNav(): Promise<LiveNav> {
   for (const b of [...knownBrands]) knownBrands.add(b.replace(/-/g, ""));
   for (const b of [...brands]) brands.add(b.replace(/-/g, ""));
   const allCats = tax.categories.map((c) => ({ slug: c.slug, name: c.name }));
-  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats };
+  const baby = list.filter((p) => p.category === "baby");
+  const babySubs = BABY_GROUPS.filter((b) => baby.filter((p) => b.re.test(p.name)).length >= 2).map((b) => b.slug);
+  const bc = new Map<string, number>();
+  for (const p of baby) bc.set(p.brand, (bc.get(p.brand) ?? 0) + 1);
+  const babyBrands = [...bc].filter(([b, n]) => n >= 2 && b !== "SuperYou").sort((a, b) => b[1] - a[1]).slice(0, 8).map(([b]) => b);
+  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats, babySubs, babyBrands };
   return g.__liveNav;
 }
 
@@ -219,8 +227,41 @@ export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy, wholesale = fa
   const auto = autoCategories(tax, nav);
   return {
     // Wholesale: always in the menu (after the shop sections), unless the admin menu already has it.
-    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(s.menu, nav, auto)),
+    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(babyMom(s.menu, nav), nav, auto)),
     footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav, auto) })).filter((c) => c.links.length),
     announcement: liveHrefsDeep(s.announcement, nav),
   };
+}
+
+/** "Body & Baby" in the main menu becomes "Baby & Mom", holding every baby, kids and pregnancy/nursing
+ *  product (sections + top brands). Body products stay reachable under Skin Care → Body & Bath. */
+export function babyMom(menu: MenuItem[], nav: LiveNav): MenuItem[] {
+  const isGroup = (x: MenuItem) => /^\s*body\s*(&|and)\s*baby\s*$/i.test(x.label) || /^\s*(baby|mother|mom)\s*(&|and)\s*(mom|mum|mother|baby|child)\s*$/i.test(x.label);
+  const i = menu.findIndex(isGroup);
+  const hadBody = i >= 0 && /body/i.test(menu[i].label);
+  const item: MenuItem = {
+    label: "Baby & Mom",
+    href: "/shop/?category=baby",
+    children: [
+      { label: "Shop by need", href: "#", children: [
+        ...BABY_GROUPS.filter((b) => nav.babySubs.includes(b.slug)).map((b) => ({ label: b.label, href: `/shop/?category=baby&sub=${b.slug}`, children: [] })),
+        { label: "View All", href: "/shop/?category=baby", children: [] },
+      ] },
+      ...(nav.babyBrands.length ? [{ label: "Top Brands", href: "#", children: nav.babyBrands.map((b) => ({ label: b, href: `/shop/?brand=${encodeURIComponent(b)}&category=baby`, children: [] })) }] : []),
+    ],
+  };
+  // Drop any other Baby & Mom entry nested elsewhere so it isn't listed twice.
+  const strip = (xs: MenuItem[]): MenuItem[] => xs.filter((x) => !isGroup(x)).map((x) => ({ ...x, children: strip(x.children ?? []) }));
+  let out = strip(menu);
+  if (i >= 0) out.splice(Math.min(i, out.length), 0, item);
+  else {
+    const para = out.findIndex((x) => /parapharmacy/i.test(x.label));
+    out.splice(para >= 0 ? para : out.length, 0, item);
+  }
+  if (hadBody) {
+    // Keep body care one click away from Skin Care.
+    const has = (xs: MenuItem[]): boolean => xs.some((x) => /category=body|body-care/i.test(x.href) || has(x.children ?? []));
+    out = out.map((x) => (/^skin\s*care$/i.test(x.label) && !has(x.children ?? []) ? { ...x, children: [...(x.children ?? []), { label: "Body & Bath", href: "/shop/?category=body", children: [] }] } : x));
+  }
+  return out;
 }

@@ -1,3 +1,4 @@
+import { babyGroup } from "@/lib/baby";
 import "server-only";
 
 // Server-side catalog queries: grouping variants into cards, filtering, search, facets, paging.
@@ -36,6 +37,8 @@ export function toCards(list: ProductLite[]): CardItem[] {
 export type ShopQuery = {
   q?: string;
   category?: string;
+  /** A section inside a category (Baby & Mom → Nappy change…). */
+  sub?: string;
   collection?: string;
   concern?: string[];
   brand?: string[];
@@ -86,7 +89,8 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
 
   // Facets are counted on the search result before the facet's own filter is applied,
   // so customers can see how many items each choice would give.
-  const byCategory = q.category ? list.filter((p) => p.category === q.category) : list;
+  const sub = q.category === "baby" ? babyGroup(q.sub) : undefined;
+  const byCategory = q.category ? list.filter((p) => p.category === q.category && (!sub || sub.re.test(p.name))) : list;
   const byConcern = q.concern?.length ? byCategory.filter((p) => q.concern!.some((c) => p.concerns.includes(c))) : byCategory;
   const wantBrands = new Set((q.brand ?? []).map(brandKey));
   let filtered = wantBrands.size ? byConcern.filter((p) => wantBrands.has(brandKey(p.brand))) : byConcern;

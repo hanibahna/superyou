@@ -11,6 +11,7 @@ export function parseQuery(sp: SP): ShopQuery {
   return {
     q: one(sp.q)?.slice(0, 100),
     category: one(sp.category),
+    sub: one(sp.sub),
     concern: many(sp.concern),
     brand: many(sp.brand),
     tag: one(sp.tag),
