@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MenuItem } from "@/lib/site";
 import { useT } from "@/lib/site-context";
 
@@ -14,8 +14,18 @@ export function MegaMenu({ items: raw, extra }: { items: MenuItem[]; extra?: Rea
   const t = useT();
   const items = tMenu(raw, t);
   const [open, setOpen] = useState<number | null>(null);
+  const nav = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (open === null || !nav.current) return;
+    const set = () => document.documentElement.style.setProperty("--mega-top", `${Math.max(0, nav.current!.getBoundingClientRect().bottom)}px`);
+    set();
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); };
+    addEventListener("scroll", set, { passive: true });
+    addEventListener("keydown", esc);
+    return () => { removeEventListener("scroll", set); removeEventListener("keydown", esc); };
+  }, [open]);
   return (
-    <nav className="mega hidden border-t border-line lg:block" onMouseLeave={() => setOpen(null)}>
+    <nav ref={nav} className="mega hidden border-t border-line lg:block" onMouseLeave={() => setOpen(null)}>
       <ul className="container-x no-scrollbar flex h-11 items-center gap-5 whitespace-nowrap text-sm font-semibold xl:gap-7">
         {items.map((it, i) => (
           <li key={i} className="h-full" onMouseEnter={() => setOpen(it.children.length ? i : null)}>
@@ -28,7 +38,13 @@ export function MegaMenu({ items: raw, extra }: { items: MenuItem[]; extra?: Rea
         ))}
         {extra}
       </ul>
-      {open !== null && items[open]?.children.length > 0 && <Panel item={items[open]} close={() => setOpen(null)} />}
+      {open !== null && items[open]?.children.length > 0 && (
+        <>
+          {/* The page stays where it is: the panel lies over it and the page behind is dimmed (click it to close). */}
+          <div aria-hidden onMouseEnter={() => setOpen(null)} onClick={() => setOpen(null)} className="mega-scrim fixed inset-x-0 bottom-0 z-30 bg-black/35 backdrop-blur-[2px]" style={{ top: "var(--mega-top, 0px)" }} />
+          <Panel item={items[open]} close={() => setOpen(null)} />
+        </>
+      )}
     </nav>
   );
 }
