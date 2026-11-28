@@ -38,7 +38,7 @@ export function Footer({ categories }: { categories: Category[] }) {
   const accepted = [payments.cod.enabled && tx("Cash on delivery"), payments.card.enabled && "Visa · Mastercard", payments.whish.enabled && "Whish"].filter(Boolean).join(" · ");
   return (
     <footer className="site-footer bg-ink text-white/80">
-      <div className="container-x grid gap-10 py-14 md:grid-cols-4">
+      <div className={`container-x grid gap-10 py-14 sm:grid-cols-2 ${footerMenu.length > 2 ? "lg:grid-cols-5" : "md:grid-cols-4"}`}>
         <div>
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -63,7 +63,7 @@ export function Footer({ categories }: { categories: Category[] }) {
           </div>
         </div>
         {footerMenu.length > 0 ? (
-          footerMenu.slice(0, 2).map((col) => <FooterCol key={col.title} title={col.title} links={col.links} />)
+          footerMenu.slice(0, 3).map((col) => <FooterCol key={col.title} title={col.title} links={col.links} />)
         ) : (
           <>
             <FooterCol title={tx("Shop")} links={categories.filter((c) => c.menu !== false).map((c) => ({ label: c.name, href: `/shop/?category=${c.slug}` }))} />
