@@ -37,7 +37,9 @@ export default async function InfoPage({ params, searchParams }: { params: Promi
   const sub = (await (await import("@/lib/growth-store")).getGrowth()).subscribe;
   const builtIn = policyText(slug, s, sub);
   // The Subscribe & save terms always follow the current settings unless written in Admin.
-  const stored = s.pages[slug] ?? (slug === "subscription-terms" && builtIn ? { title: builtIn.title, body: "" } : undefined);
+  const raw = s.pages[slug] ?? (slug === "subscription-terms" && builtIn ? { title: builtIn.title, body: "" } : undefined);
+  // Imported pages whose text was lost come through as a placeholder like "$20": treat them as empty.
+  const stored = raw && /^\$[0-9a-z]{1,4}$/i.test(raw.body.trim()) ? { ...raw, body: "" } : raw;
   if (!stored || foreignPage(slug)) notFound();
   // Policy pages copied from a supplier are replaced by SuperYou's own until you write yours.
   const p0 = builtIn && (foreignText.test(stored.body) || !stored.body) ? builtIn : stored;
