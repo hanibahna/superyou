@@ -115,9 +115,9 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
   const [mesh, setMesh] = useState("");
   const [ask, setAsk] = useState(false);
   const [info, setInfo] = useState(false);
-  // First visit on a phone: show the description once as a pop-up.
+  // Phones: the description opens as a pop-up every time SuperScan is opened (from the tab bar or a link).
   useEffect(() => {
-    try { if (!localStorage.getItem("sy:scan-intro") && window.matchMedia("(max-width: 767px)").matches) setInfo(true); } catch { /* private mode */ }
+    try { if (window.matchMedia("(max-width: 767px)").matches) setInfo(true); } catch { /* old browser */ }
   }, []);
   const [slow, setSlow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -189,7 +189,7 @@ export function SkinScan({ intro, ready }: { intro: string; ready: boolean }) {
       </div>
       {/* Desktop has room for the description; phones get it as a pop-up they dismiss once. */}
       <p className="mt-3 hidden max-w-2xl text-muted md:block">{intro}</p>
-      {info && <IntroSheet text={intro} onClose={() => { setInfo(false); try { localStorage.setItem("sy:scan-intro", "1"); } catch { /* private mode */ } }} />}
+      {info && <IntroSheet text={intro} onClose={() => setInfo(false)} />}
       {!ready && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{tx("The AI scan isn't connected yet.")} <Link href="/routine/" className="font-semibold underline">Take the 1-minute routine quiz</Link> instead.</p>}
 
       <div className="mt-4 grid gap-8 md:mt-8 md:grid-cols-[320px_1fr]">
@@ -459,12 +459,31 @@ function IntroSheet({ text, onClose }: { text: string; onClose: () => void }) {
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/45 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="scan-intro-title" onClick={onClose}>
-      <div className="sheet-up w-full max-w-md rounded-t-[28px] bg-white px-6 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3" onClick={(e) => e.stopPropagation()}>
+      <div className="sheet-up max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[28px] bg-white px-6 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3" onClick={(e) => e.stopPropagation()}>
         <span className="mx-auto mb-5 block h-1.5 w-10 rounded-full bg-line" aria-hidden />
         <div className="flex items-center gap-3 text-[#d13f74]"><FaceIdGlyph size={40} draw /><h2 id="scan-intro-title" className="text-xl font-bold text-ink">{tx("How SuperScan works")}</h2></div>
         <p className="mt-3 text-[15px] leading-relaxed text-muted">{text}</p>
+        <DeviceNote />
         <button onClick={onClose} autoFocus className="tap mt-5 w-full rounded-2xl bg-ink text-[17px] font-semibold text-white">{tx("Dismiss")}</button>
       </div>
+    </div>
+  );
+}
+
+/** Which phones get the true 3D scan, and what happens on the others. Says which one this phone is using. */
+function DeviceNote() {
+  const tx = useT();
+  const [app, setApp] = useState(false);
+  useEffect(() => {
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    setApp(!!cap?.isNativePlatform?.());
+  }, []);
+  return (
+    <div className="mt-4 space-y-2 rounded-2xl bg-[#f6f1f3] p-4 text-[14px] leading-relaxed">
+      <p><b>{tx("True 3D depth scan:")}</b> {tx("needs an iPhone with Face ID, in the SuperYou iPhone app. It uses the Face ID (TrueDepth) camera to read your face in depth.")}</p>
+      <p><b>{tx("Other phones and the website:")}</b> {tx("Android phones, older iPhones and any browser use the front camera with 3D face tracking on the phone. Same steps, a little less depth detail.")}</p>
+      <p className="text-muted">{tx("If your phone can't run the 3D scan, you can take a single photo instead.")}</p>
+      {app && <p className="font-semibold text-[#2f6b4f]">✓ {tx("You're in the iPhone app: the Face ID camera will be used.")}</p>}
     </div>
   );
 }
