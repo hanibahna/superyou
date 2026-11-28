@@ -29,6 +29,9 @@ export function PromotionsEditor({ initial, taxonomy, brands, room = {} }: { ini
       <Header title="Discounts & free gifts" sub="Sales by brand, category, concern or product · coupon codes · free gifts by spend" saver={saver} onSave={() => saver.save(p)} />
 
       <div className="space-y-6">
+        <Card title="Master switch" sub={<>Off: every automatic sale, Black Friday price, min-spend discount and promo code below stops at once (nothing is deleted). Personal codes (welcome, Club rewards, birthdays, influencers) keep working. See what each rule does in <a className="underline" href="/admin/pricing/status/">Discount status</a>.</>}>
+          <Toggle label={p.paused ? "All discounts & codes are OFF" : "All discounts & codes are ON"} checked={!p.paused} onChange={(on) => set({ ...p, paused: !on })} />
+        </Card>
         <Card
           title="Discounts"
           sub={<>No code = <b>automatic</b>: the sale price shows everywhere (cards, product pages, cart). With a code = <b>coupon</b> the customer types at checkout. A minimum spend makes it a cart discount.</>}

@@ -481,11 +481,16 @@ export type GiftTier = {
   showProgress: boolean; // "Spend $12 more to get a free gift"
 };
 
-export type Promotions = { discounts: Discount[]; gifts: GiftTier[] };
+/** paused = the master switch is off: automatic sales, Black Friday prices, min-spend discounts and
+ *  promo codes from Discounts & codes all stop (rules are kept). Personal codes still work. */
+export type Promotions = { discounts: Discount[]; gifts: GiftTier[]; paused?: boolean };
+/** The store's own discount rules that may apply now (none while the master switch is off). */
+export const storeDiscounts = (p: Promotions) => (p.paused ? [] : p.discounts);
 export const defaultPromotions: Promotions = { discounts: [], gifts: [] };
 
 const scopeSchema = z.object({ kind: z.enum(["all", "category", "brand", "concern", "tag", "skus"]), values: z.array(z.string().max(200)).max(2000) });
 export const promotionsSchema = z.object({
+  paused: z.boolean().optional(),
   discounts: z.array(z.object({
     id: z.string().min(1).max(40), name: z.string().min(1).max(100), enabled: z.boolean(), type: z.enum(["percent", "fixed"]),
     value: z.number().positive().max(100000), scope: scopeSchema, exclude: scopeSchema,
@@ -503,12 +508,13 @@ export const promotionsSchema = z.object({
 export const isLive = (r: { enabled: boolean; startsAt: string; endsAt: string }, now = Date.now()) =>
   r.enabled && (!r.startsAt || Date.parse(r.startsAt) <= now) && (!r.endsAt || Date.parse(r.endsAt) > now);
 
-type ScopedItem = { category: string; brand: string; concerns: string[]; tags: string[]; sku: string };
+type ScopedItem = { category: string; feedCategory?: string; brand: string; concerns: string[]; tags: string[]; sku: string };
 export function inScope(p: ScopedItem, s: Scope) {
   const v = s.values;
   switch (s.kind) {
     case "all": return true;
-    case "category": return v.includes(p.category);
+    // Products regrouped by the shop (Baby & Mom, Supplements) still count for their feed category.
+    case "category": return v.includes(p.category) || (!!p.feedCategory && v.includes(p.feedCategory));
     case "brand": return v.some((b) => b.toLowerCase() === p.brand.toLowerCase());
     case "concern": return p.concerns.some((c) => v.includes(c));
     case "tag": return p.tags.some((t) => v.includes(t));
@@ -559,21 +565,29 @@ export function quote(lines: QuoteLine[], promos: Promotions, settings: Settings
     else if (subtotal < c.minSubtotal) couponError = `Spend at least $${c.minSubtotal} to use this code`;
     else cartRules.push(c);
   }
+  // What each line has already been given by earlier rules, so rules together never go under the floor.
+  const given = new Map<QuoteLine, number>();
   for (const d of cartRules) {
     // Coupons that don't stack skip items already on automatic sale.
     // SuperPrice items never take a coupon on top (the price is already at its floor or below the competition).
     const eligible = lines.filter((l) => !l.superPrice && inScope(l, d.scope) && !excluded(l, d.exclude) && (d.stack || l.price >= l.basePrice));
-    const spend = eligible.reduce((s, l) => s + l.price * l.qty, 0);
-    if (d.minSubtotal > 0 && subtotal < d.minSubtotal) continue;
+    // A minimum spend counts the items the rule is about ("spend $50 on Vichy"), not the whole bag.
+    const scoped = d.scope.kind === "all" ? subtotal : lines.filter((l) => inScope(l, d.scope) && !excluded(l, d.exclude)).reduce((s, l) => s + l.price * l.qty, 0);
+    if (d.minSubtotal > 0 && scoped < d.minSubtotal) {
+      if (d.code) couponError = `Spend at least $${d.minSubtotal}${d.scope.kind === "all" ? "" : " on the items this code covers"} to use this code`;
+      continue;
+    }
     if (!eligible.length) {
       if (d.code) couponError = "This code doesn't apply to the items in your cart";
       continue;
     }
-    // Each item's share stops at its minimum-margin price (Admin → Margins).
+    // Each item's share stops at its minimum-margin price (Admin → Margins), counting earlier rules.
     const amount = eligible.reduce((s, l) => {
       const off = d.type === "percent" ? (l.price * d.value) / 100 : Math.min(l.price, d.value);
-      const room = l.floor !== undefined ? Math.max(0, l.price - l.floor) : l.price;
-      return s + Math.min(off, room) * l.qty;
+      const room = Math.max(0, (l.floor !== undefined ? l.price - l.floor : l.price) - (given.get(l) ?? 0));
+      const take = Math.min(off, room);
+      given.set(l, (given.get(l) ?? 0) + take);
+      return s + take * l.qty;
     }, 0);
     if (amount > 0) discounts.push({ name: d.name, code: d.code || undefined, amount: +amount.toFixed(2) });
   }

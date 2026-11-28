@@ -65,6 +65,8 @@ export type Product = {
 
 /** Lightweight record kept in the fast in-memory index (no long texts, first image only). */
 export type ProductLite = Omit<Product, "description" | "howToUse" | "ingredients" | "images" | "video"> & {
+  /** The category the supplier feed gave, when the shop regrouped the product (Baby & Mom, Supplements). */
+  feedCategory?: string;
   image?: string; imageCount: number; rating?: number; reviewCount?: number;
   /** Filled in live from Admin → Sourcing: local stock or international drop shipping, and delivery time. */
   origin?: "local" | "international"; shipFrom?: string; daysMin?: number; daysMax?: number;

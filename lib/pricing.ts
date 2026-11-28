@@ -8,7 +8,7 @@ import { normPhone } from "@/lib/wa";
 import type { Every } from "@/lib/every";
 import { getIndex } from "@/lib/catalog";
 import type { ProductLite } from "@/lib/data/catalog";
-import { inScope, isLive, quote, salePrice, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
+import { inScope, isLive, quote, salePrice, storeDiscounts, type Promotions, type QuoteLine, type Settings } from "@/lib/site";
 import { getPromotions, getRoutine, getSettings, getSourcing, getVisibility } from "@/lib/site-store";
 import { priceMatches } from "@/lib/price-match";
 import { floorPrice, getMargins } from "@/lib/margins";
@@ -62,7 +62,7 @@ const SUPPLIER_LABELS = new Set(["neovitale", "skin society", "nexuscare"]);
 export async function liveProducts() {
   const [idx, promos, vis, growth, ratings, sourcing, pm, margins] = await Promise.all([getIndex(), getPromotions(), getVisibility(), getGrowth(), ratingMap(), getSourcing(), priceMatches(), getMargins()]);
   const pmOn = growth.priceMatch.enabled;
-  const auto = promos.discounts.filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
+  const auto = storeDiscounts(promos).filter((d) => !d.code && d.minSubtotal === 0 && isLive(d));
   // Re-evaluate at least every minute so scheduled sales start and stop on time.
   const key = `${idx.ver}|pm${pmOn ? pm.ver : 'off'}${growth.priceMatch.badge ? 'b' : ''}|${JSON.stringify(auto)}|${JSON.stringify(vis)}|${JSON.stringify(growth.dedupe)}|${JSON.stringify(sourcing)}|${JSON.stringify(margins)}|${ratings.size}:${[...ratings.values()].reduce((s, r) => s + r.count * r.avg, 0)}|${Math.floor(Date.now() / 60000)}`;
   if (g.__live?.key === key) return g.__live;
@@ -126,7 +126,7 @@ export type QuoteInput = { items: { productId: string; qty: number; every?: Ever
 
 export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _lines: (QuoteLine & { available: boolean })[]; _promos: Promotions; _settings: Settings }> {
   const [live, basePromos, settings, idx, growth, routine, margins] = await Promise.all([liveProducts(), getPromotions(), getSettings(), getIndex(), getGrowth(), getRoutine(), getMargins()]);
-  const promos: Promotions = { discounts: [...basePromos.discounts], gifts: [...basePromos.gifts] };
+  const promos: Promotions = { discounts: [...storeDiscounts(basePromos)], gifts: [...basePromos.gifts] };
   // App welcome: X% off the customer's first order placed in the app, applied automatically (no code).
   // Known by phone; items already on sale and SuperPrice items are not discounted again.
   if (input.channel === "app" && growth.apps.firstPct > 0 && input.phone && !input.subscriptionId && !(await appOrdered(input.phone)))
@@ -170,7 +170,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
     if (p?.matchWas && qty > pmCfg.maxUnits) p = { ...p, price: Math.floor(((p.price * pmCfg.maxUnits + p.matchWas * (qty - pmCfg.maxUnits)) / qty) * 100) / 100 };
     const base = idx.byId.get(productId);
     return p && base
-      ? { productId, superPrice: !!p.matchWas, spLimit: !!p.matchWas && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt, floor: floorPrice(base, margins) }
+      ? { productId, superPrice: !!p.matchWas, spLimit: !!p.matchWas && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, feedCategory: p.feedCategory, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt, floor: floorPrice(base, margins) }
       : null;
   });
   const ok = lines.filter((l): l is NonNullable<typeof l> => !!l && l.available);

@@ -125,8 +125,8 @@ function buildIndex(ver: string, raw: string[]): Index {
   canonBrands(parsed);
   // Baby & Mom: baby, kids and pregnancy/nursing products from any feed category are grouped together.
   // Supplements first: a prenatal or kids' vitamin is shelved with the supplements.
-  for (const p of parsed) if (p.category !== "supplements" && isSupplement(p)) p.category = "supplements";
-  for (const p of parsed) if (p.category !== "baby" && p.category !== "supplements" && isBabyMom(p)) p.category = "baby";
+  for (const p of parsed) if (p.category !== "supplements" && isSupplement(p)) (p.feedCategory = p.category), (p.category = "supplements");
+  for (const p of parsed) if (p.category !== "baby" && p.category !== "supplements" && isBabyMom(p)) (p.feedCategory = p.category), (p.category = "baby");
   const all = parsed.sort((a, b) => a.name.localeCompare(b.name) || (a.price - b.price));
   const byId = new Map(all.map((p) => [p.id, p]));
   const bySlug = new Map<string, ProductLite[]>();

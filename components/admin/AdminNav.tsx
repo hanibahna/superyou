@@ -34,6 +34,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Pricing",
     links: [
       { href: "/admin/pricing/", label: "Pricing overview" },
+      { href: "/admin/pricing/status/", label: "Discount status" },
       { href: "/admin/margins/", label: "Margins & costs" },
       { href: "/admin/promotions/", label: "Discounts & codes" },
       { href: "/admin/black-friday/", label: "Black Friday" },
