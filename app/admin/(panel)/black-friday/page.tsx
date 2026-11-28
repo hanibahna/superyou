@@ -3,6 +3,7 @@ import { BannerPicker } from "@/components/admin/BannerPicker";
 import { BfTestAi } from "@/components/admin/BfTestAi";
 import { testStatus } from "@/lib/bf-test";
 import { BlackFridayEditor } from "@/components/admin/BlackFridayEditor";
+import { PricingTabs } from "@/components/admin/PricingTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function BlackFridayPage() {
   const test = await testStatus();
   return (
     <div className="space-y-6">
+      <PricingTabs />
       <BfTestAi test={test} />
       <BannerPicker key={JSON.stringify(picks)} initial={{ ...picks, items }} />
       <BlackFridayEditor key={JSON.stringify(state)} state={state} lines={lines} banner={banner} />

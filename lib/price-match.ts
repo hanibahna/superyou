@@ -1,6 +1,6 @@
 import "server-only";
 
-// Price guarantee. Every night the competitor shops listed in Admin › Growth › Price match are
+// Price guarantee. Every night the competitor shops listed in Admin › Pricing › SuperPrice are
 // read (their public Shopify product feed), each of their products is matched to ours (barcode
 // first, then brand + name + size), and the lowest competitor price is stored per product.
 // The storefront then sells at that price when it is lower than ours, but never below

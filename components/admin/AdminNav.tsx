@@ -27,8 +27,17 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/collections/", label: "Collections" },
       { href: "/admin/visibility/", label: "Catalog visibility" },
       { href: "/admin/sourcing/", label: "Sourcing: local & imported" },
-      { href: "/admin/margins/", label: "Margins" },
       { href: "/admin/import/", label: "Import / export" },
+    ],
+  },
+  {
+    title: "Pricing",
+    links: [
+      { href: "/admin/pricing/", label: "Pricing overview" },
+      { href: "/admin/margins/", label: "Margins & costs" },
+      { href: "/admin/promotions/", label: "Discounts & codes" },
+      { href: "/admin/black-friday/", label: "Black Friday" },
+      { href: "/admin/superprice/", label: "SuperPrice" },
     ],
   },
   {
@@ -36,8 +45,6 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/admin/marketing/", label: "Campaigns & ads" },
       { href: "/admin/growth/", label: "Growth & loyalty" },
-      { href: "/admin/promotions/", label: "Discounts & free gifts" },
-      { href: "/admin/black-friday/", label: "Black Friday" },
       { href: "/admin/reviews/", label: "Reviews" },
       { href: "/admin/club/", label: "Club members & codes" },
       { href: "/admin/whatsapp/", label: "WhatsApp" },
@@ -74,7 +81,7 @@ const groups: { title: string; links: { href: string; label: string }[] }[] = [
 
 export function AdminNav({ role, name }: { role: Role; name: string }) {
   const path = usePathname();
-  // Black Friday test mode: a blinking marker so it isn't forgotten (turn it off in Marketing → Black Friday).
+  // Black Friday test mode: a blinking marker so it isn't forgotten (turn it off in Pricing → Black Friday).
   const [bfTest, setBfTest] = useState(false);
   useEffect(() => { fetch("/api/admin/black-friday/?test=1").then((r) => (r.ok ? r.json() : null)).then((j) => setBfTest(!!j?.on)).catch(() => {}); }, [path]);
   const all = groups.flatMap((g) => g.links.map((l) => l.href));

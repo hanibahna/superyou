@@ -7,17 +7,20 @@ import { Area, Card, Header, ListInput, MediaField, Num, ProductPicker, Select, 
 
 const TABS = ["SuperPrime", "Price match", "Gamification", "Sign-up pop-up", "Samples & cart", "Reviews", "Club", "Pharmacist & trust", "Advent calendar", "Tools", "Look, motion & duplicates"] as const;
 
-export function GrowthEditor({ initial, aiReady, emailReady }: { initial: Growth; aiReady: boolean; emailReady: boolean }) {
+export function GrowthEditor({ initial, aiReady, emailReady, only }: { initial: Growth; aiReady: boolean; emailReady: boolean; only?: (typeof TABS)[number] }) {
   const [g, setG] = useState(initial);
-  const [tab, setTab] = useState<(typeof TABS)[number]>(TABS[0]);
+  // SuperPrice (Price match) now lives under Pricing → SuperPrice; Growth shows the other tabs.
+  const shown = only ? [only] : TABS.filter((t) => t !== "Price match");
+  const [tab, setTab] = useState<(typeof TABS)[number]>(shown[0]);
   const saver = useSaver("/api/admin/growth/");
   const up = <K extends keyof Growth>(k: K, patch: Partial<Growth[K]>) => (saver.touch(), setG((x) => ({ ...x, [k]: { ...(x[k] as object), ...patch } })));
 
   return (
     <div>
-      <Header title="Growth & loyalty" sub="Sign-up offers, free samples, reviews, the loyalty club, pharmacist chat, routine bundles, reminders and more." saver={saver} onSave={() => saver.save(g)} />
-      <div className="mb-5 flex flex-wrap gap-2">
-        {TABS.map((t) => <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-1.5 text-sm ${tab === t ? "bg-ink text-white" : "bg-white"}`}>{t}</button>)}
+      {only ? <Header title="SuperPrice" sub="Price check against other shops, the guarantee shoppers see, and the comparison report." saver={saver} onSave={() => saver.save(g)} />
+        : <Header title="Growth & loyalty" sub="Sign-up offers, free samples, reviews, the loyalty club, pharmacist chat, routine bundles, reminders and more." saver={saver} onSave={() => saver.save(g)} />}
+      <div className={`mb-5 flex flex-wrap gap-2 ${only ? "hidden" : ""}`}>
+        {shown.map((t) => <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-1.5 text-sm ${tab === t ? "bg-ink text-white" : "bg-white"}`}>{t}</button>)}
       </div>
 
       {tab === "Sign-up pop-up" && (

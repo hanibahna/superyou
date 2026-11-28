@@ -16,7 +16,7 @@ const newGift = (): GiftTier => ({
 const status = (r: { enabled: boolean; startsAt: string; endsAt: string }) =>
   !r.enabled ? ["Off", "bg-line text-muted"] : isLive(r) ? ["Live", "bg-green-100 text-green-800"] : r.endsAt && Date.parse(r.endsAt) < Date.now() ? ["Ended", "bg-line text-muted"] : ["Scheduled", "bg-amber-100 text-amber-800"];
 
-export function PromotionsEditor({ initial, taxonomy, brands }: { initial: Promotions; taxonomy: Taxonomy; brands: string[] }) {
+export function PromotionsEditor({ initial, taxonomy, brands, room = {} }: { initial: Promotions; taxonomy: Taxonomy; brands: string[]; room?: Record<string, number | null> }) {
   const [p, setP] = useState<Promotions>(initial);
   const [open, setOpen] = useState<string | null>(null);
   const saver = useSaver("/api/admin/promotions/");
@@ -47,6 +47,7 @@ export function PromotionsEditor({ initial, taxonomy, brands }: { initial: Promo
                       <span className="ml-2 text-muted">{d.type === "percent" ? `${d.value}% off` : `$${d.value} off each`} · {scopeText(d.scope, taxonomy)}{d.code ? ` · code ${d.code}` : " · automatic"}{d.minSubtotal ? ` · min $${d.minSubtotal}` : ""}{d.code && d.usageLimit ? ` · used ${d.used}/${d.usageLimit}` : d.code ? ` · used ${d.used}×` : ""}</span>
                     </button>
                     <Toggle label="" checked={d.enabled} onChange={(enabled) => upD(d.id, { enabled })} />
+                    {d.type === "percent" && <RoomHint d={d} room={room} />}
                     <button onClick={() => window.confirm("Delete this discount?") && set({ ...p, discounts: p.discounts.filter((x) => x.id !== d.id) })} className="text-sm text-sale">Delete</button>
                   </div>
                   {open === d.id && (
@@ -161,4 +162,16 @@ function ScopeEditor({ label, scope, onChange, taxonomy, brands, allowAll = fals
       </div>
     </div>
   );
+}
+
+// Margin room next to a % discount: green when every brand it covers can take it, amber when it gets capped.
+function RoomHint({ d, room }: { d: Promotions["discounts"][number]; room: Record<string, number | null> }) {
+  const brands = d.scope.kind === "brand" ? d.scope.values.map((v) => v.toLowerCase()) : d.scope.kind === "all" ? Object.keys(room) : [];
+  const known = brands.map((b) => room[b]).filter((r): r is number => typeof r === "number");
+  if (!known.length) return d.scope.kind === "all" || d.scope.kind === "brand" ? null : <span className="basis-full text-xs text-muted">Capped item by item at the minimum margin.</span>;
+  const low = Math.min(...known);
+  const over = known.filter((r) => r < d.value).length;
+  return over === 0
+    ? <span className="basis-full text-xs text-emerald-700">Fits the margin room{brands.length === 1 ? ` (up to ${low}%)` : ""}.</span>
+    : <span className="basis-full text-xs text-amber-800">{brands.length === 1 ? `Margin room is ${low}%: customers get ${low}%, not ${d.value}%.` : `${over} of ${known.length} brands have less room than ${d.value}% (lowest ${low}%): those are capped at their room.`}</span>;
 }

@@ -23,7 +23,7 @@ export function areaOf(path: string): Area | "any" {
     inventory: "inventory",
     products: "catalog", taxonomy: "catalog", collections: "catalog", visibility: "catalog", import: "catalog", "import-store": "catalog",
     catalog: "catalog", "photo-match": "catalog", rehost: "catalog", export: "catalog", template: "catalog",
-    growth: "marketing", promotions: "marketing", "black-friday": "marketing", margins: "settings", reviews: "marketing", club: "marketing", whatsapp: "marketing", videos: "marketing",
+    growth: "marketing", promotions: "marketing", "black-friday": "marketing", margins: "settings", pricing: "settings", superprice: "marketing", reviews: "marketing", club: "marketing", whatsapp: "marketing", videos: "marketing",
     routine: "marketing", services: "marketing", subscribers: "marketing", marketing: "marketing", sms: "marketing", app: "marketing",
     sourcing: "catalog", "tracking-keys": "settings",
     homepage: "store", sections: "store", extras: "store", landing: "store", navigation: "store", layout: "store", appearance: "store", theme: "store",
