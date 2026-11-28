@@ -12,7 +12,22 @@ import type { Discount } from "@/lib/site";
 import { readDoc, writeDoc } from "@/lib/site-store";
 import { normPhone } from "@/lib/wa";
 
-export const getGrowth = () => readDoc<Growth>("growth", withGrowthDefaults(null), (v) => withGrowthDefaults(v));
+const readGrowth = () => readDoc<Growth>("growth", withGrowthDefaults(null), (v) => withGrowthDefaults(v));
+let spinChecked = false;
+/** Growth settings. One-off (28 Nov 2026, owner's request): the spin-to-win sign-up pop-up is switched
+ *  off once; the setting stays in Admin → Growth → Sign-up pop-up and can be switched back on there. */
+export async function getGrowth(): Promise<Growth> {
+  const g = await readGrowth();
+  if (spinChecked) return g;
+  spinChecked = true;
+  const first = await db.cmd<string | null>(["SET", "mig:spin-off-20261128", "1", "NX"]).catch(() => null);
+  if (first === "OK" && g.popup.enabled) {
+    const off = { ...g, popup: { ...g.popup, enabled: false } };
+    await saveGrowth(off);
+    return off;
+  }
+  return g;
+}
 export const saveGrowth = (v: Growth) => writeDoc("growth", v);
 
 const site = () => siteUrl();
