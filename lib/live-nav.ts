@@ -237,8 +237,10 @@ export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy, wholesale = fa
  *  product (sections + top brands). Body products stay reachable under Skin Care → Body & Bath. */
 export function babyMom(menu: MenuItem[], nav: LiveNav): MenuItem[] {
   const isGroup = (x: MenuItem) => /^\s*body\s*(&|and)\s*baby\s*$/i.test(x.label) || /^\s*(baby|mother|mom)\s*(&|and)\s*(mom|mum|mother|baby|child)\s*$/i.test(x.label);
-  const i = menu.findIndex(isGroup);
-  const hadBody = i >= 0 && /body/i.test(menu[i].label);
+  // No "Women" / "Men" entries in the main menu (the shop's own filter still offers them).
+  const base = menu.filter((x) => !/^\s*(women|men)\s*$/i.test(x.label) && !/[?&]for=(women|men)\b/i.test(x.href));
+  const i = base.findIndex(isGroup);
+  const hadBody = i >= 0 && /body/i.test(base[i].label);
   const item: MenuItem = {
     label: "Baby & Mom",
     href: "/shop/?category=baby",
@@ -252,7 +254,7 @@ export function babyMom(menu: MenuItem[], nav: LiveNav): MenuItem[] {
   };
   // Drop any other Baby & Mom entry nested elsewhere so it isn't listed twice.
   const strip = (xs: MenuItem[]): MenuItem[] => xs.filter((x) => !isGroup(x)).map((x) => ({ ...x, children: strip(x.children ?? []) }));
-  let out = strip(menu);
+  let out = strip(base);
   if (i >= 0) out.splice(Math.min(i, out.length), 0, item);
   else {
     const para = out.findIndex((x) => /parapharmacy/i.test(x.label));
