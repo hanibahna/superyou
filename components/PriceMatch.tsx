@@ -167,13 +167,23 @@ function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) 
 }
 
 /** When the last nightly check ran, as "today at 3:00 am" / "2 h ago" (client-side, Beirut 3 am = 01:00 UTC). */
+let lastAt: Promise<string | null> | null = null;
+/** When the last price check really finished, said plainly ("today at 3:04 am", "yesterday at 2:10 pm"). */
 function useLastCheck() {
   const t = useT();
   const [v, setV] = useState("");
   useEffect(() => {
-    const last = nextCheck() - 86400_000;
-    const h = Math.floor((Date.now() - last) / 3600_000);
-    setV(h < 1 ? t("less than an hour ago") : `${t("today at 3:00 am")} (${h} ${t("h ago")})`);
+    lastAt ??= fetch("/api/price-check/").then((r) => r.json()).then((d) => d.at as string | null).catch(() => null);
+    lastAt.then((at) => {
+      if (!at) return;
+      const d = new Date(at), now = new Date();
+      const h = Math.floor((now.getTime() - d.getTime()) / 3600_000);
+      const day = (x: Date) => x.toLocaleDateString("en-GB", { timeZone: "Asia/Beirut" });
+      const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Beirut" }).toLowerCase();
+      const yest = new Date(now.getTime() - 86400_000);
+      const when = day(d) === day(now) ? t("today at") : day(d) === day(yest) ? t("yesterday at") : `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Beirut" })},`;
+      setV(h < 1 ? t("less than an hour ago") : `${when} ${time} (${h} ${t("h ago")})`);
+    });
   }, [t]);
   return v;
 }

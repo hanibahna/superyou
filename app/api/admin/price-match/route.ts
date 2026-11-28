@@ -10,6 +10,28 @@ export async function GET(req: Request) {
   const u = new URL(req.url);
   const pm0 = await import("@/lib/price-match");
   if (u.searchParams.has("review")) return NextResponse.json({ items: await pm0.reviewList() });
+  if (u.searchParams.has("diag")) {
+    // What shoppers see now, product by product: on SuperPrice, "lowest" claim, hidden (and why), or no data.
+    const { liveProducts } = await import("@/lib/pricing");
+    const { getMargins, floorPrice } = await import("@/lib/margins");
+    const live = await liveProducts();
+    const pm = await pm0.priceMatches();
+    const margins = await getMargins();
+    const out = { visible: live.list.length, superPrice: 0, claim: 0, hidden: 0, noData: 0, hiddenNight: 0, hiddenFloor: 0, hiddenSale: 0, samples: [] as unknown[] };
+    for (const p of live.list) {
+      const x = p as typeof p & { matchWas?: number; cmpVs?: number; pmLose?: boolean };
+      if (x.matchWas) out.superPrice++;
+      else if (x.cmpVs) out.claim++;
+      else if (x.pmLose) {
+        out.hidden++;
+        const m = pm.map.get(p.id), c = pm.cmp.get(p.id);
+        if (c?.lose) out.hiddenNight++;
+        else if (m) { const f = floorPrice(p, margins); if (f !== undefined && f >= m.p) out.hiddenFloor++; else out.hiddenSale++; }
+        if (out.samples.length < 8) out.samples.push({ name: `${p.brand} ${p.name}`, price: p.price, cost: p.cost, m: m && { p: m.p, t: m.t, s: m.s }, c: c && { t: c.t, s: c.s, lose: c.lose }, floor: floorPrice(p, margins) });
+      } else out.noData++;
+    }
+    return NextResponse.json(out);
+  }
   if (u.searchParams.has("coverage")) return NextResponse.json(await pm0.coverage());
   if (u.searchParams.get("product")) return NextResponse.json({ recs: await pm0.productRecs(u.searchParams.get("product")!) });
   if (u.searchParams.has("analyse"))
