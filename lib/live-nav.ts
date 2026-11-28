@@ -135,6 +135,8 @@ function hrefCats(href: string, nav: LiveNav): Set<string> | null {
 export function hrefIsLive(href: string, nav: LiveNav, scope?: string): boolean | null {
   const cats = hrefCats(href, nav);
   if (cats === null) return null;
+  // A link that names its own category ("Body care" under Skin Care) is judged by that category.
+  if (scope && /[?&]category=/.test(href)) return cats.size > 0;
   return scope ? cats.has(scope) : cats.size > 0;
 }
 

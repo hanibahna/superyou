@@ -13,8 +13,10 @@ const NOT_CAT = new Set(["makeup", "fragrance", "nails", "suncare", "oral-care"]
 const BRANDS = new Set(["nutreov", "nhco", "solgar", "arkopharma", "bio-strath", "forte pharma", "fortépharma", "vitabiotics", "centrum", "supradyn", "now foods", "nature's bounty", "natures bounty", "holland & barrett", "inneov", "imedeen", "pileje", "pilèje", "biocyte", "dietaroma", "nutergia", "juvamine", "berocca", "redoxon", "vitascience", "sanct bernhard", "orthomol", "swisse", "optimum nutrition"]);
 
 // Creams, serums and shampoos, even from supplement brands, are not taken by mouth.
-const COSMETIC = W(String.raw`creams?|crème|creme|serums?|sérum|lotion|eye care|cleanser|cleansing|face wash|shampoo|shampooing|conditioner|mask|masque|toner|moisturi[sz]er|balm|baume|spf|sunscreen|deodorant|body wash|shower gel|lip|mascara|foundation`);
-const isPill = (n: string) => STRONG.test(n) || WEAK.test(n);
+const COSMETIC = W(String.raw`creams?|crème|creme|serums?|sérum|lotions?|eye care|cleansers?|cleansing|face wash|shampoos?|shampooing|conditioners?|masks?|masques?|toners?|moisturi[sz]ers?|moisturi[sz]ing|balms?|baumes?|spf|sunscreen|deodorant|body wash|shower gel|lip|mascara|foundation`);
+// Only a true oral form beats a cosmetic word ("Capsule Cream" and "Multivitamin Shampoo" are cosmetics).
+const ORAL = W(String.raw`gummies|gummy|gumee|softgels?|tablets?|comprimés?|gélules?|gelules?|effervescent|drinkable|buvables?`);
+const isPill = (n: string) => ORAL.test(n);
 /** A cosmetic filed as a supplement by its feed: the shelf it belongs on instead. */
 export function cosmeticShelf(p: { name: string; category: string }): string | null {
   if (p.category !== "supplements" || !COSMETIC.test(p.name) || isPill(p.name)) return null;
