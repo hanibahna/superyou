@@ -59,7 +59,6 @@ export async function discountStatus() {
     const unk = unknown(d.scope); if (unk.length) w.push(`Not found in the shop: ${unk.slice(0, 5).join(", ")}${unk.length > 5 ? "…" : ""}`);
     const unkX = unknown(d.exclude); if (unkX.length) w.push(`Exception not found in the shop: ${unkX.slice(0, 5).join(", ")}`);
     if (d.exclude.kind !== "all" && d.exclude.values.length && inS.length === covered.length) w.push("Its exception doesn't remove any product");
-    if (d.exclude.kind !== "all" && d.exclude.values.length === 0) w.push(`Exception type "${d.exclude.kind}" chosen but nothing picked`);
     if (d.scope.kind !== "all" && d.scope.values.length === 0) w.push(`Applies to "${d.scope.kind}" but nothing is picked`);
     if (d.enabled && ended) w.push("Still switched on but its end date has passed");
     if (d.code && (codeCount.get(d.code.toLowerCase()) ?? 0) > 1) w.push("Another rule uses the same code: only the first one works");
