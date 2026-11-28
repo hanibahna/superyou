@@ -246,7 +246,7 @@ export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy, wholesale = fa
   const auto = autoCategories(tax, nav);
   return {
     // Wholesale: always in the menu (after the shop sections), unless the admin menu already has it.
-    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(dropOffCategories(skinMenu(supplementsMenu(babyMom(s.menu, nav), nav), nav), nav), nav, auto)),
+    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(noTopBrands(dropOffCategories(skinMenu(supplementsMenu(babyMom(s.menu, nav), nav), nav), nav)), nav, auto)),
     footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav, auto) })).filter((c) => c.links.length),
     announcement: liveHrefsDeep(s.announcement, nav),
   };
@@ -338,4 +338,9 @@ export function skinMenu(menu: MenuItem[], nav: LiveNav): MenuItem[] {
 /** A top menu section about a category that is switched off (Admin → Catalog visibility) goes. */
 export function dropOffCategories(menu: MenuItem[], nav: LiveNav): MenuItem[] {
   return menu.filter((x) => { const c = sectionCategory(x.label, nav); return !c || nav.categories.has(c); });
+}
+
+/** No "Top Brands" groups in the menu (brands have their own Brands section). */
+export function noTopBrands(menu: MenuItem[]): MenuItem[] {
+  return menu.filter((x) => !/^\s*top\s*brands\s*$/i.test(x.label)).map((x) => ({ ...x, children: noTopBrands(x.children ?? []) }));
 }
