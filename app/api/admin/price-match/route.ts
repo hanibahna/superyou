@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/admin-auth";
-import { siteUrl } from "@/lib/site-url";
 
 export const maxDuration = 300;
 
@@ -38,6 +37,9 @@ export async function GET(req: Request) {
 
 /** "Check prices now": starts a run in the background (it takes a few minutes). */
 export async function POST(req: Request) {
+  // Call ourselves on the address this request came in on: going through shopsuperyou.com would
+  // redirect to www and the redirect drops the Authorization header, so the next step was refused.
+  const self = new URL(req.url).origin;
   const denied = await adminGuard();
   if (denied) return denied;
   const secret = process.env.CRON_SECRET;
@@ -60,6 +62,6 @@ export async function POST(req: Request) {
     }
   }
   const resume = running && body.resume;
-  await (async () => fetch(`${siteUrl()}/api/cron/price-match/${resume ? "?hop=1" : ""}`, { headers: secret ? { authorization: `Bearer ${secret}` } : {}, cache: "no-store" }).catch((e) => console.error("[price-match start]", e)))();
+  await (async () => fetch(`${self}/api/cron/price-match/${resume ? "?hop=1" : ""}`, { headers: secret ? { authorization: `Bearer ${secret}` } : {}, cache: "no-store" }).catch((e) => console.error("[price-match start]", e)))();
   return NextResponse.json({ ok: true });
 }

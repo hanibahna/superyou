@@ -161,7 +161,7 @@ function BeatLine({ p, vs, lowered }: { p: SP; vs?: number; lowered: boolean }) 
   return (
     <p className="sp-in mt-1.5 text-[11px] leading-relaxed">
       {list ? <b className="text-[#046c4e]">✓ {lowered ? t("Beats") : t("Cheaper than")} {list}.</b> : <b className="text-[#046c4e]">✓ {t("Same as the lowest price.")}</b>}{" "}
-      <span className="text-muted">{status} {t("Checked every night.")}</span>
+      <span className="text-muted">{status} {t("Checked twice a day.")}</span>
     </p>
   );
 }
@@ -200,7 +200,7 @@ function NoCheaper() {
     }, 110);
     return () => clearInterval(id);
   }, [list.length]);
-  if (!shops.length) return <p className="sp-in mt-1.5 text-[11px] text-muted">{t("No lower price found in tonight's check. Checked every night.")}</p>;
+  if (!shops.length) return <p className="sp-in mt-1.5 text-[11px] text-muted">{t("No lower price found in the latest check. Checked twice a day.")}</p>;
   const done = n > list.length;
   return (
     <div className="sp-in mt-2">
@@ -313,7 +313,7 @@ export function SuperPriceSticker({ p }: { p: SP }) {
               ? `${p.match || t("Another shop")} ${t("sells it for")} ${money(p.matchVs ?? 0)}. ${t("Here it's")} ${money(p.price ?? 0)}.`
               : p.cmpVs !== undefined
                 ? `${t("Price compared:")} ${p.cmpShop || t("another shop")} ${money(p.cmpVs)}, SuperYou ${money(p.price ?? 0)}.`
-                : t("We compare our prices with other shops in Lebanon every night. When one sells it for less, we drop ours below theirs.")}
+                : t("We compare our prices with other shops in Lebanon twice a day. When one lists it for less, we drop ours below theirs.")}
           </span>
           <span className="mt-1 block text-muted">{t("Original products only. Limited quantity per order; one SuperPrice order a day.")}</span>
         </span>
