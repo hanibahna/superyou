@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const pm = await import("@/lib/price-match");
     if (!hop) await pm.startRun();
     const { more } = await pm.step().catch((e) => (console.error("[price-match step]", e), { more: false }));
-    if (more && hop < 40)
+    if (more && hop < 120) // 39 shops, big ones take several steps
       await fetch(`${self}/api/cron/price-match/?hop=${hop + 1}`, { headers: secret ? { authorization: `Bearer ${secret}` } : {}, cache: "no-store" }).catch((e) => console.error("[price-match chain]", e));
   });
   return NextResponse.json({ ok: true, hop });
