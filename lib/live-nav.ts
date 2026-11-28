@@ -8,6 +8,7 @@ import "server-only";
 import { getIndex } from "@/lib/catalog";
 import { BABY_GROUPS } from "@/lib/baby";
 import { SUPP_GROUPS } from "@/lib/supplements";
+import { SKIN_GROUPS } from "@/lib/skin";
 import { slugify, type ProductLite, type Taxonomy } from "@/lib/data/catalog";
 import { liveProducts } from "@/lib/pricing";
 import { searchProducts } from "@/lib/search";
@@ -26,6 +27,7 @@ type LiveNav = {
   /** Baby & Mom sections that have products, and its biggest brands. */
   babySubs: string[]; babyBrands: string[];
   suppSubs: string[]; suppBrands: string[];
+  skinSubs: string[]; skinBrands: string[]; skinConcerns: { slug: string; name: string }[];
 };
 const g = globalThis as unknown as { __liveNav?: LiveNav };
 
@@ -78,7 +80,15 @@ export async function liveNav(): Promise<LiveNav> {
   const sc = new Map<string, number>();
   for (const p of supp) sc.set(p.brand, (sc.get(p.brand) ?? 0) + 1);
   const suppBrands = [...sc].filter(([b, n]) => n >= 2 && b !== "SuperYou").sort((a, b) => b[1] - a[1]).slice(0, 8).map(([b]) => b);
-  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats, babySubs, babyBrands, suppSubs, suppBrands };
+  const skin = list.filter((p) => p.category === "skincare");
+  const skinSubs = SKIN_GROUPS.filter((b) => skin.filter((p) => b.re.test(p.name)).length >= 3).map((b) => b.slug);
+  const kc = new Map<string, number>();
+  for (const p of skin) kc.set(p.brand, (kc.get(p.brand) ?? 0) + 1);
+  const skinBrands = [...kc].filter(([b]) => b !== "SuperYou").sort((a, b) => b[1] - a[1]).slice(0, 8).map(([b]) => b);
+  const cc = new Map<string, number>();
+  for (const p of skin) for (const c of p.concerns) cc.set(c, (cc.get(c) ?? 0) + 1);
+  const skinConcerns = tax.concerns.filter((c) => c.group === "skin" && (cc.get(c.slug) ?? 0) >= 3).sort((a, b) => (cc.get(b.slug) ?? 0) - (cc.get(a.slug) ?? 0)).slice(0, 6).map((c) => ({ slug: c.slug, name: c.name }));
+  g.__liveNav = { key, collections, categories, concerns, brands, knownBrands, brandNames, colCats, brandCats, originCats, allCats, babySubs, babyBrands, suppSubs, suppBrands, skinSubs, skinBrands, skinConcerns };
   return g.__liveNav;
 }
 
@@ -234,7 +244,7 @@ export function shopNav(s: Settings, nav: LiveNav, tax: Taxonomy, wholesale = fa
   const auto = autoCategories(tax, nav);
   return {
     // Wholesale: always in the menu (after the shop sections), unless the admin menu already has it.
-    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(supplementsMenu(babyMom(s.menu, nav), nav), nav, auto)),
+    menu: ((m) => (!wholesale ? m.filter((x) => !x.href.startsWith("/wholesale")) : m.some((x) => x.href.startsWith("/wholesale")) ? m : [...m, { label: "Wholesale", href: "/wholesale/", children: [] }]))(liveMenu(skinMenu(supplementsMenu(babyMom(s.menu, nav), nav), nav), nav, auto)),
     footerMenu: s.footerMenu.map((c) => ({ ...c, links: pruneLinks(c.links, nav, auto) })).filter((c) => c.links.length),
     announcement: liveHrefsDeep(s.announcement, nav),
   };
@@ -296,5 +306,29 @@ export function supplementsMenu(menu: MenuItem[], nav: LiveNav): MenuItem[] {
   const out = strip(menu);
   const at = i >= 0 ? i : out.findIndex((x) => /^\s*brands\s*$/i.test(x.label));
   out.splice(at >= 0 ? Math.min(at, out.length) : out.length, 0, item);
+  return out;
+}
+
+/** Skin Care in the main menu: a short list instead of the long imported one: product types,
+ *  skin concerns, sun and body care, and top brands. */
+export function skinMenu(menu: MenuItem[], nav: LiveNav): MenuItem[] {
+  const i = menu.findIndex((x) => /^\s*skin\s*care\s*$/i.test(x.label));
+  const item: MenuItem = {
+    label: "Skin Care",
+    href: "/shop/?category=skincare",
+    children: [
+      { label: "By product", href: "#", children: [
+        ...SKIN_GROUPS.filter((b) => nav.skinSubs.includes(b.slug)).map((b) => ({ label: b.label, href: `/shop/?category=skincare&sub=${b.slug}`, children: [] })),
+        { label: "Sun care", href: "/shop/?category=suncare", children: [] },
+        { label: "Body care", href: "/shop/?category=body", children: [] },
+        { label: "View All", href: "/shop/?category=skincare", children: [] },
+      ] },
+      ...(nav.skinConcerns.length ? [{ label: "By concern", href: "#", children: nav.skinConcerns.map((c) => ({ label: c.name, href: `/shop/?category=skincare&concern=${c.slug}`, children: [] })) }] : []),
+      ...(nav.skinBrands.length ? [{ label: "Top Brands", href: "#", children: [...nav.skinBrands.map((b) => ({ label: b, href: `/shop/?brand=${encodeURIComponent(b)}&category=skincare`, children: [] })), { label: "View All", href: "/brands/", children: [] }] }] : []),
+    ],
+  };
+  const out = [...menu];
+  if (i >= 0) out[i] = item;
+  else out.unshift(item);
   return out;
 }

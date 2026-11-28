@@ -1,5 +1,6 @@
 import { babyGroup } from "@/lib/baby";
 import { suppGroup } from "@/lib/supplements";
+import { skinGroup } from "@/lib/skin";
 import "server-only";
 
 // Server-side catalog queries: grouping variants into cards, filtering, search, facets, paging.
@@ -90,7 +91,7 @@ export async function queryShop(q: ShopQuery): Promise<ShopResult> {
 
   // Facets are counted on the search result before the facet's own filter is applied,
   // so customers can see how many items each choice would give.
-  const sub = q.category === "baby" ? babyGroup(q.sub) : q.category === "supplements" ? suppGroup(q.sub) : undefined;
+  const sub = q.category === "baby" ? babyGroup(q.sub) : q.category === "supplements" ? suppGroup(q.sub) : q.category === "skincare" ? skinGroup(q.sub) : undefined;
   const byCategory = q.category ? list.filter((p) => p.category === q.category && (!sub || sub.re.test(p.name))) : list;
   const byConcern = q.concern?.length ? byCategory.filter((p) => q.concern!.some((c) => p.concerns.includes(c))) : byCategory;
   const wantBrands = new Set((q.brand ?? []).map(brandKey));
