@@ -32,6 +32,16 @@ const STAT = (d: string) => `pm:stat:${d}`; // products, variants, inStock, supp
 const BRANDS = (d: string) => `pm:brands:${d}`; // set of brand names
 const TYPES = (d: string) => `pm:types:${d}`; // product type → count
 const BCOUNT = (d: string) => `pm:bcount:${d}`; // brand → products
+// Competitor price database (kept across runs): per shop, productId → Rec (price, sale "was" price,
+// link, how it was matched, confidence, first/last seen and the last price changes).
+const DB = (d: string) => `pm:db:${d}`;
+export type Rec = { p: number; was?: number; u: string; how: "barcode" | "name" | "confirmed"; c: number; first: string; seen: string; h: [string, number][] };
+// Matches to review: name matches below AUTO_OK confidence are not used until someone confirms them.
+const REVIEW = "pm:review"; // key → JSON Review
+const YES = "pm:yes"; // confirmed pairs "productId|domain|variantId"
+const NO = "pm:no"; // rejected pairs
+const AUTO_OK = 0.97;
+export type Review = { key: string; id: string; ours: string; oursPrice: number; theirs: string; theirsPrice: number; site: string; url: string; c: number; at: string };
 
 export const SUPP = /\b(supplement|vitamin|multivitamin|capsule|softgel|tablet|gumm(y|ies)|collagen|omega|fish oil|probiotic|magnesium|zinc|iron|biotin|melatonin|ashwagandha|electrolyte|whey|protein powder|isolate|casein|creatine|bcaa|eaa|glutamine|pre-?workout|mass gainer|nutrition)\b/i;
 export const PROTEIN = /\b(whey|protein powder|protein bar|isolate|casein|creatine|bcaa|eaa|mass gainer|pre-?workout|plant protein)\b/i;
@@ -187,14 +197,14 @@ export function bookOf(all: ProductLite[], domain: string, excludeSource?: strin
 }
 
 /** Our products that are the same item as this competitor variant. */
-export function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["variants"][number]): { ids: string[]; how: "barcode" | "name" } | null {
+export function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["variants"][number]): { ids: string[]; how: "barcode" | "name"; score: number } | null {
   const same = book.byVariant.get(String(v.id));
-  if (same?.length) return { ids: same.map((p) => p.id), how: "barcode" };
+  if (same?.length) return { ids: same.map((p) => p.id), how: "barcode", score: 1 };
   // Public feeds hide the barcode field; many shops put the barcode in the SKU instead.
   const b = digits(v.barcode || (v.sku && /^\d{8,14}$/.test(v.sku.trim()) ? v.sku : ""));
   if (b.length >= 8) {
     const hit = book.byBarcode.get(b);
-    if (hit?.length) return { ids: hit.map((p) => p.id), how: "barcode" };
+    if (hit?.length) return { ids: hit.map((p) => p.id), how: "barcode", score: 1 };
   }
   const k = brandKey(sp.vendor || "");
   let cands = book.byBrand.get(k);
@@ -212,7 +222,83 @@ export function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["va
     if (s > bestScore + 1e-9) (best = [o]), (bestScore = s);
     else if (Math.abs(s - bestScore) < 1e-9 && best.length) best.push(o);
   }
-  return best.length ? { ids: best.map((o) => o.p.id), how: "name" } : null;
+  // Two of ours tie for the same competitor item: ambiguous, so it can only go to review.
+  return best.length ? { ids: best.map((o) => o.p.id), how: "name", score: best.length > 1 ? Math.min(bestScore, AUTO_OK - 0.01) : bestScore } : null;
+}
+
+// ── Competitor price database ───────────────────────────────
+
+/** Merges this run's offers into the long-lived database: keeps first seen, updates last seen,
+ *  and records a price change (last 12 changes) whenever their price moves. */
+async function saveRecs(domain: string, flat: string[]) {
+  const ids = flat.filter((_, i) => i % 2 === 0);
+  const old = (await db.cmd<(string | null)[]>(["HMGET", DB(domain), ...ids])) ?? [];
+  const now = new Date().toISOString();
+  const out: string[] = [];
+  ids.forEach((id, i) => {
+    const [p, u, how, c, was] = flat[i * 2 + 1].split("|");
+    const price = Number(p);
+    let r: Rec | null = null;
+    try { r = old[i] ? (JSON.parse(old[i]!) as Rec) : null; } catch { r = null; }
+    const h = r?.h ?? [];
+    if (!h.length || Math.abs(h[h.length - 1][1] - price) > 0.004) h.push([now.slice(0, 10), price]);
+    out.push(id, JSON.stringify({ p: price, ...(Number(was) > price ? { was: Number(was) } : {}), u, how: how as Rec["how"], c: Number(c) || 1, first: r?.first ?? now, seen: now, h: h.slice(-12) } satisfies Rec));
+  });
+  if (out.length) await db.cmd(["HSET", DB(domain), ...out]);
+}
+
+/** Everything we know about one product at every competitor (admin). */
+export async function productRecs(id: string) {
+  const sites = (await getGrowth()).priceMatch.sites;
+  const raws = await Promise.all(sites.map((s) => db.cmd<string | null>(["HGET", DB(s.domain), id])));
+  return sites.map((s, i) => ({ site: s.label, domain: s.domain, rec: raws[i] ? (JSON.parse(raws[i]!) as Rec) : null })).filter((x) => x.rec);
+}
+
+/** Matches waiting for a person (admin), most likely first. */
+export async function reviewList(): Promise<Review[]> {
+  const flat = (await db.cmd<string[] | null>(["HGETALL", REVIEW])) ?? [];
+  const out: Review[] = [];
+  for (let i = 1; i < flat.length; i += 2) try { out.push(JSON.parse(flat[i]) as Review); } catch { /* skip */ }
+  return out.sort((a, b) => b.c - a.c).slice(0, 300);
+}
+
+/** A person confirms or rejects a suggested match; used from the next price check. */
+export async function decide(key: string, ok: boolean) {
+  await db.pipeline([["SADD", ok ? YES : NO, key], ["SREM", ok ? NO : YES, key], ["HDEL", REVIEW, key]]);
+}
+
+/** How much of our catalogue we can compare, and how sure we are. */
+export async function coverage() {
+  const idx = await getIndex();
+  const sites = (await getGrowth()).priceMatch.sites.filter((s) => s.enabled);
+  const active = idx.all.filter((p) => p.status === "active");
+  const seen = new Map<string, { how: string; fresh: boolean }>();
+  const weekAgo = Date.now() - 7 * 86400_000;
+  for (const s of sites) {
+    let cursor = "0";
+    do {
+      const [next, flat] = (await db.cmd<[string, string[]]>(["HSCAN", DB(s.domain), cursor, "COUNT", 2000])) ?? ["0", []];
+      for (let i = 0; i < flat.length; i += 2) {
+        try {
+          const r = JSON.parse(flat[i + 1]) as Rec;
+          const fresh = Date.parse(r.seen) > weekAgo;
+          const prev = seen.get(flat[i]);
+          const rank = (h: string) => (h === "barcode" ? 3 : h === "confirmed" ? 2 : 1);
+          if (!prev || (fresh && !prev.fresh) || rank(r.how) > rank(prev.how)) seen.set(flat[i], { how: r.how, fresh: fresh || !!prev?.fresh });
+        } catch { /* skip */ }
+      }
+      cursor = String(next);
+    } while (cursor !== "0");
+  }
+  let exact = 0, confirmed = 0, name = 0, stale = 0;
+  for (const p of active) {
+    const s = seen.get(p.id);
+    if (!s) continue;
+    if (!s.fresh) { stale++; continue; }
+    if (s.how === "barcode") exact++; else if (s.how === "confirmed") confirmed++; else name++;
+  }
+  const review = (await db.cmd<number>(["HLEN", REVIEW])) ?? 0;
+  return { products: active.length, compared: exact + confirmed + name, exact, confirmed, name, stale, review };
 }
 
 // ── Steps ───────────────────────────────────────────────────
@@ -227,6 +313,7 @@ const writeState = (s: State | null) => (s ? db.cmd(["SET", STATE, JSON.stringif
 export async function startRun(): Promise<State> {
   const s: State = { run: new Date().toISOString(), site: 0, page: 1, startedAt: new Date().toISOString(), sites: [] };
   await writeState(s);
+  await db.cmd(["DEL", REVIEW]); // rebuilt by this run
   return s;
 }
 
@@ -249,23 +336,42 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
         const cur = await currencyOf(site.domain);
         if (cur !== "USD") throw new Error(`prices are in ${cur}, not US dollars`);
       }
-      const book = bookOf((await getIndex()).all, site.domain);
+      const idx = await getIndex();
+      const book = bookOf(idx.all, site.domain);
+      const [yes, no] = await Promise.all([db.cmd<string[]>(["SMEMBERS", YES]), db.cmd<string[]>(["SMEMBERS", NO])]).then(([a, b]) => [new Set(a ?? []), new Set(b ?? [])]);
       while (Date.now() - t0 < BUDGET_MS) {
         const page = await fetchPage(site.domain, st.page);
         await statPage(site.domain, page).catch(() => {});
-        const best = new Map<string, [number, string, string]>();
+        // productId → [price, url, how, confidence, their "was" price]
+        const best = new Map<string, [number, string, string, number, number]>();
+        const review: string[] = [];
         for (const sp of page) {
           for (const v of sp.variants ?? []) {
             const price = Number(v.price);
             if (!v.available || !(price > 0)) continue;
             const m = matchVariant(book, sp, v);
             if (!m) continue;
+            const url = `https://${site.domain}/products/${sp.handle}${sp.variants.length > 1 ? `?variant=${v.id}` : ""}`;
+            const was = Number((v as { compare_at_price?: string | null }).compare_at_price ?? 0);
             for (const id of m.ids) {
+              const pair = `${id}|${site.domain}|${v.id}`;
+              if (no.has(pair)) continue; // someone said it is not the same item
+              let how: string = m.how, c = m.score;
+              if (m.how === "name") {
+                if (yes.has(pair)) (how = "confirmed"), (c = 1);
+                else if (c < AUTO_OK) {
+                  // Not sure enough to sell at their price: ask a person first.
+                  const ours = idx.byId.get(id);
+                  if (ours) review.push(pair, JSON.stringify({ key: pair, id, ours: `${ours.brand} ${ours.name}${ours.variant ? ` · ${ours.variant}` : ""}${ours.size ? ` · ${ours.size}` : ""}`, oursPrice: ours.price, theirs: `${sp.vendor ?? ""} ${sp.title}${v.title && v.title !== "Default Title" ? ` · ${v.title}` : ""}`.trim(), theirsPrice: price, site: site.label, url, c: Math.round(c * 1000) / 1000, at: new Date().toISOString() } satisfies Review));
+                  continue;
+                }
+              }
               const prev = best.get(id);
-              if (!prev || price < prev[0]) best.set(id, [price, `https://${site.domain}/products/${sp.handle}${sp.variants.length > 1 ? `?variant=${v.id}` : ""}`, m.how]);
+              if (!prev || price < prev[0]) best.set(id, [price, url, how, c, was > price ? was : 0]);
             }
           }
         }
+        if (review.length) await db.cmd(["HSET", REVIEW, ...review]);
         rep.products += page.length;
         if (best.size) {
           // Keep the cheaper offer when a product already matched on an earlier page.
@@ -273,12 +379,15 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
           const old = (await db.cmd<(string | null)[]>(["HMGET", OFFERS(site.domain), ...ids])) ?? [];
           const flat: string[] = [];
           ids.forEach((id, i) => {
-            const [p, u, how] = best.get(id)!;
+            const [p, u, how, c, was] = best.get(id)!;
             const o = old[i] ? Number(old[i]!.split("|")[0]) : Infinity;
-            if (p < o) flat.push(id, `${p}|${u}|${how}`);
-            if (!old[i]) (rep.matched++, how === "barcode" && rep.byBarcode++);
+            if (p < o) flat.push(id, `${p}|${u}|${how}|${c}|${was}`);
+            if (!old[i]) (rep.matched++, how !== "name" && rep.byBarcode++);
           });
-          if (flat.length) await db.cmd(["HSET", OFFERS(site.domain), ...flat]);
+          if (flat.length) {
+            await db.cmd(["HSET", OFFERS(site.domain), ...flat]);
+            await saveRecs(site.domain, flat);
+          }
         }
         if (page.length < 250 || st.page >= 400) {
           st = { ...st, site: st.site + 1, page: 1 };

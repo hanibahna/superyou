@@ -9,6 +9,10 @@ export async function GET(req: Request) {
   const denied = await adminGuard();
   if (denied) return denied;
   const u = new URL(req.url);
+  const pm0 = await import("@/lib/price-match");
+  if (u.searchParams.has("review")) return NextResponse.json({ items: await pm0.reviewList() });
+  if (u.searchParams.has("coverage")) return NextResponse.json(await pm0.coverage());
+  if (u.searchParams.get("product")) return NextResponse.json({ recs: await pm0.productRecs(u.searchParams.get("product")!) });
   if (u.searchParams.has("analyse"))
     return NextResponse.json(await (await import("@/lib/price-match")).analyse(Number(u.searchParams.get("beat") ?? 5), Number(u.searchParams.get("margin") ?? 10), Number(u.searchParams.get("assume") ?? 0)));
   if (u.searchParams.has("competitors")) {
@@ -39,7 +43,12 @@ export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
   // A run that stopped half-way (state still there) is continued instead of restarted.
   const { running } = await (await import("@/lib/price-match")).getReport();
-  const body = (await req.json().catch(() => ({}))) as { resume?: boolean; sync?: boolean };
+  const body = (await req.json().catch(() => ({}))) as { resume?: boolean; sync?: boolean; decide?: { key: string; ok: boolean } };
+  // Confirm or reject a suggested match (used from the next price check).
+  if (body.decide?.key && /^[^|]+\|[a-z0-9.-]+\|\d+$/i.test(body.decide.key)) {
+    await (await import("@/lib/price-match")).decide(body.decide.key, !!body.decide.ok);
+    return NextResponse.json({ ok: true });
+  }
   // Run one step right here and show what happened (for checking a stuck run).
   if (body.sync && running) {
     const t = Date.now();

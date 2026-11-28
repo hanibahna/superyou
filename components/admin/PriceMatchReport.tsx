@@ -99,6 +99,89 @@ export function PriceMatchReport() {
           )}
         </>
       )}
+      <MatchQuality />
+    </div>
+  );
+}
+
+type Cov = { products: number; compared: number; exact: number; confirmed: number; name: number; stale: number; review: number };
+type Rev = { key: string; id: string; ours: string; oursPrice: number; theirs: string; theirsPrice: number; site: string; url: string; c: number };
+type Rec = { site: string; rec: { p: number; was?: number; u: string; how: string; c: number; first: string; seen: string; h: [string, number][] } };
+
+/** How much of the catalogue we can compare, the matches waiting for a person, and one product's history. */
+function MatchQuality() {
+  const [cov, setCov] = useState<Cov | null>(null);
+  const [items, setItems] = useState<Rev[]>([]);
+  const [q, setQ] = useState("");
+  const [recs, setRecs] = useState<Rec[] | null>(null);
+  const load = () => {
+    fetch("/api/admin/price-match/?coverage=1").then((r) => r.json()).then(setCov).catch(() => {});
+    fetch("/api/admin/price-match/?review=1").then((r) => r.json()).then((d) => setItems(d.items ?? [])).catch(() => {});
+  };
+  useEffect(load, []);
+  const decide = async (key: string, ok: boolean) => {
+    setItems((l) => l.filter((x) => x.key !== key));
+    await fetch("/api/admin/price-match/", { method: "POST", body: JSON.stringify({ decide: { key, ok } }) }).catch(() => {});
+  };
+  const pct = (n: number) => (cov?.products ? Math.round((n / cov.products) * 100) : 0);
+  return (
+    <div className="space-y-4 border-t border-line pt-4">
+      <p className="font-semibold">Matching quality</p>
+      {cov && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Stat n={cov.compared} label={`of ${cov.products.toLocaleString()} products compared (${pct(cov.compared)}%)`} />
+            <Stat n={cov.exact} label="exact: barcode or same item" />
+            <Stat n={cov.confirmed + cov.name} label={`by name (${cov.confirmed} confirmed by you)`} />
+            <Stat n={cov.review} label="waiting for your review" />
+          </div>
+          {cov.stale > 0 && <p className="text-xs text-muted">{cov.stale.toLocaleString()} matched products weren&apos;t seen at any shop in the last 7 days (sold out or removed there), so they aren&apos;t used.</p>}
+        </>
+      )}
+      {items.length > 0 && (
+        <div>
+          <p className="font-semibold">Is it the same product? ({items.length})</p>
+          <p className="text-xs text-muted">These matched by name only and aren&apos;t certain enough to change prices or claims. Your answer is used from the next price check (twice a day).</p>
+          <div className="mt-2 max-h-[28rem] overflow-auto rounded-lg border border-line">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-white uppercase text-muted"><tr><th className="p-2">Ours</th><th>Theirs</th><th>Sure</th><th></th></tr></thead>
+              <tbody>
+                {items.map((x) => (
+                  <tr key={x.key} className="border-t border-line align-top">
+                    <td className="p-2">{x.ours}<br /><b>{money(x.oursPrice)}</b></td>
+                    <td className="p-2">{x.theirs}<br /><b>{money(x.theirsPrice)}</b> <a href={x.url} target="_blank" rel="noreferrer" className="text-brand-600 underline">{x.site}</a></td>
+                    <td className="p-2">{Math.round(x.c * 100)}%</td>
+                    <td className="whitespace-nowrap p-2">
+                      <button type="button" onClick={() => decide(x.key, true)} className="rounded-full bg-[#046c4e] px-3 py-1 font-semibold text-white">Same</button>{" "}
+                      <button type="button" onClick={() => decide(x.key, false)} className="rounded-full border border-line px-3 py-1 font-semibold">Different</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) fetch(`/api/admin/price-match/?product=${encodeURIComponent(q.trim())}`).then((r) => r.json()).then((d) => setRecs(d.recs ?? [])).catch(() => setRecs([])); }} className="flex flex-wrap items-center gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Product ID, to see its competitor prices and history" className="min-w-0 flex-1 rounded-lg border border-line px-3 py-2" />
+        <button className="rounded-full border border-line px-4 py-2 font-semibold">Look up</button>
+      </form>
+      {recs && (recs.length ? (
+        <table className="w-full text-left text-xs">
+          <thead className="uppercase text-muted"><tr><th className="py-1">Shop</th><th>Price</th><th>Match</th><th>Last seen</th><th>Price history</th></tr></thead>
+          <tbody>
+            {recs.map(({ site, rec }) => (
+              <tr key={site} className="border-t border-line">
+                <td className="py-1.5"><a href={rec.u} target="_blank" rel="noreferrer" className="underline">{site}</a></td>
+                <td>{money(rec.p)}{rec.was ? <span className="ml-1 text-muted line-through">{money(rec.was)}</span> : null}</td>
+                <td>{rec.how === "barcode" ? "exact" : rec.how === "confirmed" ? "confirmed" : `name ${Math.round(rec.c * 100)}%`}</td>
+                <td>{when(rec.seen)}</td>
+                <td>{rec.h.map(([d, p]) => `${d.slice(5)} ${money(p)}`).join(" → ")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : <p className="text-xs text-muted">No competitor has this product on record.</p>)}
     </div>
   );
 }

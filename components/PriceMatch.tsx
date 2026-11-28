@@ -36,7 +36,7 @@ const Mark = () => (
 /** Small pill: "SuperPrice" (+ the shop on larger sizes). */
 export function PriceMatchBadge({ p, size = "sm", className = "" }: { p: SP; size?: "sm" | "md"; className?: string }) {
   const t = useT();
-  if (p.spLimit) return <span className={`inline-flex rounded-full bg-[#fdecef] px-2 py-0.5 text-[11px] font-semibold text-[#9b2c50] ${className}`}>{t("SuperPrice is for up to")} {p.spLimit} {t("per order")}</span>;
+  if (p.spLimit) return <span className={`inline-flex rounded-full bg-[#fdecef] px-2 py-0.5 text-[11px] font-semibold text-[#9b2c50] ${className}`}>{t("SuperPrice on the first")} {p.spLimit}{t(", the rest at our regular price")}</span>;
   const cls = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]";
   // Product page: one sticker for every shop we're cheaper than (SuperPrice or already cheaper).
   if (size === "md" && p.shops?.length && p.price) {
@@ -211,14 +211,14 @@ function NoCheaper() {
         </svg>
         <div className="min-w-0">
           <p className="text-[15px] font-bold leading-tight text-ink">
-            {done ? <span className="sp-pop">🏆 {t("Lowest price in Lebanon")}</span> : <>{t("Checking")} {Math.min(n, list.length)}/{list.length}…</>}
+            {done ? <span className="sp-pop">🏆 {t("Lowest listed price in Lebanon")}</span> : <>{t("Checking")} {Math.min(n, list.length)}/{list.length}…</>}
           </p>
           <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
             <span className="inline-flex items-center gap-1 rounded-full bg-[#d92d20] px-1.5 py-px text-[10px] font-black uppercase tracking-wider text-white">
               <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" /></span>
               Live
             </span>
-            <span>{t("price watch on")} <b className="text-ink">{shops.length}</b> {t("online shops. None sells it for less.")} {lastCheck && <>{t("Last checked")} {lastCheck}.</>}</span>
+            <span>{t("price watch on")} <b className="text-ink">{shops.length}</b> {t("online shops. None lists it for less.")} {lastCheck && <>{t("Last checked")} {lastCheck}.</>}</span>
           </p>
         </div>
       </div>
@@ -239,8 +239,8 @@ function NoCheaper() {
       </ul>
       {done && (
         <p className="sp-pop mt-2 rounded-lg bg-[#046c4e] px-2.5 py-1.5 text-[12px] font-semibold text-white">
-          ✓ {t("No online shop in Lebanon beats our price, guaranteed.")}
-        <span className="mt-0.5 block text-[11px] font-normal text-white/90">{t("None of these shops sells it today. If one lists it for less, we go")} {g.superPriceBeat ?? 3}% {t("below their price.")}</span></p>
+          ✓ {t("Lowest listed price, guaranteed.")}
+        <span className="mt-0.5 block text-[11px] font-normal text-white/90">{t("We compare the shelf prices these shops list, checked daily (their promo codes and delivery fees aren't included). If one lists it for less, we go")} {g.superPriceBeat ?? 3}% {t("below their price.")}</span></p>
       )}
     </div>
   );

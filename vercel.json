@@ -9,6 +9,10 @@
       "schedule": "0 1 * * *"
     },
     {
+      "path": "/api/cron/price-match/",
+      "schedule": "0 12 * * *"
+    },
+    {
       "path": "/api/cron/neo-sync/",
       "schedule": "0 3 */3 * *"
     },

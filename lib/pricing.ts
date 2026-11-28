@@ -88,11 +88,18 @@ export async function liveProducts() {
     const named = (all?: [string, number, boolean][]) => all?.map(([s, t, show]) => [ok(s, show) ? s : "", t] as [string, number]);
     const mp = m ? Math.max(m.p, floor ?? 0) : 0;
     if (m && mp < sold.price - 0.005) return { ...sold, price: mp, matchWas: sold.price, matchVs: m.t, ...(growth.priceMatch.badge ? { match: ok(m.s, m.show) ? m.s : "", shops: named(m.all), beat: m.beat ?? "full" } : {}) };
-    // Already the best price: say which shop we compared with (shown as "price compared").
-    const c = pmOn && growth.priceMatch.badge ? pm.cmp.get(p.id) : undefined;
-    // A shop is cheaper and we didn't go below it: no "best price" claim on this product.
-    if (c?.lose) return { ...sold, pmLose: true };
+    // The nightly check compares with our catalogue price; the claim is decided here, against the price
+    // the customer actually sees now (Black Friday and other sales included).
+    const badge = pmOn && growth.priceMatch.badge;
+    if (m) {
+      // A sale already took us to (or below) the SuperPrice: if that beats the cheapest shop, say so.
+      if (badge && sold.price <= m.t + 0.005) return { ...sold, cmpVs: m.t, cmpShop: ok(m.s, m.show) ? m.s : "", shops: named(m.all), beat: "none" as const };
+      return badge ? { ...sold, pmLose: true } : sold;
+    }
+    const c = badge ? pm.cmp.get(p.id) : undefined;
     if (c && c.t >= sold.price - 0.005) return { ...sold, cmpVs: c.t, cmpShop: ok(c.s, c.show) ? c.s : "", shops: named(c.all), beat: "none" as const };
+    // A shop is cheaper than what we sell it for now: no "best price" claim on this product.
+    if (c) return { ...sold, pmLose: true };
     return sold;
   });
   let dupOf = new Map<string, string>();
@@ -145,14 +152,21 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   // A % off some lines, each line's share stopping at its minimum-margin price (Admin → Margins).
   const capped = (ls: { price: number; qty: number; floor?: number }[], pct: number) =>
     ls.reduce((a, l) => a + Math.min((l.price * pct) / 100, l.floor !== undefined ? Math.max(0, l.price - l.floor) : l.price) * l.qty, 0);
+  // A subscription's earned % (looked up once): a subscriber keeps the SuperPrice when it is lower than
+  // the subscription price, and gets the subscription % otherwise (never both, never more than either).
+  const subPricing = growth.subscribe.enabled && input.subscriptionId ? await (await import("@/lib/subscriptions")).subscriptionPricing(input.subscriptionId).catch(() => null) : null;
   const lines = input.items.map(({ productId, qty }) => {
     const live0 = live.byId.get(productId);
-    // SuperPrice: limited units per item, and off when the customer already used it today.
-    const spOff = !!live0?.matchWas && (input.noSuperPrice || !!input.subscriptionId || qty > pmCfg.maxUnits);
-    const p = live0 && spOff ? { ...live0, price: live0.matchWas!, match: undefined, matchWas: undefined, matchVs: undefined } : live0;
+    // SuperPrice is off when the customer already used it today, or (subscriptions) when the
+    // subscription price is lower anyway.
+    const subBetter = !!input.subscriptionId && !!live0?.matchWas && live0.matchWas * (1 - (subPricing?.pct ?? 0) / 100) < live0.price - 0.005;
+    const spOff = !!live0?.matchWas && (input.noSuperPrice || subBetter);
+    let p = live0 && spOff ? { ...live0, price: live0.matchWas!, match: undefined, matchWas: undefined, matchVs: undefined } : live0;
+    // Over the unit limit: only the units above it go back to the regular price (blended per unit, rounded down for the customer).
+    if (p?.matchWas && qty > pmCfg.maxUnits) p = { ...p, price: Math.floor(((p.price * pmCfg.maxUnits + p.matchWas * (qty - pmCfg.maxUnits)) / qty) * 100) / 100 };
     const base = idx.byId.get(productId);
     return p && base
-      ? { productId, superPrice: !!p.matchWas, spLimit: spOff && !input.noSuperPrice && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt, floor: floorPrice(base, margins) }
+      ? { productId, superPrice: !!p.matchWas, spLimit: !!p.matchWas && qty > pmCfg.maxUnits ? pmCfg.maxUnits : undefined, match: p.match, matchWas: p.matchWas, matchVs: p.matchVs, name: p.name, price: p.price, basePrice: base.price, qty, category: p.category, brand: p.brand, concerns: p.concerns, tags: p.tags, sku: p.sku, available: p.inStock, compareAt: p.compareAt, floor: floorPrice(base, margins) }
       : null;
   });
   const ok = lines.filter((l): l is NonNullable<typeof l> => !!l && l.available);
@@ -198,7 +212,7 @@ export async function serverQuote(input: QuoteInput): Promise<ServerQuote & { _l
   if (growth.subscribe.enabled && input.subscriptionId) {
     const sp = await (await import("@/lib/subscriptions")).subscriptionPricing(input.subscriptionId);
     if (sp) {
-      const amount = +Math.min(q.subtotal - q.discountTotal, capped(ok, sp.pct)).toFixed(2);
+      const amount = +Math.min(q.subtotal - q.discountTotal, capped(ok.filter((l) => !l.superPrice), sp.pct)).toFixed(2);
       if (sp.pct > 0 && amount > 0) {
         q.discounts.push({ name: `Subscribe & save (−${sp.pct}%)`, amount });
         q.discountTotal = +(q.discountTotal + amount).toFixed(2);
