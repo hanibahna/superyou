@@ -40,7 +40,9 @@ export type Rec = { p: number; was?: number; u: string; how: "barcode" | "name" 
 const REVIEW = "pm:review"; // key → JSON Review
 const YES = "pm:yes"; // confirmed pairs "productId|domain|variantId"
 const NO = "pm:no"; // rejected pairs
-const AUTO_OK = 0.97;
+const AUTO_OK = 0.9; // name matches already need the same brand, the same size and every word of our name
+// Words that make it a different item from ours (a set, a refill, a travel size…) when only their side has them.
+const RISK = /\b(set|kit|coffret|bundle|duo|trio|pack|pcs|refill|recharge|eco ?refill|travel|mini|sample|tester|gift|offer|x ?[2-9]|[2-9] ?x|[2-9] ?for)\b/i;
 export type Review = { key: string; id: string; ours: string; oursPrice: number; theirs: string; theirsPrice: number; site: string; url: string; c: number; at: string };
 
 export const SUPP = /\b(supplement|vitamin|multivitamin|capsule|softgel|tablet|gumm(y|ies)|collagen|omega|fish oil|probiotic|magnesium|zinc|iron|biotin|melatonin|ashwagandha|electrolyte|whey|protein powder|isolate|casein|creatine|bcaa|eaa|glutamine|pre-?workout|mass gainer|nutrition)\b/i;
@@ -223,7 +225,7 @@ export function matchVariant(book: Book, sp: SourceProduct, v: SourceProduct["va
     else if (Math.abs(s - bestScore) < 1e-9 && best.length) best.push(o);
   }
   // Two of ours tie for the same competitor item: ambiguous, so it can only go to review.
-  return best.length ? { ids: best.map((o) => o.p.id), how: "name", score: best.length > 1 ? Math.min(bestScore, AUTO_OK - 0.01) : bestScore } : null;
+  return best.length ? { ids: best.map((o) => o.p.id), how: "name", score: Math.min(1, best.length > 1 ? Math.min(bestScore, AUTO_OK - 0.01) : bestScore) } : null;
 }
 
 // ── Competitor price database ───────────────────────────────
@@ -358,11 +360,16 @@ export async function step(t0 = Date.now()): Promise<{ more: boolean; state: Sta
               if (no.has(pair)) continue; // someone said it is not the same item
               let how: string = m.how, c = m.score;
               if (m.how === "name") {
+                const ours0 = idx.byId.get(id);
+                const theirText = `${sp.title} ${v.title ?? ""}`;
+                const oursText = ours0 ? `${ours0.name} ${ours0.variant ?? ""} ${ours0.size ?? ""}` : "";
+                // Different format (set, refill, travel size…) or a very different price: a person decides.
+                const risky = (RISK.test(theirText) && !RISK.test(oursText)) || (!!ours0 && (price < ours0.price * 0.6 || price > ours0.price * 1.8));
                 if (yes.has(pair)) (how = "confirmed"), (c = 1);
-                else if (c < AUTO_OK) {
+                else if (c < AUTO_OK || risky) {
                   // Not sure enough to sell at their price: ask a person first.
                   const ours = idx.byId.get(id);
-                  if (ours) review.push(pair, JSON.stringify({ key: pair, id, ours: `${ours.brand} ${ours.name}${ours.variant ? ` · ${ours.variant}` : ""}${ours.size ? ` · ${ours.size}` : ""}`, oursPrice: ours.price, theirs: `${sp.vendor ?? ""} ${sp.title}${v.title && v.title !== "Default Title" ? ` · ${v.title}` : ""}`.trim(), theirsPrice: price, site: site.label, url, c: Math.round(c * 1000) / 1000, at: new Date().toISOString() } satisfies Review));
+                  if (ours) review.push(pair, JSON.stringify({ key: pair, id, ours: `${ours.brand} ${ours.name}${ours.variant ? ` · ${ours.variant}` : ""}${ours.size && ours.size !== ours.variant ? ` · ${ours.size}` : ""}`, oursPrice: ours.price, theirs: `${sp.vendor ?? ""} ${sp.title}${v.title && v.title !== "Default Title" ? ` · ${v.title}` : ""}`.trim(), theirsPrice: price, site: site.label, url, c: Math.round(Math.min(c, risky ? 0.89 : c) * 1000) / 1000, at: new Date().toISOString() } satisfies Review));
                   continue;
                 }
               }
